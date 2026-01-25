@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "phased-array"
+version = "1.0.0"
+description = "Comprehensive Python library for phased array antenna modeling and visualization"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "John Hodge", email = "jhodge007@gmail.com"}
+]
+keywords = [
+    "phased array",
+    "antenna",
+    "beamforming",
+    "radar",
+    "electromagnetics",
+    "array factor",
+    "radiation pattern"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.20.0",
+    "matplotlib>=3.5.0",
+    "scipy>=1.7.0",
+]
+
+[project.optional-dependencies]
+plotting = [
+    "plotly>=5.0.0",
+]
+full = [
+    "plotly>=5.0.0",
+    "seaborn>=0.11.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "plotly>=5.0.0",
+    "seaborn>=0.11.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/jman4162/Phased-Array-Antenna-Model"
+Repository = "https://github.com/jman4162/Phased-Array-Antenna-Model"
+Issues = "https://github.com/jman4162/Phased-Array-Antenna-Model/issues"
+
+[tool.setuptools.packages.find]
+include = ["phased_array*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
