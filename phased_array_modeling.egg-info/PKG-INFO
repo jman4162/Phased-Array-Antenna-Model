@@ -1,3 +1,44 @@
+Metadata-Version: 2.4
+Name: phased-array-modeling
+Version: 1.0.0
+Summary: Comprehensive Python library for phased array antenna modeling and visualization
+Author-email: John Hodge <jah70@vt.edu>
+License: MIT
+Project-URL: Homepage, https://github.com/jman4162/Phased-Array-Antenna-Model
+Project-URL: Repository, https://github.com/jman4162/Phased-Array-Antenna-Model
+Project-URL: Issues, https://github.com/jman4162/Phased-Array-Antenna-Model/issues
+Keywords: phased array,antenna,beamforming,radar,electromagnetics,array factor,radiation pattern
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Science/Research
+Classifier: Intended Audience :: Education
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering
+Classifier: Topic :: Scientific/Engineering :: Physics
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.20.0
+Requires-Dist: matplotlib>=3.5.0
+Requires-Dist: scipy>=1.7.0
+Provides-Extra: plotting
+Requires-Dist: plotly>=5.0.0; extra == "plotting"
+Provides-Extra: full
+Requires-Dist: plotly>=5.0.0; extra == "full"
+Requires-Dist: seaborn>=0.11.0; extra == "full"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: plotly>=5.0.0; extra == "dev"
+Requires-Dist: seaborn>=0.11.0; extra == "dev"
+Dynamic: license-file
+
 # Phased Array Antenna Modeling
 
 [![CI](https://github.com/jman4162/Phased-Array-Antenna-Model/actions/workflows/ci.yml/badge.svg)](https://github.com/jman4162/Phased-Array-Antenna-Model/actions/workflows/ci.yml)
@@ -21,17 +62,17 @@ A comprehensive Python library for computing and visualizing phased array antenn
 ### From GitHub (recommended)
 
 ```bash
-pip install phased-array-modeling
+pip install git+https://github.com/jman4162/Phased-Array-Antenna-Model.git
 ```
 
 ### With optional dependencies
 
 ```bash
 # Include Plotly for 3D visualization
-pip install "phased-array-modeling[plotting]"
+pip install "phased-array[plotting] @ git+https://github.com/jman4162/Phased-Array-Antenna-Model.git"
 
 # Include all optional dependencies
-pip install "phased-array-modeling[full]"
+pip install "phased-array[full] @ git+https://github.com/jman4162/Phased-Array-Antenna-Model.git"
 ```
 
 ### For development
