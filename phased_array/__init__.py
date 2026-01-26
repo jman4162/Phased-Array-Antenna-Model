@@ -32,7 +32,7 @@ Example
 >>> theta, phi, pattern_dB = pa.compute_full_pattern(geom.x, geom.y, weights, k)
 """
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 # Beamforming functions
 from .beamforming import (  # Amplitude tapers; Null steering; Multiple beams
@@ -81,13 +81,20 @@ from .utils import (azel_to_thetaphi, create_theta_phi_grid, create_uv_grid,
                     normalize_pattern, rad2deg, theta_phi_to_uv,
                     thetaphi_to_azel, uv_to_theta_phi, wavelength_to_k)
 # Visualization functions
-from .visualization import (  # 2D matplotlib plots; UV-space; 3D Plotly plots; Utilities
+from .visualization import (  # 2D matplotlib plots; UV-space; 3D Plotly plots; Wideband
     compute_pattern_uv_space, create_pattern_animation_plotly,
-    plot_array_geometry, plot_array_geometry_3d_plotly,
+    plot_array_geometry, plot_array_geometry_3d_plotly, plot_beam_squint,
     plot_comparison_patterns, plot_pattern_2d,
     plot_pattern_3d_cartesian_plotly, plot_pattern_3d_plotly,
     plot_pattern_contour, plot_pattern_polar, plot_pattern_uv_plotly,
-    plot_pattern_uv_space)
+    plot_pattern_uv_space, plot_pattern_vs_frequency,
+    plot_pattern_vs_frequency_plotly, plot_subarray_delays)
+# Wideband / TTD functions
+from .wideband import (analyze_instantaneous_bandwidth, compare_steering_modes,
+                       compute_beam_squint, compute_pattern_vs_frequency,
+                       compute_subarray_delays_ttd,
+                       compute_subarray_weights_hybrid, steering_delays_ttd,
+                       steering_vector_hybrid, steering_vector_ttd)
 
 __all__ = [
     # Version
@@ -200,4 +207,19 @@ __all__ = [
     "load_pattern_npz",
     "export_coupling_matrix_csv",
     "export_summary_report",
+    # Wideband / TTD
+    "steering_vector_ttd",
+    "steering_delays_ttd",
+    "steering_vector_hybrid",
+    "compute_subarray_delays_ttd",
+    "compute_beam_squint",
+    "analyze_instantaneous_bandwidth",
+    "compute_pattern_vs_frequency",
+    "compute_subarray_weights_hybrid",
+    "compare_steering_modes",
+    # Wideband visualization
+    "plot_beam_squint",
+    "plot_pattern_vs_frequency",
+    "plot_pattern_vs_frequency_plotly",
+    "plot_subarray_delays",
 ]

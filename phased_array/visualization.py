@@ -823,3 +823,217 @@ def create_pattern_animation_plotly(
     )
 
     return fig
+
+
+# ============== Wideband / Beam Squint Plots ==============
+
+def plot_beam_squint(
+    frequencies: np.ndarray,
+    squint_data: Dict[str, np.ndarray],
+    center_frequency: float,
+    title: str = "Beam Squint vs Frequency",
+    figsize: Tuple[int, int] = (10, 6)
+) -> Any:
+    """
+    Plot beam squint comparison for different steering modes.
+
+    Parameters
+    ----------
+    frequencies : ndarray
+        Frequency values in Hz
+    squint_data : dict
+        Dictionary of {mode_name: squint_array} in degrees
+    center_frequency : float
+        Center frequency in Hz (for normalization)
+    title : str
+        Plot title
+    figsize : tuple
+        Figure size
+
+    Returns
+    -------
+    ax : matplotlib axis
+    """
+    if not MATPLOTLIB_AVAILABLE:
+        raise ImportError("matplotlib is required for this function")
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Normalize frequency to percentage of center
+    freq_percent = (frequencies - center_frequency) / center_frequency * 100
+
+    colors = {'phase': 'red', 'hybrid': 'blue', 'ttd': 'green'}
+    labels = {'phase': 'Phase-only', 'hybrid': 'Hybrid (TTD + Phase)', 'ttd': 'True-Time Delay'}
+
+    for mode, squint in squint_data.items():
+        color = colors.get(mode, None)
+        label = labels.get(mode, mode)
+        ax.plot(freq_percent, squint, 'o-', label=label, color=color, linewidth=2, markersize=6)
+
+    ax.axhline(0, color='gray', linestyle='--', alpha=0.5)
+    ax.axvline(0, color='gray', linestyle='--', alpha=0.5)
+
+    ax.set_xlabel('Frequency Offset (%)')
+    ax.set_ylabel('Beam Squint (degrees)')
+    ax.set_title(title)
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+
+    return ax
+
+
+def plot_pattern_vs_frequency(
+    angles: np.ndarray,
+    frequencies: np.ndarray,
+    patterns: np.ndarray,
+    center_frequency: float,
+    title: str = "Pattern vs Frequency",
+    min_dB: float = -40.0,
+    figsize: Tuple[int, int] = (12, 8)
+) -> Any:
+    """
+    Plot radiation patterns at multiple frequencies as a waterfall/heatmap.
+
+    Parameters
+    ----------
+    angles : ndarray
+        Angle values in degrees
+    frequencies : ndarray
+        Frequency values in Hz
+    patterns : ndarray
+        2D array (n_freq x n_angles) of patterns in dB
+    center_frequency : float
+        Center frequency for labeling
+    title : str
+        Plot title
+    min_dB : float
+        Minimum dB for colormap
+    figsize : tuple
+        Figure size
+
+    Returns
+    -------
+    ax : matplotlib axis
+    """
+    if not MATPLOTLIB_AVAILABLE:
+        raise ImportError("matplotlib is required for this function")
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Normalize frequency to percentage
+    freq_percent = (frequencies - center_frequency) / center_frequency * 100
+
+    patterns_clipped = np.clip(patterns, min_dB, 0)
+
+    im = ax.pcolormesh(angles, freq_percent, patterns_clipped, cmap='jet', shading='auto')
+    plt.colorbar(im, ax=ax, label='Gain (dB)')
+
+    ax.set_xlabel('Angle (degrees)')
+    ax.set_ylabel('Frequency Offset (%)')
+    ax.set_title(title)
+
+    return ax
+
+
+def plot_pattern_vs_frequency_plotly(
+    angles: np.ndarray,
+    frequencies: np.ndarray,
+    patterns: np.ndarray,
+    center_frequency: float,
+    title: str = "Pattern vs Frequency",
+    min_dB: float = -40.0
+) -> Any:
+    """
+    Interactive Plotly plot of patterns vs frequency.
+
+    Parameters
+    ----------
+    angles : ndarray
+        Angle values in degrees
+    frequencies : ndarray
+        Frequency values in Hz
+    patterns : ndarray
+        2D array (n_freq x n_angles) in dB
+    center_frequency : float
+        Center frequency
+    title : str
+        Plot title
+    min_dB : float
+        Minimum dB
+
+    Returns
+    -------
+    fig : plotly Figure
+    """
+    if not PLOTLY_AVAILABLE:
+        raise ImportError("plotly is required for this function")
+
+    freq_percent = (frequencies - center_frequency) / center_frequency * 100
+    patterns_clipped = np.clip(patterns, min_dB, 0)
+
+    fig = go.Figure(data=go.Heatmap(
+        x=angles,
+        y=freq_percent,
+        z=patterns_clipped,
+        colorscale='Jet',
+        zmin=min_dB,
+        zmax=0,
+        colorbar=dict(title='Gain (dB)')
+    ))
+
+    fig.update_layout(
+        title=title,
+        xaxis_title='Angle (degrees)',
+        yaxis_title='Frequency Offset (%)'
+    )
+
+    return fig
+
+
+def plot_subarray_delays(
+    architecture,
+    delays: np.ndarray,
+    title: str = "Subarray Time Delays",
+    figsize: Tuple[int, int] = (10, 8)
+) -> Any:
+    """
+    Visualize TTD values across subarrays.
+
+    Parameters
+    ----------
+    architecture : SubarrayArchitecture
+        Subarray architecture with centers
+    delays : ndarray
+        Time delay for each subarray in seconds
+    title : str
+        Plot title
+    figsize : tuple
+        Figure size
+
+    Returns
+    -------
+    ax : matplotlib axis
+    """
+    if not MATPLOTLIB_AVAILABLE:
+        raise ImportError("matplotlib is required for this function")
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    centers = architecture.subarray_centers
+    delays_ns = delays * 1e9  # Convert to nanoseconds
+
+    scatter = ax.scatter(centers[:, 0], centers[:, 1], c=delays_ns,
+                         cmap='viridis', s=200, edgecolors='black')
+    plt.colorbar(scatter, ax=ax, label='Delay (ns)')
+
+    # Add labels
+    for i, (x, y) in enumerate(centers):
+        ax.annotate(f'SA{i}', (x, y), ha='center', va='center', fontsize=8)
+
+    ax.set_xlabel('X (m)')
+    ax.set_ylabel('Y (m)')
+    ax.set_title(title)
+    ax.set_aspect('equal')
+    ax.grid(True, alpha=0.3)
+
+    return ax
