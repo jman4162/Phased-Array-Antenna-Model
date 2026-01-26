@@ -4,6 +4,7 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jman4162/Phased-Array-Antenna-Model/blob/main/Phased_Array_Demo.ipynb)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://phased-array-antenna-model.streamlit.app/)
 
 A comprehensive Python library for computing and visualizing phased array antenna radiation patterns. Features **125x faster** vectorized computations, multiple array geometries, advanced beamforming, and interactive 3D visualization.
 
@@ -15,6 +16,19 @@ A comprehensive Python library for computing and visualizing phased array antenn
 - **Realistic Impairments**: Mutual coupling, phase quantization, element failures, scan blindness
 - **Visualization**: 2D matplotlib, interactive 3D Plotly, UV-space representation
 - **Subarray Support**: Subarray-level beamforming with quantized phase shifters
+- **Data Export**: CSV, JSON, and NumPy formats for patterns, weights, and geometry
+
+## Try it Online
+
+**[Launch Interactive Web App](https://phased-array-antenna-model.streamlit.app/)** - No installation required!
+
+The Streamlit app provides an interactive interface for:
+- Designing array geometries (rectangular, triangular, circular, concentric rings, elliptical)
+- Beam steering with real-time pattern visualization
+- Amplitude tapering with sidelobe comparison
+- Impairment simulation (phase quantization, element failures, mutual coupling)
+- UV-space pattern analysis
+- Export data to CSV for further analysis
 
 ## Installation
 

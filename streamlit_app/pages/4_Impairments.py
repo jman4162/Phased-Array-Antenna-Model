@@ -248,4 +248,65 @@ with tab3:
     st.pyplot(fig)
     plt.close()
 
+# Export section
+st.markdown("---")
+st.subheader("Export Impairment Data")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    if st.button("Export Coupling Matrix CSV"):
+        csv_data = pa.export_coupling_matrix_csv(
+            C,
+            format='magnitude_phase',
+            metadata={
+                'model': coupling_model,
+                'coefficient': coupling_coeff
+            }
+        )
+        st.download_button(
+            label="Download Coupling Matrix",
+            data=csv_data,
+            file_name="coupling_matrix.csv",
+            mime="text/csv"
+        )
+
+with col2:
+    if st.button("Export Failed Pattern CSV"):
+        csv_data = pa.export_pattern_csv(
+            angles, E_failed,
+            angle_label="angle_deg",
+            pattern_label="pattern_dB",
+            metadata={
+                'failure_rate': failure_rate,
+                'failure_mode': failure_mode,
+                'n_failed': int(np.sum(failure_mask))
+            }
+        )
+        st.download_button(
+            label="Download Failed Pattern",
+            data=csv_data,
+            file_name=f"pattern_failed_{int(failure_rate*100)}pct.csv",
+            mime="text/csv"
+        )
+
+with col3:
+    if st.button("Export Quantized Pattern CSV"):
+        csv_data = pa.export_pattern_csv(
+            angles, E_quant,
+            angle_label="angle_deg",
+            pattern_label="pattern_dB",
+            metadata={
+                'quantization_bits': n_bits,
+                'phase_levels': n_levels,
+                'rms_error_deg': rms_error
+            }
+        )
+        st.download_button(
+            label="Download Quantized Pattern",
+            data=csv_data,
+            file_name=f"pattern_quantized_{n_bits}bit.csv",
+            mime="text/csv"
+        )
+
 st.success("✅ Impairment analysis complete! View **UV-Space** for advanced visualization.")

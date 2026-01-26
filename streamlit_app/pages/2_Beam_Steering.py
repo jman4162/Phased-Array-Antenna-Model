@@ -157,4 +157,67 @@ with col2:
     st.pyplot(fig)
     plt.close()
 
+# Export section
+st.markdown("---")
+st.subheader("Export Pattern Data")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    if st.button("Export E-Plane CSV"):
+        csv_data = pa.export_pattern_csv(
+            angles, E_plane,
+            angle_label="angle_deg",
+            pattern_label="E_plane_dB",
+            metadata={
+                'cut': 'E-plane',
+                'theta': theta0,
+                'phi': phi0,
+                'n_elements': geom.n_elements
+            }
+        )
+        st.download_button(
+            label="Download E-Plane CSV",
+            data=csv_data,
+            file_name=f"e_plane_theta{theta0}_phi{phi0}.csv",
+            mime="text/csv"
+        )
+
+with col2:
+    if st.button("Export H-Plane CSV"):
+        csv_data = pa.export_pattern_csv(
+            angles, H_plane,
+            angle_label="angle_deg",
+            pattern_label="H_plane_dB",
+            metadata={
+                'cut': 'H-plane',
+                'theta': theta0,
+                'phi': phi0 + 90,
+                'n_elements': geom.n_elements
+            }
+        )
+        st.download_button(
+            label="Download H-Plane CSV",
+            data=csv_data,
+            file_name=f"h_plane_theta{theta0}_phi{phi0}.csv",
+            mime="text/csv"
+        )
+
+with col3:
+    if st.button("Export Weights CSV"):
+        csv_data = pa.export_weights_csv(
+            geom, weights,
+            metadata={
+                'steering_theta': theta0,
+                'steering_phi': phi0,
+                'taper': 'uniform'
+            }
+        )
+        st.download_button(
+            label="Download Weights CSV",
+            data=csv_data,
+            file_name=f"weights_theta{theta0}_phi{phi0}.csv",
+            mime="text/csv"
+        )
+
 st.success("✅ Pattern computed! Try **Tapering** to reduce sidelobes.")

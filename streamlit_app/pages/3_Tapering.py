@@ -224,4 +224,70 @@ if len(tapers_to_compare) > 1:
 
     st.table(comparison_data)
 
+# Export section
+st.markdown("---")
+st.subheader("Export Tapered Data")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    if st.button("Export Tapered Pattern CSV"):
+        csv_data = pa.export_pattern_csv(
+            angles, E_tapered,
+            angle_label="angle_deg",
+            pattern_label="pattern_dB",
+            metadata={
+                'taper': taper_type,
+                'efficiency': f"{efficiency*100:.1f}%",
+                'theta': theta0,
+                'phi': phi0
+            }
+        )
+        st.download_button(
+            label="Download Pattern CSV",
+            data=csv_data,
+            file_name=f"pattern_{taper_type.lower()}.csv",
+            mime="text/csv"
+        )
+
+with col2:
+    if st.button("Export Tapered Weights CSV"):
+        csv_data = pa.export_weights_csv(
+            geom, weights_tapered,
+            metadata={
+                'taper': taper_type,
+                'steering_theta': theta0,
+                'steering_phi': phi0
+            }
+        )
+        st.download_button(
+            label="Download Weights CSV",
+            data=csv_data,
+            file_name=f"weights_{taper_type.lower()}.csv",
+            mime="text/csv"
+        )
+
+with col3:
+    if st.button("Export Taper Comparison"):
+        import io
+        buffer = io.StringIO()
+        buffer.write("angle_deg")
+        for name in patterns_quant if 'patterns_quant' in dir() else {}:
+            buffer.write(f",{name}")
+        buffer.write(",uniform\n")
+        for i, angle in enumerate(angles):
+            buffer.write(f"{angle:.2f}")
+            for name in patterns_quant if 'patterns_quant' in dir() else {}:
+                buffer.write(f",{patterns_quant[name][i]:.2f}")
+            if compare_uniform:
+                buffer.write(f",{E_uniform[i]:.2f}")
+            buffer.write("\n")
+
+        st.download_button(
+            label="Download Comparison CSV",
+            data=buffer.getvalue(),
+            file_name="taper_comparison.csv",
+            mime="text/csv"
+        )
+
 st.success("✅ Taper applied! Check **Impairments** for realistic effects.")

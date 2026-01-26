@@ -32,7 +32,7 @@ Example
 >>> theta, phi, pattern_dB = pa.compute_full_pattern(geom.x, geom.y, weights, k)
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 # Core computation functions
 from .core import (
@@ -160,6 +160,20 @@ from .visualization import (
     create_pattern_animation_plotly,
 )
 
+# Export functions
+from .export import (
+    export_pattern_csv,
+    export_pattern_2d_csv,
+    export_uv_pattern_csv,
+    export_weights_csv,
+    export_geometry_csv,
+    export_array_config_json,
+    export_pattern_npz,
+    load_pattern_npz,
+    export_coupling_matrix_csv,
+    export_summary_report,
+)
+
 __all__ = [
     # Version
     "__version__",
@@ -260,4 +274,15 @@ __all__ = [
     "plot_pattern_uv_plotly",
     "plot_comparison_patterns",
     "create_pattern_animation_plotly",
+    # Export
+    "export_pattern_csv",
+    "export_pattern_2d_csv",
+    "export_uv_pattern_csv",
+    "export_weights_csv",
+    "export_geometry_csv",
+    "export_array_config_json",
+    "export_pattern_npz",
+    "load_pattern_npz",
+    "export_coupling_matrix_csv",
+    "export_summary_report",
 ]

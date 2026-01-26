@@ -156,6 +156,8 @@ if st.session_state.geometry is not None:
         k = pa.wavelength_to_k(params['wavelength'])
 
         # Estimate beamwidth (approximate)
+        bw_x = None
+        bw_y = None
         if aperture_x > 0:
             bw_x = np.rad2deg(0.886 * params['wavelength'] / aperture_x)
             st.write(f"**Est. Beamwidth X:** {bw_x:.1f}°")
@@ -167,6 +169,57 @@ if st.session_state.geometry is not None:
         D_est = 4 * np.pi * aperture_x * aperture_y / (params['wavelength']**2)
         D_dB = 10 * np.log10(max(D_est, 1))
         st.write(f"**Est. Directivity:** {D_dB:.1f} dBi")
+
+    # Export section
+    st.markdown("---")
+    st.subheader("Export Array Data")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        if st.button("Export Geometry CSV"):
+            csv_data = pa.export_geometry_csv(
+                geom,
+                metadata={'array_type': params['type'], 'wavelength': params['wavelength']}
+            )
+            st.download_button(
+                label="Download Geometry CSV",
+                data=csv_data,
+                file_name="array_geometry.csv",
+                mime="text/csv"
+            )
+
+    with col2:
+        if st.button("Export Config JSON"):
+            json_data = pa.export_array_config_json(
+                geom,
+                array_params=params
+            )
+            st.download_button(
+                label="Download Config JSON",
+                data=json_data,
+                file_name="array_config.json",
+                mime="application/json"
+            )
+
+    with col3:
+        if st.button("Generate Summary Report"):
+            report = pa.export_summary_report(
+                geom,
+                weights=np.ones(geom.n_elements, dtype=complex),
+                pattern_metrics={
+                    'Est. Directivity (dBi)': D_dB,
+                    'Est. Beamwidth X (deg)': bw_x if bw_x is not None else 'N/A',
+                    'Est. Beamwidth Y (deg)': bw_y if bw_y is not None else 'N/A',
+                },
+                array_params=params
+            )
+            st.download_button(
+                label="Download Summary Report",
+                data=report,
+                file_name="array_report.txt",
+                mime="text/plain"
+            )
 
     st.success("✅ Array created! Go to **Beam Steering** to compute patterns.")
 else:
