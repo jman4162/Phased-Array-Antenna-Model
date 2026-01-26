@@ -1,6 +1,8 @@
 # Phased Array Antenna Modeling
 
 [![CI](https://github.com/jman4162/Phased-Array-Antenna-Model/actions/workflows/ci.yml/badge.svg)](https://github.com/jman4162/Phased-Array-Antenna-Model/actions/workflows/ci.yml)
+[![PyPI version](https://img.shields.io/pypi/v/phased-array-modeling.svg)](https://pypi.org/project/phased-array-modeling/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/phased-array-modeling.svg)](https://pypi.org/project/phased-array-modeling/)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jman4162/Phased-Array-Antenna-Model/blob/main/Phased_Array_Demo.ipynb)
