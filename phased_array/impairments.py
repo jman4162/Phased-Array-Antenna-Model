@@ -4,10 +4,11 @@ Realistic impairment models for phased arrays.
 Includes mutual coupling, phase quantization, element failures, and scan blindness.
 """
 
-import numpy as np
-from typing import Tuple, Optional, List, Dict, Union
-from .geometry import ArrayGeometry
+from typing import Dict, List, Optional, Tuple, Union
 
+import numpy as np
+
+from .geometry import ArrayGeometry
 
 # ============== Mutual Coupling ==============
 

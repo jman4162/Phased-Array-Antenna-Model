@@ -4,8 +4,9 @@ Utility functions for phased array antenna computations.
 Includes coordinate transforms and helper functions.
 """
 
-import numpy as np
 from typing import Tuple, Union
+
+import numpy as np
 
 ArrayLike = Union[np.ndarray, float]
 

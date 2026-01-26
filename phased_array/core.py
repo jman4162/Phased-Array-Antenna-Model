@@ -5,9 +5,11 @@ Includes vectorized array factor, FFT-based computation, steering vectors,
 and element patterns.
 """
 
+from typing import Optional, Tuple, Union
+
 import numpy as np
-from typing import Tuple, Optional, Union
-from .utils import theta_phi_to_uv, create_theta_phi_grid, linear_to_db
+
+from .utils import create_theta_phi_grid, linear_to_db, theta_phi_to_uv
 
 ArrayLike = Union[np.ndarray, float]
 

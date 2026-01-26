@@ -4,10 +4,11 @@ Array geometry definitions and generation functions.
 Includes rectangular, circular, conformal, sparse, and subarray architectures.
 """
 
-import numpy as np
-from dataclasses import dataclass, field
-from typing import Tuple, Optional, List, Callable, Union
 import warnings
+from dataclasses import dataclass, field
+from typing import Callable, List, Optional, Tuple, Union
+
+import numpy as np
 
 
 @dataclass

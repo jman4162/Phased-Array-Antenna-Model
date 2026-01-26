@@ -4,9 +4,10 @@ Visualization functions for phased array patterns.
 Includes 3D Plotly plots, UV-space representation, and array geometry plots.
 """
 
-import numpy as np
-from typing import Tuple, Optional, Dict, Any, List
 import warnings
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
 
 try:
     import plotly.graph_objects as go
@@ -24,8 +25,8 @@ except ImportError:
     MATPLOTLIB_AVAILABLE = False
 
 from .geometry import ArrayGeometry
-from .utils import theta_phi_to_uv, uv_to_theta_phi, is_visible_region, linear_to_db
-
+from .utils import (is_visible_region, linear_to_db, theta_phi_to_uv,
+                    uv_to_theta_phi)
 
 # ============== Matplotlib Plots (2D) ==============
 

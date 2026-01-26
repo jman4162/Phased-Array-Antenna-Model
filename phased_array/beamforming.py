@@ -4,11 +4,13 @@ Beamforming functions for phased arrays.
 Includes amplitude tapering, null steering, and multiple simultaneous beams.
 """
 
+from typing import List, Optional, Tuple, Union
+
 import numpy as np
 from scipy import signal
-from typing import Tuple, Optional, List, Union
-from .geometry import ArrayGeometry
+
 from .core import steering_vector
+from .geometry import ArrayGeometry
 
 ArrayLike = Union[np.ndarray, float]
 
