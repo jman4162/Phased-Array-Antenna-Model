@@ -17,6 +17,10 @@ if 'geometry' not in st.session_state:
     st.session_state.geometry = None
 if 'array_params' not in st.session_state:
     st.session_state.array_params = {}
+if 'subarray_architecture' not in st.session_state:
+    st.session_state.subarray_architecture = None
+if 'subarray_params' not in st.session_state:
+    st.session_state.subarray_params = {}
 
 # Sidebar controls
 st.sidebar.header("Array Configuration")
@@ -50,12 +54,48 @@ if array_type == "Rectangular":
     with col4:
         dy = st.number_input("Spacing Y (λ)", min_value=0.1, max_value=2.0, value=0.5, step=0.1)
 
+    # Subarray configuration (only for Rectangular arrays)
+    st.sidebar.markdown("---")
+    with st.sidebar.expander("Subarray Configuration", expanded=False):
+        st.markdown("*Optional: Define subarrays for wideband/hybrid beamforming*")
+        enable_subarrays = st.checkbox("Enable Subarrays", value=False)
+
+        if enable_subarrays:
+            # Subarray size options based on array dimensions
+            sub_options_x = [i for i in [2, 4, 8] if Nx % i == 0 and i <= Nx]
+            sub_options_y = [i for i in [2, 4, 8] if Ny % i == 0 and i <= Ny]
+
+            if not sub_options_x:
+                sub_options_x = [2]
+            if not sub_options_y:
+                sub_options_y = [2]
+
+            Nx_sub = st.selectbox("Subarray Size X", sub_options_x, index=0)
+            Ny_sub = st.selectbox("Subarray Size Y", sub_options_y, index=0)
+
+            n_subarrays = (Nx // Nx_sub) * (Ny // Ny_sub)
+            st.info(f"**{n_subarrays}** subarrays of {Nx_sub}×{Ny_sub} elements")
+        else:
+            Nx_sub, Ny_sub = None, None
+
     if st.sidebar.button("Create Array", type="primary"):
         st.session_state.geometry = pa.create_rectangular_array(Nx, Ny, dx, dy, wavelength)
         st.session_state.array_params = {
             'type': 'Rectangular', 'Nx': Nx, 'Ny': Ny, 'dx': dx, 'dy': dy,
             'wavelength': wavelength
         }
+        # Create subarray architecture if enabled
+        if enable_subarrays and Nx_sub and Ny_sub:
+            st.session_state.subarray_architecture = pa.create_rectangular_subarrays(
+                Nx, Ny, Nx_sub, Ny_sub, dx, dy
+            )
+            st.session_state.subarray_params = {
+                'Nx_sub': Nx_sub, 'Ny_sub': Ny_sub,
+                'n_subarrays': (Nx // Nx_sub) * (Ny // Ny_sub)
+            }
+        else:
+            st.session_state.subarray_architecture = None
+            st.session_state.subarray_params = {}
 
 elif array_type == "Triangular":
     col1, col2 = st.sidebar.columns(2)
@@ -72,6 +112,8 @@ elif array_type == "Triangular":
             'type': 'Triangular', 'Nx': Nx, 'Ny': Ny, 'dx': dx,
             'wavelength': wavelength
         }
+        st.session_state.subarray_architecture = None
+        st.session_state.subarray_params = {}
 
 elif array_type == "Circular Ring":
     n_elements = st.sidebar.number_input("Number of Elements", min_value=4, max_value=64, value=16)
@@ -83,6 +125,8 @@ elif array_type == "Circular Ring":
             'type': 'Circular Ring', 'n_elements': n_elements, 'radius': radius,
             'wavelength': wavelength
         }
+        st.session_state.subarray_architecture = None
+        st.session_state.subarray_params = {}
 
 elif array_type == "Concentric Rings":
     n_rings = st.sidebar.number_input("Number of Rings", min_value=1, max_value=10, value=3)
@@ -99,6 +143,8 @@ elif array_type == "Concentric Rings":
             'elements_per_ring': elements_per_ring, 'ring_spacing': ring_spacing,
             'wavelength': wavelength
         }
+        st.session_state.subarray_architecture = None
+        st.session_state.subarray_params = {}
 
 elif array_type == "Elliptical":
     col1, col2 = st.sidebar.columns(2)
@@ -116,6 +162,8 @@ elif array_type == "Elliptical":
             'type': 'Elliptical', 'a': a, 'b': b, 'dx': dx, 'grid_type': grid_type,
             'wavelength': wavelength
         }
+        st.session_state.subarray_architecture = None
+        st.session_state.subarray_params = {}
 
 # Display results
 if st.session_state.geometry is not None:
@@ -123,7 +171,7 @@ if st.session_state.geometry is not None:
     params = st.session_state.array_params
 
     # Info columns
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Total Elements", geom.n_elements)
     with col2:
@@ -132,6 +180,12 @@ if st.session_state.geometry is not None:
     with col3:
         aperture_y = geom.y.max() - geom.y.min()
         st.metric("Aperture Y", f"{aperture_y:.2f} m")
+    with col4:
+        if st.session_state.subarray_architecture is not None:
+            n_sub = st.session_state.subarray_architecture.n_subarrays
+            st.metric("Subarrays", n_sub)
+        else:
+            st.metric("Subarrays", "N/A")
 
     # Plot
     col1, col2 = st.columns([2, 1])

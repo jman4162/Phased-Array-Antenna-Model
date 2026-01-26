@@ -45,35 +45,53 @@ n_freq_points = st.sidebar.slider(
     min_value=5, max_value=21, value=11, step=2
 )
 
-st.sidebar.markdown("---")
-st.sidebar.header("Subarray Configuration")
+# Check for subarray architecture from Array Design
+arch = st.session_state.get('subarray_architecture', None)
+subarray_params = st.session_state.get('subarray_params', {})
 
-# Determine subarray size based on array dimensions
-Nx = params.get('Nx', int(np.sqrt(geom.n_elements)))
-Ny = params.get('Ny', int(np.sqrt(geom.n_elements)))
+if arch is None:
+    # Allow creating subarrays here if not defined in Array Design
+    st.sidebar.markdown("---")
+    st.sidebar.header("Subarray Configuration")
+    st.sidebar.info("💡 Tip: Define subarrays in Array Design for reuse across pages.")
 
-# Subarray size options
-sub_options_x = [i for i in [2, 4, 8] if Nx % i == 0 and i <= Nx]
-sub_options_y = [i for i in [2, 4, 8] if Ny % i == 0 and i <= Ny]
+    # Determine subarray size based on array dimensions
+    Nx = params.get('Nx', int(np.sqrt(geom.n_elements)))
+    Ny = params.get('Ny', int(np.sqrt(geom.n_elements)))
 
-if not sub_options_x:
-    sub_options_x = [2]
-if not sub_options_y:
-    sub_options_y = [2]
+    if params.get('type') != 'Rectangular':
+        st.warning("⚠️ Subarrays require a Rectangular array. Go to Array Design to create one.")
+        st.stop()
 
-Nx_sub = st.sidebar.selectbox("Subarray Size X", sub_options_x, index=0)
-Ny_sub = st.sidebar.selectbox("Subarray Size Y", sub_options_y, index=0)
+    # Subarray size options
+    sub_options_x = [i for i in [2, 4, 8] if Nx % i == 0 and i <= Nx]
+    sub_options_y = [i for i in [2, 4, 8] if Ny % i == 0 and i <= Ny]
 
-# Create subarray architecture
-try:
-    dx = params.get('dx', 0.5)
-    dy = params.get('dy', dx)
-    arch = pa.create_rectangular_subarrays(Nx, Ny, Nx_sub, Ny_sub, dx, dy)
-    n_subarrays = arch.n_subarrays
-except Exception as e:
-    st.error(f"Could not create subarrays: {e}")
-    st.info("Try a Rectangular array for best subarray support.")
-    st.stop()
+    if not sub_options_x:
+        sub_options_x = [2]
+    if not sub_options_y:
+        sub_options_y = [2]
+
+    Nx_sub = st.sidebar.selectbox("Subarray Size X", sub_options_x, index=0)
+    Ny_sub = st.sidebar.selectbox("Subarray Size Y", sub_options_y, index=0)
+
+    # Create subarray architecture
+    try:
+        dx = params.get('dx', 0.5)
+        dy = params.get('dy', dx)
+        arch = pa.create_rectangular_subarrays(Nx, Ny, Nx_sub, Ny_sub, dx, dy)
+    except Exception as e:
+        st.error(f"Could not create subarrays: {e}")
+        st.stop()
+else:
+    # Use architecture from Array Design
+    st.sidebar.markdown("---")
+    st.sidebar.header("Subarray Configuration")
+    Nx_sub = subarray_params.get('Nx_sub', 4)
+    Ny_sub = subarray_params.get('Ny_sub', 4)
+    st.sidebar.success(f"✅ Using {arch.n_subarrays} subarrays ({Nx_sub}×{Ny_sub}) from Array Design")
+
+n_subarrays = arch.n_subarrays
 
 # Display configuration
 col1, col2, col3, col4 = st.columns(4)
