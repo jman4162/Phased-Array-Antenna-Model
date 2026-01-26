@@ -9,7 +9,7 @@ description = "Comprehensive Python library for phased array antenna modeling an
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "John Hodge", email = "jhodge007@gmail.com"}
+    {name = "John Hodge", email = "jah70@vt.edu"}
 ]
 keywords = [
     "phased array",
