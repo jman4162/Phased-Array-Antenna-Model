@@ -5,9 +5,6 @@ UV-Space Page - Visualize pattern in direction cosine space.
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
-sys.path.insert(0, '..')
-
 import phased_array as pa
 
 st.set_page_config(page_title="UV-Space", page_icon="🌐", layout="wide")

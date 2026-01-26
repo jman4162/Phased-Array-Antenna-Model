@@ -5,9 +5,6 @@ Beam Steering Page - Interactive beam direction control.
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
-sys.path.insert(0, '..')
-
 import phased_array as pa
 
 st.set_page_config(page_title="Beam Steering", page_icon="🎯", layout="wide")
