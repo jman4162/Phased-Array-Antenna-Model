@@ -245,4 +245,4 @@ Getting Help
 ------------
 
 - **GitHub Issues**: https://github.com/jman4162/Phased-Array-Antenna-Model/issues
-- **Documentation**: https://phased-array-modeling.readthedocs.io
+- **Documentation**: https://phased-array-antenna-model.readthedocs.io

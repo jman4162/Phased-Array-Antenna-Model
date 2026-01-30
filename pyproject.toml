@@ -64,7 +64,7 @@ docs = [
 
 [project.urls]
 Homepage = "https://github.com/jman4162/Phased-Array-Antenna-Model"
-Documentation = "https://phased-array-modeling.readthedocs.io/"
+Documentation = "https://phased-array-antenna-model.readthedocs.io/"
 Repository = "https://github.com/jman4162/Phased-Array-Antenna-Model"
 Issues = "https://github.com/jman4162/Phased-Array-Antenna-Model/issues"
 

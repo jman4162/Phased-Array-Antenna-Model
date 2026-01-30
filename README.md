@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jman4162/Phased-Array-Antenna-Model/blob/main/Phased_Array_Demo.ipynb)
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://phased-array-antenna-model.streamlit.app/)
-[![Documentation](https://readthedocs.org/projects/phased-array-modeling/badge/?version=latest)](https://phased-array-modeling.readthedocs.io/en/latest/?badge=latest)
+[![Documentation](https://readthedocs.org/projects/phased-array-antenna-model/badge/?version=latest)](https://phased-array-antenna-model.readthedocs.io/en/latest/)
 
 A comprehensive Python library for computing and visualizing phased array antenna radiation patterns. Features **125x faster** vectorized computations, multiple array geometries, advanced beamforming, and interactive 3D visualization.
 
@@ -158,7 +158,7 @@ fig.show()
 
 ## Documentation
 
-**[Full Documentation on ReadTheDocs](https://phased-array-modeling.readthedocs.io/)** includes:
+**[Full Documentation on ReadTheDocs](https://phased-array-antenna-model.readthedocs.io/)** includes:
 
 - **Getting Started**: Installation, quickstart guide, core concepts
 - **User Guides**: Detailed tutorials for geometry, beamforming, impairments, wideband, and visualization
