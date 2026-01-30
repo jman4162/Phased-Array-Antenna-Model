@@ -168,6 +168,28 @@ def wavelength_to_k(wavelength: float) -> float:
     -------
     k : float
         Wavenumber (2*pi/wavelength) in rad/m
+
+    Examples
+    --------
+    For normalized wavelength (positions in wavelengths):
+
+    >>> import phased_array as pa
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> round(k, 4)
+    6.2832
+
+    For physical wavelength (10 GHz = 3 cm):
+
+    >>> wavelength = 0.03  # meters
+    >>> k = pa.wavelength_to_k(wavelength)
+    >>> round(k, 2)
+    209.44
+
+    Or use frequency directly:
+
+    >>> k = pa.frequency_to_k(10e9)  # 10 GHz
+    >>> round(k, 2)
+    209.44
     """
     return 2.0 * np.pi / wavelength
 

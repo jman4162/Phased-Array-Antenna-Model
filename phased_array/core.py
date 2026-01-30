@@ -44,6 +44,25 @@ def steering_vector(
     -------
     weights : ndarray
         Complex steering weights (unit magnitude, appropriate phases)
+
+    Examples
+    --------
+    Create steering weights for a 4x4 array pointing at 30 degrees:
+
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> geom = pa.create_rectangular_array(4, 4, dx=0.5, dy=0.5)
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> weights = pa.steering_vector(k, geom.x, geom.y, theta0_deg=30, phi0_deg=0)
+    >>> weights.shape
+    (16,)
+    >>> np.abs(weights[0])  # All weights have unit magnitude
+    1.0
+
+    Steer to azimuth with 3D array positions:
+
+    >>> z = np.zeros(16)  # Planar array
+    >>> weights_3d = pa.steering_vector(k, geom.x, geom.y, 20, 45, z=z)
     """
     theta0 = np.deg2rad(theta0_deg)
     phi0 = np.deg2rad(phi0_deg)
@@ -98,6 +117,34 @@ def array_factor_vectorized(
     -------
     AF : ndarray
         Complex array factor, same shape as theta/phi
+
+    Examples
+    --------
+    Compute array factor for a 4x4 array at broadside:
+
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> geom = pa.create_rectangular_array(4, 4, dx=0.5, dy=0.5)
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> weights = np.ones(16)  # Uniform weights
+    >>> theta = np.array([[0.0]])  # Broadside
+    >>> phi = np.array([[0.0]])
+    >>> AF = pa.array_factor_vectorized(theta, phi, geom.x, geom.y, weights, k)
+    >>> np.abs(AF[0, 0])  # Peak at broadside equals number of elements
+    16.0
+
+    Compute over a grid of angles:
+
+    >>> theta_grid, phi_grid = np.meshgrid(
+    ...     np.linspace(0, np.pi/2, 91),
+    ...     np.linspace(0, 2*np.pi, 181),
+    ...     indexing='ij'
+    ... )
+    >>> AF_grid = pa.array_factor_vectorized(
+    ...     theta_grid, phi_grid, geom.x, geom.y, weights, k
+    ... )
+    >>> AF_grid.shape
+    (91, 181)
     """
     # Flatten inputs for computation
     original_shape = theta.shape
@@ -347,19 +394,21 @@ def total_pattern(
         Polar angles in radians
     phi : ndarray
         Azimuthal angles in radians
-    x, y : ndarray
-        Element positions in meters
+    x : ndarray
+        Element x-positions in meters
+    y : ndarray
+        Element y-positions in meters
     weights : ndarray
         Complex element weights
     k : float
         Wavenumber in rad/m
     element_pattern_func : callable, optional
         Function to compute element pattern. If None, uses isotropic elements.
-        Should have signature: func(theta, phi, **kwargs) -> ndarray
+        Should have signature: func(theta, phi, \*\*kwargs) -> ndarray
     z : ndarray, optional
         Element z-positions for 3D arrays
-    **element_kwargs
-        Additional arguments passed to element_pattern_func
+    element_kwargs : dict
+        Additional keyword arguments passed to element_pattern_func
 
     Returns
     -------
@@ -499,6 +548,31 @@ def compute_full_pattern(
         Phi values in radians, shape (n_phi,)
     pattern_dB : ndarray
         Pattern in dB, shape (n_theta, n_phi)
+
+    Examples
+    --------
+    Compute a full pattern for a 16x16 array steered to 30 degrees:
+
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> geom = pa.create_rectangular_array(16, 16, dx=0.5, dy=0.5)
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> weights = pa.steering_vector(k, geom.x, geom.y, theta0_deg=30, phi0_deg=0)
+    >>> theta, phi, pattern_dB = pa.compute_full_pattern(
+    ...     geom.x, geom.y, weights, k, n_theta=91, n_phi=181
+    ... )
+    >>> theta.shape, phi.shape, pattern_dB.shape
+    ((91,), (181,), (91, 181))
+    >>> pattern_dB.max()  # Normalized to 0 dB peak
+    0.0
+
+    Include element pattern (cosine model):
+
+    >>> theta, phi, pattern_dB = pa.compute_full_pattern(
+    ...     geom.x, geom.y, weights, k,
+    ...     element_pattern_func=pa.element_pattern,
+    ...     cos_exp_theta=1.3
+    ... )
     """
     theta_1d, phi_1d, theta_grid, phi_grid = create_theta_phi_grid(
         theta_range, phi_range, n_theta, n_phi

@@ -61,6 +61,32 @@ def steering_vector_ttd(
     This is equivalent to phase steering at the given frequency, but
     the key difference is that the TIME DELAY is what's physically
     implemented, so the beam points correctly at all frequencies.
+
+    Examples
+    --------
+    TTD steering for a 10 GHz array with physical positions:
+
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> # Array positions in meters (e.g., 16x16 at half-wavelength for 10 GHz)
+    >>> wavelength = 0.03  # 10 GHz
+    >>> geom = pa.create_rectangular_array(16, 16, dx=0.5, dy=0.5, wavelength=wavelength)
+    >>> weights_ttd = pa.steering_vector_ttd(
+    ...     geom.x, geom.y,
+    ...     theta0_deg=30, phi0_deg=0,
+    ...     frequency=10e9
+    ... )
+    >>> weights_ttd.shape
+    (256,)
+
+    Compare TTD vs phase steering beam squint:
+
+    >>> # TTD maintains beam direction across bandwidth
+    >>> # Phase steering causes beam squint at off-center frequencies
+    >>> squint = pa.compute_beam_squint(
+    ...     geom.x, geom.y, theta0_deg=30, phi0_deg=0,
+    ...     center_freq=10e9, bandwidth=2e9, n_freqs=11
+    ... )
     """
     theta0 = np.deg2rad(theta0_deg)
     phi0 = np.deg2rad(phi0_deg)
@@ -289,6 +315,33 @@ def compute_beam_squint(
         'beam_angles' : Actual beam pointing angle at each frequency (deg)
         'squint' : Pointing error (deg), positive = beam moved towards broadside
         'relative_gain' : Gain relative to center frequency (dB)
+
+    Examples
+    --------
+    Analyze beam squint for a phase-steered array:
+
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> wavelength = 0.03  # 10 GHz center frequency
+    >>> geom = pa.create_rectangular_array(16, 16, dx=0.5, dy=0.5, wavelength=wavelength)
+    >>> freqs = np.linspace(9e9, 11e9, 11)  # 9-11 GHz
+    >>> results = pa.compute_beam_squint(
+    ...     geom.x, geom.y,
+    ...     theta0_deg=30, phi0_deg=0,
+    ...     center_frequency=10e9,
+    ...     frequencies=freqs,
+    ...     steering_mode='phase'
+    ... )
+    >>> results['squint'].shape
+    (11,)
+
+    Compare steering modes:
+
+    >>> # Phase steering: beam squint increases with bandwidth
+    >>> # TTD steering: no beam squint (squint ~ 0)
+    >>> results_ttd = pa.compute_beam_squint(
+    ...     geom.x, geom.y, 30, 0, 10e9, freqs, steering_mode='ttd'
+    ... )
     """
     from .core import array_factor_vectorized
 

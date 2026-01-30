@@ -224,6 +224,32 @@ def quantize_phase(
     -------
     quantized_weights : ndarray
         Weights with quantized phases
+
+    Examples
+    --------
+    Quantize to 3-bit phase shifters (8 levels, 45 deg steps):
+
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> geom = pa.create_rectangular_array(8, 8, dx=0.5, dy=0.5)
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> weights = pa.steering_vector(k, geom.x, geom.y, theta0_deg=15, phi0_deg=0)
+    >>> weights_q = pa.quantize_phase(weights, n_bits=3)
+    >>> weights_q.shape
+    (64,)
+
+    Check phase quantization levels:
+
+    >>> phases_deg = np.rad2deg(np.angle(weights_q))
+    >>> np.unique(np.round(phases_deg / 45) * 45).size <= 8
+    True
+
+    Compare effect of different bit depths:
+
+    >>> rms_3bit = pa.quantization_rms_error(3)  # ~13 degrees
+    >>> rms_6bit = pa.quantization_rms_error(6)  # ~1.6 degrees
+    >>> rms_3bit > rms_6bit
+    True
     """
     n_levels = 2 ** n_bits
     phase_step = 2 * np.pi / n_levels
@@ -383,6 +409,35 @@ def simulate_element_failures(
         Weights with failures applied
     failure_mask : ndarray
         Boolean array, True for failed elements
+
+    Examples
+    --------
+    Simulate 5% element failure rate:
+
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> geom = pa.create_rectangular_array(16, 16, dx=0.5, dy=0.5)
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> weights = pa.steering_vector(k, geom.x, geom.y, theta0_deg=0, phi0_deg=0)
+    >>> degraded, mask = pa.simulate_element_failures(
+    ...     weights, failure_rate=0.05, mode='off', seed=42
+    ... )
+    >>> n_failed = np.sum(mask)
+    >>> degraded.shape
+    (256,)
+
+    Compare failure modes:
+
+    >>> # 'off' mode: failed elements produce no output
+    >>> w_off, m_off = pa.simulate_element_failures(weights, 0.1, mode='off', seed=1)
+    >>> np.all(w_off[m_off] == 0)
+    True
+
+    Analyze graceful degradation:
+
+    >>> results = pa.analyze_graceful_degradation(
+    ...     geom, k, weights, failure_rates=[0.0, 0.05, 0.1]
+    ... )
     """
     if seed is not None:
         np.random.seed(seed)

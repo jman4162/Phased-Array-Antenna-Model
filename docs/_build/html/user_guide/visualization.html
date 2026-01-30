@@ -1,0 +1,1268 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Visualization &#8212; Phased Array Modeling</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../_static/documentation_options.js?v=872021ae"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=fd10adb8"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'user_guide/visualization';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="API Reference" href="../api/index.html" />
+    <link rel="prev" title="Wideband Beamforming" href="wideband.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="1.2.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Phased Array Modeling</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/concepts.html">
+    Core Concepts
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    User Guide
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="geometry.html">
+    Array Geometries
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="beamforming.html">
+    Beamforming
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="impairments.html">
+    Impairments
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="wideband.html">
+    Wideband Beamforming
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="#">
+    Visualization
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../api/core.html">
+    Core Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../api/geometry.html">
+    Geometry Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../api/beamforming.html">
+    Beamforming Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../api/impairments.html">
+    Impairments Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../api/visualization.html">
+    Visualization Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../api/wideband.html">
+    Wideband Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../api/utils.html">
+    Utilities Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../api/export.html">
+    Export Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../cookbook/index.html">
+    Cookbook
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../cookbook/hardware_recipes.html">
+    Hardware Engineer Recipes
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../cookbook/systems_recipes.html">
+    Systems Engineer Recipes
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../cookbook/research_recipes.html">
+    Research Recipes
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../theory/index.html">
+    Theory Background
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../theory/fundamentals.html">
+    Array Fundamentals
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../theory/coordinate_systems.html">
+    Coordinate Systems
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../theory/tapering_theory.html">
+    Tapering Theory
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../troubleshooting.html">
+    Troubleshooting & FAQ
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../glossary.html">
+    Glossary
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jman4162/Phased-Array-Antenna-Model" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/phased-array-modeling/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-box fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/concepts.html">
+    Core Concepts
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="geometry.html">
+    Array Geometries
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="beamforming.html">
+    Beamforming
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="impairments.html">
+    Impairments
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="wideband.html">
+    Wideband Beamforming
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="#">
+    Visualization
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/core.html">
+    Core Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/geometry.html">
+    Geometry Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/beamforming.html">
+    Beamforming Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/impairments.html">
+    Impairments Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/visualization.html">
+    Visualization Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/wideband.html">
+    Wideband Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/utils.html">
+    Utilities Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/export.html">
+    Export Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../cookbook/index.html">
+    Cookbook
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../cookbook/hardware_recipes.html">
+    Hardware Engineer Recipes
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../cookbook/systems_recipes.html">
+    Systems Engineer Recipes
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../cookbook/research_recipes.html">
+    Research Recipes
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../theory/index.html">
+    Theory Background
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../theory/fundamentals.html">
+    Array Fundamentals
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../theory/coordinate_systems.html">
+    Coordinate Systems
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../theory/tapering_theory.html">
+    Tapering Theory
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../troubleshooting.html">
+    Troubleshooting & FAQ
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../glossary.html">
+    Glossary
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jman4162/Phased-Array-Antenna-Model" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/phased-array-modeling/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-box fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="geometry.html">Array Geometries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="beamforming.html">Beamforming</a></li>
+<li class="toctree-l1"><a class="reference internal" href="impairments.html">Impairments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="wideband.html">Wideband Beamforming</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Visualization</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">User Guide</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Visualization</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="visualization">
+<h1>Visualization<a class="headerlink" href="#visualization" title="Link to this heading">#</a></h1>
+<p>This guide covers the visualization capabilities including 2D/3D plots,
+UV-space representation, and interactive Plotly figures.</p>
+<section id="d-matplotlib-plots">
+<h2>2D Matplotlib Plots<a class="headerlink" href="#d-matplotlib-plots" title="Link to this heading">#</a></h2>
+<section id="basic-pattern-cut">
+<h3>Basic Pattern Cut<a class="headerlink" href="#basic-pattern-cut" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">phased_array</span> <span class="k">as</span> <span class="nn">pa</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="c1"># Create array and compute pattern</span>
+<span class="n">geom</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">create_rectangular_array</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="n">k</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">wavelength_to_k</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+<span class="n">weights</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">steering_vector</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">theta0_deg</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">phi0_deg</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">weights</span> <span class="o">*=</span> <span class="n">pa</span><span class="o">.</span><span class="n">taylor_taper_2d</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">sidelobe_dB</span><span class="o">=-</span><span class="mi">30</span><span class="p">)</span>
+
+<span class="c1"># Compute principal plane cuts</span>
+<span class="n">theta_deg</span><span class="p">,</span> <span class="n">E_plane</span><span class="p">,</span> <span class="n">H_plane</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">compute_pattern_cuts</span><span class="p">(</span>
+    <span class="n">geom</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span>
+    <span class="n">theta0_deg</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">phi0_deg</span><span class="o">=</span><span class="mi">0</span>
+<span class="p">)</span>
+
+<span class="c1"># Plot</span>
+<span class="n">pa</span><span class="o">.</span><span class="n">plot_pattern_2d</span><span class="p">(</span>
+    <span class="n">theta_deg</span><span class="p">,</span> <span class="n">E_plane</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s1">&#39;E-plane Pattern Cut&#39;</span><span class="p">,</span>
+    <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;Theta (deg)&#39;</span><span class="p">,</span>
+    <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;Normalized Gain (dB)&#39;</span><span class="p">,</span>
+    <span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">90</span><span class="p">,</span> <span class="mi">90</span><span class="p">),</span>
+    <span class="n">ylim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">50</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="polar-plot">
+<h3>Polar Plot<a class="headerlink" href="#polar-plot" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pa</span><span class="o">.</span><span class="n">plot_pattern_polar</span><span class="p">(</span>
+    <span class="n">theta_deg</span><span class="p">,</span> <span class="n">E_plane</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s1">&#39;E-plane (Polar)&#39;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="contour-plot">
+<h3>Contour Plot<a class="headerlink" href="#contour-plot" title="Link to this heading">#</a></h3>
+<p>Full 2D pattern as a contour plot:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">pattern_dB</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">compute_full_pattern</span><span class="p">(</span>
+    <span class="n">geom</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">k</span>
+<span class="p">)</span>
+
+<span class="n">pa</span><span class="o">.</span><span class="n">plot_pattern_contour</span><span class="p">(</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">rad2deg</span><span class="p">(</span><span class="n">theta</span><span class="p">),</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">rad2deg</span><span class="p">(</span><span class="n">phi</span><span class="p">),</span>
+    <span class="n">pattern_dB</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s1">&#39;2D Radiation Pattern&#39;</span><span class="p">,</span>
+    <span class="n">levels</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+    <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;jet&#39;</span><span class="p">,</span>
+    <span class="n">min_dB</span><span class="o">=-</span><span class="mi">40</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="comparison-plots">
+<h3>Comparison Plots<a class="headerlink" href="#comparison-plots" title="Link to this heading">#</a></h3>
+<p>Compare multiple patterns on the same axes:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">patterns</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="c1"># Uniform illumination</span>
+<span class="n">w_uniform</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">steering_vector</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">E_uniform</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">compute_pattern_cuts</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">w_uniform</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+<span class="n">patterns</span><span class="p">[</span><span class="s1">&#39;Uniform&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">E_uniform</span>
+
+<span class="c1"># Taylor taper</span>
+<span class="n">w_taylor</span> <span class="o">=</span> <span class="n">w_uniform</span> <span class="o">*</span> <span class="n">pa</span><span class="o">.</span><span class="n">taylor_taper_2d</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">sidelobe_dB</span><span class="o">=-</span><span class="mi">30</span><span class="p">)</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">E_taylor</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">compute_pattern_cuts</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">w_taylor</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+<span class="n">patterns</span><span class="p">[</span><span class="s1">&#39;Taylor -30 dB&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">E_taylor</span>
+
+<span class="c1"># Chebyshev taper</span>
+<span class="n">w_cheb</span> <span class="o">=</span> <span class="n">w_uniform</span> <span class="o">*</span> <span class="n">pa</span><span class="o">.</span><span class="n">chebyshev_taper_2d</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">sidelobe_dB</span><span class="o">=-</span><span class="mi">30</span><span class="p">)</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">E_cheb</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">compute_pattern_cuts</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">w_cheb</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+<span class="n">patterns</span><span class="p">[</span><span class="s1">&#39;Chebyshev -30 dB&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">E_cheb</span>
+
+<span class="n">pa</span><span class="o">.</span><span class="n">plot_comparison_patterns</span><span class="p">(</span>
+    <span class="n">theta_deg</span><span class="p">,</span> <span class="n">patterns</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Taper Comparison&#39;</span><span class="p">,</span>
+    <span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">60</span><span class="p">,</span> <span class="mi">60</span><span class="p">),</span>
+    <span class="n">ylim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">50</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="array-geometry-plot">
+<h3>Array Geometry Plot<a class="headerlink" href="#array-geometry-plot" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pa</span><span class="o">.</span><span class="n">plot_array_geometry</span><span class="p">(</span>
+    <span class="n">geom</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+    <span class="n">weights</span><span class="o">=</span><span class="n">weights</span><span class="p">,</span>  <span class="c1"># Color by weight magnitude</span>
+    <span class="n">title</span><span class="o">=</span><span class="s1">&#39;16x16 Array Element Positions&#39;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="uv-space-visualization">
+<h2>UV-Space Visualization<a class="headerlink" href="#uv-space-visualization" title="Link to this heading">#</a></h2>
+<p>Direction cosine (UV) space is often more intuitive for array analysis as
+it shows the visible region and grating lobe locations clearly.</p>
+<section id="computing-uv-space-pattern">
+<h3>Computing UV-Space Pattern<a class="headerlink" href="#computing-uv-space-pattern" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">pattern_uv</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">compute_pattern_uv_space</span><span class="p">(</span>
+    <span class="n">geom</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span>
+    <span class="n">n_u</span><span class="o">=</span><span class="mi">201</span><span class="p">,</span> <span class="n">n_v</span><span class="o">=</span><span class="mi">201</span><span class="p">,</span>
+    <span class="n">u_range</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+    <span class="n">v_range</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">pa</span><span class="o">.</span><span class="n">plot_pattern_uv_space</span><span class="p">(</span>
+    <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">pattern_uv</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s1">&#39;UV-Space Pattern&#39;</span><span class="p">,</span>
+    <span class="n">show_visible_region</span><span class="o">=</span><span class="kc">True</span>  <span class="c1"># Circle at u^2+v^2=1</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>The visible region (u² + v² ≤ 1) corresponds to real angles. Points outside
+are evanescent.</p>
+</section>
+</section>
+<section id="d-plotly-interactive">
+<h2>3D Plotly (Interactive)<a class="headerlink" href="#d-plotly-interactive" title="Link to this heading">#</a></h2>
+<p>Plotly provides interactive 3D visualizations that can be rotated, zoomed,
+and explored in a web browser.</p>
+<section id="installation">
+<h3>Installation<a class="headerlink" href="#installation" title="Link to this heading">#</a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>plotly
+</pre></div>
+</div>
+</section>
+<section id="d-radiation-pattern">
+<h3>3D Radiation Pattern<a class="headerlink" href="#d-radiation-pattern" title="Link to this heading">#</a></h3>
+<p>Spherical surface where radius represents gain:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">plot_pattern_3d_plotly</span><span class="p">(</span>
+    <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">pattern_dB</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s1">&#39;3D Radiation Pattern&#39;</span><span class="p">,</span>
+    <span class="n">min_dB</span><span class="o">=-</span><span class="mi">40</span><span class="p">,</span>
+    <span class="n">colorscale</span><span class="o">=</span><span class="s1">&#39;Jet&#39;</span><span class="p">,</span>
+    <span class="n">surface_type</span><span class="o">=</span><span class="s1">&#39;spherical&#39;</span>
+<span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="cartesian-3d-surface">
+<h3>Cartesian 3D Surface<a class="headerlink" href="#cartesian-3d-surface" title="Link to this heading">#</a></h3>
+<p>Theta/phi/gain as a 3D surface:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">plot_pattern_3d_cartesian_plotly</span><span class="p">(</span>
+    <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">pattern_dB</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Pattern Surface&#39;</span>
+<span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="uv-space-plotly">
+<h3>UV-Space (Plotly)<a class="headerlink" href="#uv-space-plotly" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">plot_pattern_uv_plotly</span><span class="p">(</span>
+    <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">pattern_uv</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s1">&#39;UV-Space Pattern&#39;</span><span class="p">,</span>
+    <span class="n">min_dB</span><span class="o">=-</span><span class="mi">40</span>
+<span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="d-array-geometry">
+<h3>3D Array Geometry<a class="headerlink" href="#d-array-geometry" title="Link to this heading">#</a></h3>
+<p>For conformal arrays:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create cylindrical array</span>
+<span class="n">geom_cyl</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">create_cylindrical_array</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mf">3.0</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mf">2.0</span><span class="p">)</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">plot_array_geometry_3d_plotly</span><span class="p">(</span>
+    <span class="n">geom_cyl</span><span class="p">,</span>
+    <span class="n">show_normals</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># Display element normal vectors</span>
+    <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Cylindrical Array&#39;</span>
+<span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="animated-patterns">
+<h3>Animated Patterns<a class="headerlink" href="#animated-patterns" title="Link to this heading">#</a></h3>
+<p>Create animations showing pattern changes (e.g., scanning beam):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># List of patterns at different scan angles</span>
+<span class="n">scan_angles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">61</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+<span class="n">patterns_list</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">titles</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">for</span> <span class="n">angle</span> <span class="ow">in</span> <span class="n">scan_angles</span><span class="p">:</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">steering_vector</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">angle</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">w</span> <span class="o">*=</span> <span class="n">pa</span><span class="o">.</span><span class="n">taylor_taper_2d</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">sidelobe_dB</span><span class="o">=-</span><span class="mi">30</span><span class="p">)</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">pat</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">compute_full_pattern</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+    <span class="n">patterns_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pat</span><span class="p">)</span>
+    <span class="n">titles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Scan: </span><span class="si">{</span><span class="n">angle</span><span class="si">}</span><span class="s1"> deg&#39;</span><span class="p">)</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">create_pattern_animation_plotly</span><span class="p">(</span>
+    <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span>
+    <span class="n">patterns_list</span><span class="p">,</span>
+    <span class="n">frame_titles</span><span class="o">=</span><span class="n">titles</span><span class="p">,</span>
+    <span class="n">animation_speed</span><span class="o">=</span><span class="mi">500</span>  <span class="c1"># ms per frame</span>
+<span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="wideband-visualization">
+<h2>Wideband Visualization<a class="headerlink" href="#wideband-visualization" title="Link to this heading">#</a></h2>
+<section id="beam-squint-plot">
+<h3>Beam Squint Plot<a class="headerlink" href="#beam-squint-plot" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">wavelength</span> <span class="o">=</span> <span class="mf">0.03</span>  <span class="c1"># 10 GHz</span>
+<span class="n">geom</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">create_rectangular_array</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">wavelength</span><span class="o">=</span><span class="n">wavelength</span><span class="p">)</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">plot_beam_squint</span><span class="p">(</span>
+    <span class="n">geom</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+    <span class="n">theta0_deg</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">phi0_deg</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">center_frequency</span><span class="o">=</span><span class="mf">10e9</span><span class="p">,</span>
+    <span class="n">bandwidth</span><span class="o">=</span><span class="mf">2e9</span><span class="p">,</span>
+    <span class="n">steering_modes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;phase&#39;</span><span class="p">,</span> <span class="s1">&#39;ttd&#39;</span><span class="p">]</span>
+<span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="pattern-vs-frequency">
+<h3>Pattern vs Frequency<a class="headerlink" href="#pattern-vs-frequency" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">plot_pattern_vs_frequency_plotly</span><span class="p">(</span>
+    <span class="n">geom</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+    <span class="n">theta0_deg</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">phi0_deg</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">center_frequency</span><span class="o">=</span><span class="mf">10e9</span><span class="p">,</span>
+    <span class="n">bandwidth</span><span class="o">=</span><span class="mf">2e9</span><span class="p">,</span>
+    <span class="n">n_freqs</span><span class="o">=</span><span class="mi">11</span><span class="p">,</span>
+    <span class="n">steering_mode</span><span class="o">=</span><span class="s1">&#39;phase&#39;</span>
+<span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="subarray-delays">
+<h3>Subarray Delays<a class="headerlink" href="#subarray-delays" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">architecture</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">create_rectangular_subarrays</span><span class="p">(</span>
+    <span class="n">Nx_total</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">Ny_total</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+    <span class="n">Nx_sub</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">Ny_sub</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+    <span class="n">dx</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">wavelength</span><span class="o">=</span><span class="n">wavelength</span>
+<span class="p">)</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">plot_subarray_delays</span><span class="p">(</span>
+    <span class="n">architecture</span><span class="p">,</span>
+    <span class="n">theta0_deg</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">phi0_deg</span><span class="o">=</span><span class="mi">0</span>
+<span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="saving-figures">
+<h2>Saving Figures<a class="headerlink" href="#saving-figures" title="Link to this heading">#</a></h2>
+<section id="matplotlib">
+<h3>Matplotlib<a class="headerlink" href="#matplotlib" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+<span class="n">pa</span><span class="o">.</span><span class="n">plot_pattern_2d</span><span class="p">(</span><span class="n">theta_deg</span><span class="p">,</span> <span class="n">E_plane</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s1">&#39;pattern.png&#39;</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s1">&#39;pattern.pdf&#39;</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="plotly">
+<h3>Plotly<a class="headerlink" href="#plotly" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># HTML (interactive)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">write_html</span><span class="p">(</span><span class="s1">&#39;pattern_3d.html&#39;</span><span class="p">)</span>
+
+<span class="c1"># Static image (requires kaleido)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">write_image</span><span class="p">(</span><span class="s1">&#39;pattern_3d.png&#39;</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">write_image</span><span class="p">(</span><span class="s1">&#39;pattern_3d.pdf&#39;</span><span class="p">)</span>
+
+<span class="c1"># Install kaleido for static export:</span>
+<span class="c1"># pip install kaleido</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="customization">
+<h2>Customization<a class="headerlink" href="#customization" title="Link to this heading">#</a></h2>
+<section id="matplotlib-style">
+<h3>Matplotlib Style<a class="headerlink" href="#matplotlib-style" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Use a built-in style</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;seaborn-v0_8-whitegrid&#39;</span><span class="p">)</span>
+
+<span class="c1"># Or customize</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="o">.</span><span class="n">update</span><span class="p">({</span>
+    <span class="s1">&#39;font.size&#39;</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span>
+    <span class="s1">&#39;axes.labelsize&#39;</span><span class="p">:</span> <span class="mi">14</span><span class="p">,</span>
+    <span class="s1">&#39;axes.titlesize&#39;</span><span class="p">:</span> <span class="mi">16</span><span class="p">,</span>
+    <span class="s1">&#39;lines.linewidth&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="s1">&#39;figure.figsize&#39;</span><span class="p">:</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
+<span class="p">})</span>
+</pre></div>
+</div>
+</section>
+<section id="plotly-theme">
+<h3>Plotly Theme<a class="headerlink" href="#plotly-theme" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">plotly.io</span> <span class="k">as</span> <span class="nn">pio</span>
+<span class="n">pio</span><span class="o">.</span><span class="n">templates</span><span class="o">.</span><span class="n">default</span> <span class="o">=</span> <span class="s2">&quot;plotly_white&quot;</span>
+
+<span class="c1"># Or use dark theme</span>
+<span class="n">pio</span><span class="o">.</span><span class="n">templates</span><span class="o">.</span><span class="n">default</span> <span class="o">=</span> <span class="s2">&quot;plotly_dark&quot;</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="best-practices">
+<h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p><strong>Use UV-space</strong> for understanding grating lobes and visible region.</p></li>
+<li><p><strong>Use 3D Plotly</strong> for presentations and interactive exploration.</p></li>
+<li><p><strong>Use contour plots</strong> for comparing patterns across the full hemisphere.</p></li>
+<li><p><strong>Use pattern cuts</strong> for precise numerical comparisons.</p></li>
+<li><p><strong>Set appropriate min_dB</strong> to focus on the sidelobe region of interest.</p></li>
+<li><p><strong>Export high-resolution</strong> figures for publications (300+ DPI).</p></li>
+</ol>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="wideband.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Wideband Beamforming</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../api/index.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">API Reference</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#d-matplotlib-plots">2D Matplotlib Plots</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#basic-pattern-cut">Basic Pattern Cut</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#polar-plot">Polar Plot</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#contour-plot">Contour Plot</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#comparison-plots">Comparison Plots</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#array-geometry-plot">Array Geometry Plot</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#uv-space-visualization">UV-Space Visualization</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#computing-uv-space-pattern">Computing UV-Space Pattern</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#d-plotly-interactive">3D Plotly (Interactive)</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#d-radiation-pattern">3D Radiation Pattern</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cartesian-3d-surface">Cartesian 3D Surface</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#uv-space-plotly">UV-Space (Plotly)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#d-array-geometry">3D Array Geometry</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#animated-patterns">Animated Patterns</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#wideband-visualization">Wideband Visualization</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#beam-squint-plot">Beam Squint Plot</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pattern-vs-frequency">Pattern vs Frequency</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#subarray-delays">Subarray Delays</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#saving-figures">Saving Figures</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#matplotlib">Matplotlib</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#plotly">Plotly</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#customization">Customization</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#matplotlib-style">Matplotlib Style</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#plotly-theme">Plotly Theme</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#best-practices">Best Practices</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/jman4162/Phased-Array-Antenna-Model/edit/main/docs/user_guide/visualization.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/user_guide/visualization.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, John Hodge.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.7.
+    <br/>
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

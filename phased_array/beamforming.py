@@ -65,6 +65,29 @@ def taylor_taper_2d(
     -------
     taper : ndarray
         2D amplitude taper (Nx, Ny), flattened row-major
+
+    Examples
+    --------
+    Apply Taylor taper for -30 dB sidelobes:
+
+    >>> import phased_array as pa
+    >>> taper = pa.taylor_taper_2d(16, 16, sidelobe_dB=-30)
+    >>> taper.shape
+    (256,)
+
+    Combine with steering weights:
+
+    >>> geom = pa.create_rectangular_array(16, 16, dx=0.5, dy=0.5)
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> weights = pa.steering_vector(k, geom.x, geom.y, theta0_deg=30, phi0_deg=0)
+    >>> weights_tapered = weights * pa.taylor_taper_2d(16, 16, sidelobe_dB=-35)
+
+    Compare taper efficiency:
+
+    >>> taper = pa.taylor_taper_2d(16, 16, sidelobe_dB=-40)
+    >>> efficiency = pa.compute_taper_efficiency(taper)
+    >>> efficiency < 1.0  # Tapering reduces efficiency
+    True
     """
     tx = taylor_taper_1d(Nx, sidelobe_dB, nbar)
     ty = taylor_taper_1d(Ny, sidelobe_dB, nbar)
@@ -348,6 +371,29 @@ def null_steering_projection(
     -------
     weights : ndarray
         Complex weights with nulls placed
+
+    Examples
+    --------
+    Place nulls at specific interference directions:
+
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> geom = pa.create_rectangular_array(16, 16, dx=0.5, dy=0.5)
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> # Main beam at 30 deg, nulls at 45 and 60 degrees
+    >>> null_dirs = [(45, 0), (60, 0)]
+    >>> weights = pa.null_steering_projection(
+    ...     geom, k, theta_main_deg=30, phi_main_deg=0,
+    ...     null_directions=null_dirs
+    ... )
+    >>> weights.shape
+    (256,)
+
+    Verify null depth:
+
+    >>> null_depth = pa.compute_null_depth(geom, k, weights, null_dirs[0])
+    >>> null_depth < -30  # Deep null achieved
+    True
     """
     n = geometry.n_elements
 

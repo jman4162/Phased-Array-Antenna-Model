@@ -48,6 +48,29 @@ def export_pattern_csv(
     -------
     csv_string : str
         CSV formatted string (also written to file if filename provided)
+
+    Examples
+    --------
+    Export a pattern cut to CSV:
+
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> geom = pa.create_rectangular_array(8, 8, dx=0.5, dy=0.5)
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> weights = pa.steering_vector(k, geom.x, geom.y, theta0_deg=0, phi0_deg=0)
+    >>> theta_deg, E_plane, H_plane = pa.compute_pattern_cuts(
+    ...     geom.x, geom.y, weights, k
+    ... )
+    >>> csv_str = pa.export_pattern_csv(
+    ...     theta_deg, E_plane,
+    ...     angle_label='theta_deg',
+    ...     pattern_label='E_plane_dB',
+    ...     metadata={'array_size': '8x8', 'scan_angle': '0 deg'}
+    ... )
+
+    Save to file:
+
+    >>> # pa.export_pattern_csv(theta_deg, E_plane, filename='pattern.csv')
     """
     buffer = io.StringIO()
 

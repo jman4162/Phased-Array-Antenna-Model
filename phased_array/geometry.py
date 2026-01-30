@@ -136,6 +136,29 @@ def create_rectangular_array(
     -------
     geometry : ArrayGeometry
         Array geometry with element positions
+
+    Examples
+    --------
+    Create a 16x16 array with half-wavelength spacing:
+
+    >>> import phased_array as pa
+    >>> geom = pa.create_rectangular_array(16, 16, dx=0.5, dy=0.5)
+    >>> geom.n_elements
+    256
+    >>> geom.x.shape
+    (256,)
+
+    Create a 10x10 array at 10 GHz (3 cm wavelength):
+
+    >>> geom = pa.create_rectangular_array(10, 10, dx=0.5, dy=0.5, wavelength=0.03)
+    >>> geom.n_elements
+    100
+
+    Access element positions:
+
+    >>> geom = pa.create_rectangular_array(4, 4, dx=0.5, dy=0.5)
+    >>> geom.is_planar
+    True
     """
     # Convert spacing to meters
     dx_m = dx * wavelength
@@ -194,6 +217,24 @@ def create_triangular_array(
     Returns
     -------
     geometry : ArrayGeometry
+
+    Examples
+    --------
+    Create a triangular grid array (hexagonal packing):
+
+    >>> import phased_array as pa
+    >>> geom = pa.create_triangular_array(10, 10, dx=0.5)
+    >>> geom.n_elements  # Slightly fewer than 10x10 due to offset rows
+    95
+    >>> geom.is_planar
+    True
+
+    Triangular grids provide ~13% better packing efficiency:
+
+    >>> rect = pa.create_rectangular_array(10, 10, dx=0.5, dy=0.5)
+    >>> tri = pa.create_triangular_array(10, 10, dx=0.5)
+    >>> rect.n_elements > tri.n_elements  # Rect has more for same Nx, Ny
+    True
     """
     if dy is None:
         dy = dx * np.sqrt(3) / 2

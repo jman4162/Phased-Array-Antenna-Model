@@ -1,0 +1,1644 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>phased_array.beamforming &#8212; Phased Array Modeling</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../_static/documentation_options.js?v=872021ae"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=fd10adb8"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/phased_array/beamforming';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="1.2.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Phased Array Modeling</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/concepts.html">
+    Core Concepts
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../user_guide/geometry.html">
+    Array Geometries
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../user_guide/beamforming.html">
+    Beamforming
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../user_guide/impairments.html">
+    Impairments
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../user_guide/wideband.html">
+    Wideband Beamforming
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../user_guide/visualization.html">
+    Visualization
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../api/core.html">
+    Core Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../api/geometry.html">
+    Geometry Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../api/beamforming.html">
+    Beamforming Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../api/impairments.html">
+    Impairments Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../api/visualization.html">
+    Visualization Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../api/wideband.html">
+    Wideband Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../api/utils.html">
+    Utilities Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../api/export.html">
+    Export Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../cookbook/index.html">
+    Cookbook
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../cookbook/hardware_recipes.html">
+    Hardware Engineer Recipes
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../cookbook/systems_recipes.html">
+    Systems Engineer Recipes
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../cookbook/research_recipes.html">
+    Research Recipes
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../theory/index.html">
+    Theory Background
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../theory/fundamentals.html">
+    Array Fundamentals
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../theory/coordinate_systems.html">
+    Coordinate Systems
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../theory/tapering_theory.html">
+    Tapering Theory
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../troubleshooting.html">
+    Troubleshooting & FAQ
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../glossary.html">
+    Glossary
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jman4162/Phased-Array-Antenna-Model" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/phased-array-modeling/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-box fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/concepts.html">
+    Core Concepts
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../user_guide/geometry.html">
+    Array Geometries
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../user_guide/beamforming.html">
+    Beamforming
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../user_guide/impairments.html">
+    Impairments
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../user_guide/wideband.html">
+    Wideband Beamforming
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../user_guide/visualization.html">
+    Visualization
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/core.html">
+    Core Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/geometry.html">
+    Geometry Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/beamforming.html">
+    Beamforming Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/impairments.html">
+    Impairments Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/visualization.html">
+    Visualization Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/wideband.html">
+    Wideband Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/utils.html">
+    Utilities Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/export.html">
+    Export Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../cookbook/index.html">
+    Cookbook
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../cookbook/hardware_recipes.html">
+    Hardware Engineer Recipes
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../cookbook/systems_recipes.html">
+    Systems Engineer Recipes
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../cookbook/research_recipes.html">
+    Research Recipes
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../theory/index.html">
+    Theory Background
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../theory/fundamentals.html">
+    Array Fundamentals
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../theory/coordinate_systems.html">
+    Coordinate Systems
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../theory/tapering_theory.html">
+    Tapering Theory
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../troubleshooting.html">
+    Troubleshooting & FAQ
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../glossary.html">
+    Glossary
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jman4162/Phased-Array-Antenna-Model" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/phased-array-modeling/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-box fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">phased_array.beamforming</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for phased_array.beamforming</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Beamforming functions for phased arrays.</span>
+
+<span class="sd">Includes amplitude tapering, null steering, and multiple simultaneous beams.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">signal</span>
+
+<span class="kn">from</span> <span class="nn">.core</span> <span class="kn">import</span> <span class="n">steering_vector</span>
+<span class="kn">from</span> <span class="nn">.geometry</span> <span class="kn">import</span> <span class="n">ArrayGeometry</span>
+
+<span class="n">ArrayLike</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
+
+
+<span class="c1"># ============== Amplitude Tapering ==============</span>
+
+<div class="viewcode-block" id="taylor_taper_1d">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.taylor_taper_1d">[docs]</a>
+<span class="k">def</span> <span class="nf">taylor_taper_1d</span><span class="p">(</span>
+    <span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">sidelobe_dB</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">30.0</span><span class="p">,</span>
+    <span class="n">nbar</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generate 1D Taylor window for sidelobe control.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n : int</span>
+<span class="sd">        Number of elements</span>
+<span class="sd">    sidelobe_dB : float</span>
+<span class="sd">        Desired peak sidelobe level in dB (negative)</span>
+<span class="sd">    nbar : int</span>
+<span class="sd">        Number of nearly equal-level sidelobes</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    taper : ndarray</span>
+<span class="sd">        Amplitude taper weights (n,)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Use scipy&#39;s Taylor window</span>
+    <span class="k">return</span> <span class="n">signal</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">taylor</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">nbar</span><span class="o">=</span><span class="n">nbar</span><span class="p">,</span> <span class="n">sll</span><span class="o">=-</span><span class="n">sidelobe_dB</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="taylor_taper_2d">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.taylor_taper_2d">[docs]</a>
+<span class="k">def</span> <span class="nf">taylor_taper_2d</span><span class="p">(</span>
+    <span class="n">Nx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">Ny</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">sidelobe_dB</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">30.0</span><span class="p">,</span>
+    <span class="n">nbar</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generate 2D Taylor window (separable product).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Nx, Ny : int</span>
+<span class="sd">        Number of elements in x and y</span>
+<span class="sd">    sidelobe_dB : float</span>
+<span class="sd">        Desired peak sidelobe level in dB</span>
+<span class="sd">    nbar : int</span>
+<span class="sd">        Number of nearly equal-level sidelobes</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    taper : ndarray</span>
+<span class="sd">        2D amplitude taper (Nx, Ny), flattened row-major</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    Apply Taylor taper for -30 dB sidelobes:</span>
+
+<span class="sd">    &gt;&gt;&gt; import phased_array as pa</span>
+<span class="sd">    &gt;&gt;&gt; taper = pa.taylor_taper_2d(16, 16, sidelobe_dB=-30)</span>
+<span class="sd">    &gt;&gt;&gt; taper.shape</span>
+<span class="sd">    (256,)</span>
+
+<span class="sd">    Combine with steering weights:</span>
+
+<span class="sd">    &gt;&gt;&gt; geom = pa.create_rectangular_array(16, 16, dx=0.5, dy=0.5)</span>
+<span class="sd">    &gt;&gt;&gt; k = pa.wavelength_to_k(1.0)</span>
+<span class="sd">    &gt;&gt;&gt; weights = pa.steering_vector(k, geom.x, geom.y, theta0_deg=30, phi0_deg=0)</span>
+<span class="sd">    &gt;&gt;&gt; weights_tapered = weights * pa.taylor_taper_2d(16, 16, sidelobe_dB=-35)</span>
+
+<span class="sd">    Compare taper efficiency:</span>
+
+<span class="sd">    &gt;&gt;&gt; taper = pa.taylor_taper_2d(16, 16, sidelobe_dB=-40)</span>
+<span class="sd">    &gt;&gt;&gt; efficiency = pa.compute_taper_efficiency(taper)</span>
+<span class="sd">    &gt;&gt;&gt; efficiency &lt; 1.0  # Tapering reduces efficiency</span>
+<span class="sd">    True</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">tx</span> <span class="o">=</span> <span class="n">taylor_taper_1d</span><span class="p">(</span><span class="n">Nx</span><span class="p">,</span> <span class="n">sidelobe_dB</span><span class="p">,</span> <span class="n">nbar</span><span class="p">)</span>
+    <span class="n">ty</span> <span class="o">=</span> <span class="n">taylor_taper_1d</span><span class="p">(</span><span class="n">Ny</span><span class="p">,</span> <span class="n">sidelobe_dB</span><span class="p">,</span> <span class="n">nbar</span><span class="p">)</span>
+    <span class="n">taper_2d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">ty</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">taper_2d</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="chebyshev_taper_1d">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.chebyshev_taper_1d">[docs]</a>
+<span class="k">def</span> <span class="nf">chebyshev_taper_1d</span><span class="p">(</span>
+    <span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">sidelobe_dB</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">30.0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generate 1D Dolph-Chebyshev window for equi-ripple sidelobes.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n : int</span>
+<span class="sd">        Number of elements</span>
+<span class="sd">    sidelobe_dB : float</span>
+<span class="sd">        Desired sidelobe level in dB (negative)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    taper : ndarray</span>
+<span class="sd">        Amplitude taper weights</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">signal</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">chebwin</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">at</span><span class="o">=-</span><span class="n">sidelobe_dB</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="chebyshev_taper_2d">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.chebyshev_taper_2d">[docs]</a>
+<span class="k">def</span> <span class="nf">chebyshev_taper_2d</span><span class="p">(</span>
+    <span class="n">Nx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">Ny</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">sidelobe_dB</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">30.0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generate 2D Chebyshev window (separable product).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Nx, Ny : int</span>
+<span class="sd">        Number of elements</span>
+<span class="sd">    sidelobe_dB : float</span>
+<span class="sd">        Desired sidelobe level in dB</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    taper : ndarray</span>
+<span class="sd">        2D taper, flattened</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">tx</span> <span class="o">=</span> <span class="n">chebyshev_taper_1d</span><span class="p">(</span><span class="n">Nx</span><span class="p">,</span> <span class="n">sidelobe_dB</span><span class="p">)</span>
+    <span class="n">ty</span> <span class="o">=</span> <span class="n">chebyshev_taper_1d</span><span class="p">(</span><span class="n">Ny</span><span class="p">,</span> <span class="n">sidelobe_dB</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">ty</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="hamming_taper_1d">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.hamming_taper_1d">[docs]</a>
+<span class="k">def</span> <span class="nf">hamming_taper_1d</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate 1D Hamming window.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hamming</span><span class="p">(</span><span class="n">n</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="hamming_taper_2d">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.hamming_taper_2d">[docs]</a>
+<span class="k">def</span> <span class="nf">hamming_taper_2d</span><span class="p">(</span><span class="n">Nx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">Ny</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate 2D Hamming window.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hamming</span><span class="p">(</span><span class="n">Nx</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">hamming</span><span class="p">(</span><span class="n">Ny</span><span class="p">))</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="hanning_taper_1d">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.hanning_taper_1d">[docs]</a>
+<span class="k">def</span> <span class="nf">hanning_taper_1d</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate 1D Hanning (Hann) window.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hanning</span><span class="p">(</span><span class="n">n</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="hanning_taper_2d">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.hanning_taper_2d">[docs]</a>
+<span class="k">def</span> <span class="nf">hanning_taper_2d</span><span class="p">(</span><span class="n">Nx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">Ny</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate 2D Hanning window.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hanning</span><span class="p">(</span><span class="n">Nx</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">hanning</span><span class="p">(</span><span class="n">Ny</span><span class="p">))</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="cosine_taper_1d">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.cosine_taper_1d">[docs]</a>
+<span class="k">def</span> <span class="nf">cosine_taper_1d</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate 1D cosine (sine) window.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="cosine_taper_2d">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.cosine_taper_2d">[docs]</a>
+<span class="k">def</span> <span class="nf">cosine_taper_2d</span><span class="p">(</span><span class="n">Nx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">Ny</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate 2D cosine window.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">cosine_taper_1d</span><span class="p">(</span><span class="n">Nx</span><span class="p">),</span> <span class="n">cosine_taper_1d</span><span class="p">(</span><span class="n">Ny</span><span class="p">))</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="cosine_on_pedestal_taper_1d">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.cosine_on_pedestal_taper_1d">[docs]</a>
+<span class="k">def</span> <span class="nf">cosine_on_pedestal_taper_1d</span><span class="p">(</span>
+    <span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">pedestal</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generate 1D cosine-on-pedestal window.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n : int</span>
+<span class="sd">        Number of elements</span>
+<span class="sd">    pedestal : float</span>
+<span class="sd">        Minimum amplitude at edges (0 to 1)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    taper : ndarray</span>
+<span class="sd">        Amplitude taper</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pedestal</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">pedestal</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">t</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="cosine_on_pedestal_taper_2d">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.cosine_on_pedestal_taper_2d">[docs]</a>
+<span class="k">def</span> <span class="nf">cosine_on_pedestal_taper_2d</span><span class="p">(</span>
+    <span class="n">Nx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">Ny</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">pedestal</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate 2D cosine-on-pedestal window.&quot;&quot;&quot;</span>
+    <span class="n">tx</span> <span class="o">=</span> <span class="n">cosine_on_pedestal_taper_1d</span><span class="p">(</span><span class="n">Nx</span><span class="p">,</span> <span class="n">pedestal</span><span class="p">)</span>
+    <span class="n">ty</span> <span class="o">=</span> <span class="n">cosine_on_pedestal_taper_1d</span><span class="p">(</span><span class="n">Ny</span><span class="p">,</span> <span class="n">pedestal</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">ty</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="gaussian_taper_1d">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.gaussian_taper_1d">[docs]</a>
+<span class="k">def</span> <span class="nf">gaussian_taper_1d</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">sigma</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.4</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generate 1D Gaussian window.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n : int</span>
+<span class="sd">        Number of elements</span>
+<span class="sd">    sigma : float</span>
+<span class="sd">        Standard deviation as fraction of array (typical: 0.3-0.5)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    taper : ndarray</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="n">sigma</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="gaussian_taper_2d">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.gaussian_taper_2d">[docs]</a>
+<span class="k">def</span> <span class="nf">gaussian_taper_2d</span><span class="p">(</span><span class="n">Nx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">Ny</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">sigma</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.4</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate 2D Gaussian window.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">gaussian_taper_1d</span><span class="p">(</span><span class="n">Nx</span><span class="p">,</span> <span class="n">sigma</span><span class="p">),</span> <span class="n">gaussian_taper_1d</span><span class="p">(</span><span class="n">Ny</span><span class="p">,</span> <span class="n">sigma</span><span class="p">))</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="compute_taper_efficiency">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.compute_taper_efficiency">[docs]</a>
+<span class="k">def</span> <span class="nf">compute_taper_efficiency</span><span class="p">(</span><span class="n">taper</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute aperture efficiency for a taper.</span>
+
+<span class="sd">    Efficiency = (sum of weights)^2 / (N * sum of weights^2)</span>
+<span class="sd">    Uniform illumination gives 100% efficiency.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    taper : ndarray</span>
+<span class="sd">        Amplitude taper weights</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    efficiency : float</span>
+<span class="sd">        Aperture efficiency (0 to 1)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">taper</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">taper</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">n</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">taper</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="compute_taper_directivity_loss">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.compute_taper_directivity_loss">[docs]</a>
+<span class="k">def</span> <span class="nf">compute_taper_directivity_loss</span><span class="p">(</span><span class="n">taper</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute directivity loss due to tapering in dB.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    taper : ndarray</span>
+<span class="sd">        Amplitude taper weights</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    loss_dB : float</span>
+<span class="sd">        Directivity loss relative to uniform illumination (negative or zero)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">efficiency</span> <span class="o">=</span> <span class="n">compute_taper_efficiency</span><span class="p">(</span><span class="n">taper</span><span class="p">)</span>
+    <span class="k">return</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">efficiency</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="apply_taper_to_geometry">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.apply_taper_to_geometry">[docs]</a>
+<span class="k">def</span> <span class="nf">apply_taper_to_geometry</span><span class="p">(</span>
+    <span class="n">geometry</span><span class="p">:</span> <span class="n">ArrayGeometry</span><span class="p">,</span>
+    <span class="n">taper_func</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;taylor&#39;</span><span class="p">,</span>
+    <span class="n">Nx</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">Ny</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">taper_kwargs</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Apply an amplitude taper based on element positions.</span>
+
+<span class="sd">    For non-rectangular arrays, uses radial distance from center.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">        Array geometry</span>
+<span class="sd">    taper_func : str</span>
+<span class="sd">        &#39;taylor&#39;, &#39;chebyshev&#39;, &#39;hamming&#39;, &#39;hanning&#39;, &#39;gaussian&#39;, &#39;cosine&#39;</span>
+<span class="sd">    Nx, Ny : int, optional</span>
+<span class="sd">        For rectangular arrays, specify dimensions</span>
+<span class="sd">    **taper_kwargs</span>
+<span class="sd">        Additional arguments for the taper function</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    taper : ndarray</span>
+<span class="sd">        Amplitude weights for each element</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">n_elements</span>
+
+    <span class="c1"># If Nx, Ny provided, use 2D separable taper</span>
+    <span class="k">if</span> <span class="n">Nx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">Ny</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">taper_func</span> <span class="o">==</span> <span class="s1">&#39;taylor&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">taylor_taper_2d</span><span class="p">(</span><span class="n">Nx</span><span class="p">,</span> <span class="n">Ny</span><span class="p">,</span> <span class="o">**</span><span class="n">taper_kwargs</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">taper_func</span> <span class="o">==</span> <span class="s1">&#39;chebyshev&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">chebyshev_taper_2d</span><span class="p">(</span><span class="n">Nx</span><span class="p">,</span> <span class="n">Ny</span><span class="p">,</span> <span class="o">**</span><span class="n">taper_kwargs</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">taper_func</span> <span class="o">==</span> <span class="s1">&#39;hamming&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">hamming_taper_2d</span><span class="p">(</span><span class="n">Nx</span><span class="p">,</span> <span class="n">Ny</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">taper_func</span> <span class="o">==</span> <span class="s1">&#39;hanning&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">hanning_taper_2d</span><span class="p">(</span><span class="n">Nx</span><span class="p">,</span> <span class="n">Ny</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">taper_func</span> <span class="o">==</span> <span class="s1">&#39;gaussian&#39;</span><span class="p">:</span>
+            <span class="n">sigma</span> <span class="o">=</span> <span class="n">taper_kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">gaussian_taper_2d</span><span class="p">(</span><span class="n">Nx</span><span class="p">,</span> <span class="n">Ny</span><span class="p">,</span> <span class="n">sigma</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">taper_func</span> <span class="o">==</span> <span class="s1">&#39;cosine&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">cosine_taper_2d</span><span class="p">(</span><span class="n">Nx</span><span class="p">,</span> <span class="n">Ny</span><span class="p">)</span>
+
+    <span class="c1"># For irregular arrays, use radial taper</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">r_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mf">1.0</span>
+    <span class="n">r_norm</span> <span class="o">=</span> <span class="n">r</span> <span class="o">/</span> <span class="n">r_max</span>  <span class="c1"># 0 at center, 1 at edge</span>
+
+    <span class="k">if</span> <span class="n">taper_func</span> <span class="o">==</span> <span class="s1">&#39;gaussian&#39;</span><span class="p">:</span>
+        <span class="n">sigma</span> <span class="o">=</span> <span class="n">taper_kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">r_norm</span> <span class="o">/</span> <span class="n">sigma</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">taper_func</span> <span class="o">==</span> <span class="s1">&#39;cosine&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">r_norm</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">taper_func</span> <span class="o">==</span> <span class="s1">&#39;taylor&#39;</span><span class="p">:</span>
+        <span class="c1"># Approximate Taylor with a polynomial</span>
+        <span class="n">sll</span> <span class="o">=</span> <span class="o">-</span><span class="n">taper_kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;sidelobe_dB&#39;</span><span class="p">,</span> <span class="o">-</span><span class="mf">30.0</span><span class="p">)</span>
+        <span class="c1"># Simple approximation: cosine-squared on pedestal</span>
+        <span class="n">pedestal</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="n">sll</span> <span class="o">/</span> <span class="mi">40</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pedestal</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">pedestal</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">r_norm</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Default to uniform</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># ============== Null Steering ==============</span>
+
+<div class="viewcode-block" id="null_steering_projection">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.null_steering_projection">[docs]</a>
+<span class="k">def</span> <span class="nf">null_steering_projection</span><span class="p">(</span>
+    <span class="n">geometry</span><span class="p">:</span> <span class="n">ArrayGeometry</span><span class="p">,</span>
+    <span class="n">k</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">theta_main_deg</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">phi_main_deg</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">null_directions</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
+    <span class="n">initial_weights</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute weights with nulls using orthogonal projection.</span>
+
+<span class="sd">    Projects the desired weight vector onto the null-space of the</span>
+<span class="sd">    steering vectors for the null directions.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">        Array geometry</span>
+<span class="sd">    k : float</span>
+<span class="sd">        Wavenumber</span>
+<span class="sd">    theta_main_deg : float</span>
+<span class="sd">        Main beam theta in degrees</span>
+<span class="sd">    phi_main_deg : float</span>
+<span class="sd">        Main beam phi in degrees</span>
+<span class="sd">    null_directions : list of (theta_deg, phi_deg) tuples</span>
+<span class="sd">        Directions for placing nulls</span>
+<span class="sd">    initial_weights : ndarray, optional</span>
+<span class="sd">        Starting weights (default: uniform with steering)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    weights : ndarray</span>
+<span class="sd">        Complex weights with nulls placed</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    Place nulls at specific interference directions:</span>
+
+<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">    &gt;&gt;&gt; import phased_array as pa</span>
+<span class="sd">    &gt;&gt;&gt; geom = pa.create_rectangular_array(16, 16, dx=0.5, dy=0.5)</span>
+<span class="sd">    &gt;&gt;&gt; k = pa.wavelength_to_k(1.0)</span>
+<span class="sd">    &gt;&gt;&gt; # Main beam at 30 deg, nulls at 45 and 60 degrees</span>
+<span class="sd">    &gt;&gt;&gt; null_dirs = [(45, 0), (60, 0)]</span>
+<span class="sd">    &gt;&gt;&gt; weights = pa.null_steering_projection(</span>
+<span class="sd">    ...     geom, k, theta_main_deg=30, phi_main_deg=0,</span>
+<span class="sd">    ...     null_directions=null_dirs</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; weights.shape</span>
+<span class="sd">    (256,)</span>
+
+<span class="sd">    Verify null depth:</span>
+
+<span class="sd">    &gt;&gt;&gt; null_depth = pa.compute_null_depth(geom, k, weights, null_dirs[0])</span>
+<span class="sd">    &gt;&gt;&gt; null_depth &lt; -30  # Deep null achieved</span>
+<span class="sd">    True</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">n_elements</span>
+
+    <span class="c1"># Initial steering weights</span>
+    <span class="k">if</span> <span class="n">initial_weights</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">initial_weights</span> <span class="o">=</span> <span class="n">steering_vector</span><span class="p">(</span>
+            <span class="n">k</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+            <span class="n">theta_main_deg</span><span class="p">,</span> <span class="n">phi_main_deg</span><span class="p">,</span>
+            <span class="n">geometry</span><span class="o">.</span><span class="n">z</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">null_directions</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">initial_weights</span>
+
+    <span class="c1"># Build constraint matrix (columns are steering vectors for null directions)</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">null_directions</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">theta_null</span><span class="p">,</span> <span class="n">phi_null</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">null_directions</span><span class="p">):</span>
+        <span class="n">C</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">steering_vector</span><span class="p">(</span>
+            <span class="n">k</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+            <span class="n">theta_null</span><span class="p">,</span> <span class="n">phi_null</span><span class="p">,</span>
+            <span class="n">geometry</span><span class="o">.</span><span class="n">z</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Project initial weights onto null space of C</span>
+    <span class="c1"># P_null = I - C(C^H C)^-1 C^H</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">CTC_inv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">C</span><span class="p">)</span>
+        <span class="n">P_null</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">-</span> <span class="n">C</span> <span class="o">@</span> <span class="n">CTC_inv</span> <span class="o">@</span> <span class="n">C</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">P_null</span> <span class="o">@</span> <span class="n">initial_weights</span>
+    <span class="k">except</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span>
+        <span class="c1"># If matrix is singular, use pseudoinverse</span>
+        <span class="n">P_null</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">-</span> <span class="n">C</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">C</span><span class="p">)</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">P_null</span> <span class="o">@</span> <span class="n">initial_weights</span>
+
+    <span class="k">return</span> <span class="n">weights</span></div>
+
+
+
+<div class="viewcode-block" id="null_steering_lcmv">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.null_steering_lcmv">[docs]</a>
+<span class="k">def</span> <span class="nf">null_steering_lcmv</span><span class="p">(</span>
+    <span class="n">geometry</span><span class="p">:</span> <span class="n">ArrayGeometry</span><span class="p">,</span>
+    <span class="n">k</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">constraints</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">complex</span><span class="p">]],</span>
+    <span class="n">noise_covariance</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    LCMV (Linearly Constrained Minimum Variance) beamformer.</span>
+
+<span class="sd">    Minimizes output power subject to linear constraints on response</span>
+<span class="sd">    in specified directions.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">        Array geometry</span>
+<span class="sd">    k : float</span>
+<span class="sd">        Wavenumber</span>
+<span class="sd">    constraints : list of (theta_deg, phi_deg, response) tuples</span>
+<span class="sd">        Each constraint specifies (direction, desired complex response)</span>
+<span class="sd">        Use response=1+0j for unity gain, response=0 for null</span>
+<span class="sd">    noise_covariance : ndarray, optional</span>
+<span class="sd">        N x N noise covariance matrix (default: identity)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    weights : ndarray</span>
+<span class="sd">        Complex LCMV weights</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">n_elements</span>
+
+    <span class="k">if</span> <span class="n">noise_covariance</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="n">noise_covariance</span>
+
+    <span class="c1"># Build constraint matrix and response vector</span>
+    <span class="n">n_constraints</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">constraints</span><span class="p">)</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="n">n_constraints</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_constraints</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">response</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">constraints</span><span class="p">):</span>
+        <span class="n">C</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">steering_vector</span><span class="p">(</span>
+            <span class="n">k</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+            <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">z</span>
+        <span class="p">)</span>
+        <span class="n">f</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">response</span>
+
+    <span class="c1"># LCMV solution: w = R^-1 C (C^H R^-1 C)^-1 f</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">R_inv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">R</span><span class="p">)</span>
+        <span class="n">R_inv_C</span> <span class="o">=</span> <span class="n">R_inv</span> <span class="o">@</span> <span class="n">C</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">R_inv_C</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">R_inv_C</span><span class="p">)</span> <span class="o">@</span> <span class="n">f</span>
+    <span class="k">except</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span>
+        <span class="c1"># Use pseudoinverse if singular</span>
+        <span class="n">R_inv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">R</span><span class="p">)</span>
+        <span class="n">R_inv_C</span> <span class="o">=</span> <span class="n">R_inv</span> <span class="o">@</span> <span class="n">C</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">R_inv_C</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">R_inv_C</span><span class="p">)</span> <span class="o">@</span> <span class="n">f</span>
+
+    <span class="k">return</span> <span class="n">weights</span></div>
+
+
+
+<div class="viewcode-block" id="compute_null_depth">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.compute_null_depth">[docs]</a>
+<span class="k">def</span> <span class="nf">compute_null_depth</span><span class="p">(</span>
+    <span class="n">weights</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">geometry</span><span class="p">:</span> <span class="n">ArrayGeometry</span><span class="p">,</span>
+    <span class="n">k</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">theta_deg</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">phi_deg</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">theta_main_deg</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">phi_main_deg</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute null depth relative to main beam in dB.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    weights : ndarray</span>
+<span class="sd">        Array weights</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">        Array geometry</span>
+<span class="sd">    k : float</span>
+<span class="sd">        Wavenumber</span>
+<span class="sd">    theta_deg, phi_deg : float</span>
+<span class="sd">        Null direction</span>
+<span class="sd">    theta_main_deg, phi_main_deg : float</span>
+<span class="sd">        Main beam direction</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    depth_dB : float</span>
+<span class="sd">        Null depth (negative, lower is deeper)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">.core</span> <span class="kn">import</span> <span class="n">array_factor_vectorized</span>
+
+    <span class="c1"># Response at null</span>
+    <span class="n">theta_null</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">theta_deg</span><span class="p">)]])</span>
+    <span class="n">phi_null</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">phi_deg</span><span class="p">)]])</span>
+    <span class="n">AF_null</span> <span class="o">=</span> <span class="n">array_factor_vectorized</span><span class="p">(</span>
+        <span class="n">theta_null</span><span class="p">,</span> <span class="n">phi_null</span><span class="p">,</span>
+        <span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">z</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Response at main beam</span>
+    <span class="n">theta_main</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">theta_main_deg</span><span class="p">)]])</span>
+    <span class="n">phi_main</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">phi_main_deg</span><span class="p">)]])</span>
+    <span class="n">AF_main</span> <span class="o">=</span> <span class="n">array_factor_vectorized</span><span class="p">(</span>
+        <span class="n">theta_main</span><span class="p">,</span> <span class="n">phi_main</span><span class="p">,</span>
+        <span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">z</span>
+    <span class="p">)</span>
+
+    <span class="n">ratio</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">AF_null</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">AF_main</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">ratio</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">20</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">ratio</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mf">200.0</span>  <span class="c1"># Very deep null</span></div>
+
+
+
+<span class="c1"># ============== Multiple Simultaneous Beams ==============</span>
+
+<div class="viewcode-block" id="multi_beam_weights_superposition">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.multi_beam_weights_superposition">[docs]</a>
+<span class="k">def</span> <span class="nf">multi_beam_weights_superposition</span><span class="p">(</span>
+    <span class="n">geometry</span><span class="p">:</span> <span class="n">ArrayGeometry</span><span class="p">,</span>
+    <span class="n">k</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">beam_directions</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
+    <span class="n">amplitudes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">tapers</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute weights for multiple simultaneous beams via superposition.</span>
+
+<span class="sd">    The weights are a weighted sum of individual steering vectors.</span>
+<span class="sd">    This creates multiple beams but with reduced gain per beam.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">        Array geometry</span>
+<span class="sd">    k : float</span>
+<span class="sd">        Wavenumber</span>
+<span class="sd">    beam_directions : list of (theta_deg, phi_deg) tuples</span>
+<span class="sd">        Directions for each beam</span>
+<span class="sd">    amplitudes : list of float, optional</span>
+<span class="sd">        Relative amplitude for each beam (default: equal)</span>
+<span class="sd">    tapers : list of ndarray, optional</span>
+<span class="sd">        Amplitude taper for each beam (default: uniform)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    weights : ndarray</span>
+<span class="sd">        Combined complex weights</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n_beams</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">beam_directions</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">amplitudes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">amplitudes</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_beams</span>
+
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">n_elements</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">beam_directions</span><span class="p">):</span>
+        <span class="n">sv</span> <span class="o">=</span> <span class="n">steering_vector</span><span class="p">(</span>
+            <span class="n">k</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+            <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">z</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">tapers</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">tapers</span><span class="p">):</span>
+            <span class="n">sv</span> <span class="o">=</span> <span class="n">sv</span> <span class="o">*</span> <span class="n">tapers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+        <span class="n">weights</span> <span class="o">+=</span> <span class="n">amplitudes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">sv</span>
+
+    <span class="k">return</span> <span class="n">weights</span></div>
+
+
+
+<div class="viewcode-block" id="multi_beam_weights_orthogonal">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.multi_beam_weights_orthogonal">[docs]</a>
+<span class="k">def</span> <span class="nf">multi_beam_weights_orthogonal</span><span class="p">(</span>
+    <span class="n">geometry</span><span class="p">:</span> <span class="n">ArrayGeometry</span><span class="p">,</span>
+    <span class="n">k</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">beam_directions</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute separate weight vectors for orthogonal digital beamforming.</span>
+
+<span class="sd">    Each beam has its own weight vector, allowing digital combination</span>
+<span class="sd">    with no loss per beam (requires N receive channels).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">        Array geometry</span>
+<span class="sd">    k : float</span>
+<span class="sd">        Wavenumber</span>
+<span class="sd">    beam_directions : list of (theta_deg, phi_deg) tuples</span>
+<span class="sd">        Directions for each beam</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    weight_vectors : list of ndarray</span>
+<span class="sd">        List of complex weight vectors, one per beam</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">weight_vectors</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span> <span class="ow">in</span> <span class="n">beam_directions</span><span class="p">:</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">steering_vector</span><span class="p">(</span>
+            <span class="n">k</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+            <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">z</span>
+        <span class="p">)</span>
+        <span class="n">weight_vectors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">weight_vectors</span></div>
+
+
+
+<div class="viewcode-block" id="compute_beam_isolation">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.compute_beam_isolation">[docs]</a>
+<span class="k">def</span> <span class="nf">compute_beam_isolation</span><span class="p">(</span>
+    <span class="n">weights_list</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+    <span class="n">geometry</span><span class="p">:</span> <span class="n">ArrayGeometry</span><span class="p">,</span>
+    <span class="n">k</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">beam_directions</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute isolation between multiple beams.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    weights_list : list of ndarray</span>
+<span class="sd">        Weight vector for each beam</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">        Array geometry</span>
+<span class="sd">    k : float</span>
+<span class="sd">        Wavenumber</span>
+<span class="sd">    beam_directions : list of (theta_deg, phi_deg)</span>
+<span class="sd">        Direction of each beam</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    isolation_matrix : ndarray</span>
+<span class="sd">        N_beams x N_beams matrix of isolation in dB</span>
+<span class="sd">        Diagonal is 0 dB, off-diagonal is negative (isolation)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">.core</span> <span class="kn">import</span> <span class="n">array_factor_vectorized</span>
+
+    <span class="n">n_beams</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">weights_list</span><span class="p">)</span>
+    <span class="n">isolation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_beams</span><span class="p">,</span> <span class="n">n_beams</span><span class="p">))</span>
+
+    <span class="c1"># Compute response of each beam&#39;s weights at each beam&#39;s direction</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_beams</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_beams</span><span class="p">):</span>
+            <span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">beam_directions</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">])]])</span>
+            <span class="n">phi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">beam_directions</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">1</span><span class="p">])]])</span>
+
+            <span class="n">AF</span> <span class="o">=</span> <span class="n">array_factor_vectorized</span><span class="p">(</span>
+                <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span>
+                <span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+                <span class="n">weights_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">k</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">z</span>
+            <span class="p">)</span>
+
+            <span class="n">AF_main</span> <span class="o">=</span> <span class="n">array_factor_vectorized</span><span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">beam_directions</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">])]]),</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">beam_directions</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">])]]),</span>
+                <span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+                <span class="n">weights_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">k</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">z</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">AF_main</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">ratio</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">AF</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">AF_main</span><span class="p">)</span>
+                <span class="n">isolation</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="mi">20</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">ratio</span><span class="o">.</span><span class="n">item</span><span class="p">())</span> <span class="k">if</span> <span class="n">ratio</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="o">-</span><span class="mi">200</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">isolation</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">200</span>
+
+    <span class="k">return</span> <span class="n">isolation</span></div>
+
+
+
+<div class="viewcode-block" id="monopulse_weights">
+<a class="viewcode-back" href="../../api/beamforming.html#phased_array.monopulse_weights">[docs]</a>
+<span class="k">def</span> <span class="nf">monopulse_weights</span><span class="p">(</span>
+    <span class="n">geometry</span><span class="p">:</span> <span class="n">ArrayGeometry</span><span class="p">,</span>
+    <span class="n">k</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">theta0_deg</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">phi0_deg</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;sum&#39;</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute monopulse tracking weights.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">        Array geometry</span>
+<span class="sd">    k : float</span>
+<span class="sd">        Wavenumber</span>
+<span class="sd">    theta0_deg : float</span>
+<span class="sd">        Nominal beam direction theta</span>
+<span class="sd">    phi0_deg : float</span>
+<span class="sd">        Nominal beam direction phi</span>
+<span class="sd">    mode : str</span>
+<span class="sd">        &#39;sum&#39; - sum pattern (normal beam)</span>
+<span class="sd">        &#39;delta_az&#39; - azimuth difference pattern</span>
+<span class="sd">        &#39;delta_el&#39; - elevation difference pattern</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    weights : ndarray</span>
+<span class="sd">        Complex weights for the specified mode</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Base steering vector</span>
+    <span class="n">sv</span> <span class="o">=</span> <span class="n">steering_vector</span><span class="p">(</span>
+        <span class="n">k</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+        <span class="n">theta0_deg</span><span class="p">,</span> <span class="n">phi0_deg</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">z</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;sum&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">sv</span>
+
+    <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;delta_az&#39;</span><span class="p">:</span>
+        <span class="c1"># Difference in azimuth: flip sign for half the array in x</span>
+        <span class="n">sign</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">sign</span><span class="p">[</span><span class="n">sign</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1"># Handle elements at x=0</span>
+        <span class="k">return</span> <span class="n">sv</span> <span class="o">*</span> <span class="n">sign</span>
+
+    <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;delta_el&#39;</span><span class="p">:</span>
+        <span class="c1"># Difference in elevation: flip sign for half the array in y</span>
+        <span class="n">sign</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
+        <span class="n">sign</span><span class="p">[</span><span class="n">sign</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">sv</span> <span class="o">*</span> <span class="n">sign</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown monopulse mode: </span><span class="si">{</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, John Hodge.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.7.
+    <br/>
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

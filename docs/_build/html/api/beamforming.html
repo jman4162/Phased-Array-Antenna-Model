@@ -1,0 +1,1425 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Beamforming Module &#8212; Phased Array Modeling</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../_static/documentation_options.js?v=872021ae"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=fd10adb8"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/beamforming';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Impairments Module" href="impairments.html" />
+    <link rel="prev" title="Geometry Module" href="geometry.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="1.2.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Phased Array Modeling</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/concepts.html">
+    Core Concepts
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../user_guide/geometry.html">
+    Array Geometries
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../user_guide/beamforming.html">
+    Beamforming
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../user_guide/impairments.html">
+    Impairments
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../user_guide/wideband.html">
+    Wideband Beamforming
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../user_guide/visualization.html">
+    Visualization
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="core.html">
+    Core Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="geometry.html">
+    Geometry Module
+  </a>
+</li>
+
+
+<li class=" current active">
+  <a class="nav-link dropdown-item nav-internal" href="#">
+    Beamforming Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="impairments.html">
+    Impairments Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="visualization.html">
+    Visualization Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="wideband.html">
+    Wideband Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="utils.html">
+    Utilities Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="export.html">
+    Export Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../cookbook/index.html">
+    Cookbook
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../cookbook/hardware_recipes.html">
+    Hardware Engineer Recipes
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../cookbook/systems_recipes.html">
+    Systems Engineer Recipes
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../cookbook/research_recipes.html">
+    Research Recipes
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../theory/index.html">
+    Theory Background
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../theory/fundamentals.html">
+    Array Fundamentals
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../theory/coordinate_systems.html">
+    Coordinate Systems
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../theory/tapering_theory.html">
+    Tapering Theory
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../troubleshooting.html">
+    Troubleshooting & FAQ
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../glossary.html">
+    Glossary
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jman4162/Phased-Array-Antenna-Model" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/phased-array-modeling/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-box fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/concepts.html">
+    Core Concepts
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide/geometry.html">
+    Array Geometries
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide/beamforming.html">
+    Beamforming
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide/impairments.html">
+    Impairments
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide/wideband.html">
+    Wideband Beamforming
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide/visualization.html">
+    Visualization
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="core.html">
+    Core Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="geometry.html">
+    Geometry Module
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
+    Beamforming Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="impairments.html">
+    Impairments Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="visualization.html">
+    Visualization Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="wideband.html">
+    Wideband Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="utils.html">
+    Utilities Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="export.html">
+    Export Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../cookbook/index.html">
+    Cookbook
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../cookbook/hardware_recipes.html">
+    Hardware Engineer Recipes
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../cookbook/systems_recipes.html">
+    Systems Engineer Recipes
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../cookbook/research_recipes.html">
+    Research Recipes
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../theory/index.html">
+    Theory Background
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../theory/fundamentals.html">
+    Array Fundamentals
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../theory/coordinate_systems.html">
+    Coordinate Systems
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../theory/tapering_theory.html">
+    Tapering Theory
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../troubleshooting.html">
+    Troubleshooting & FAQ
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../glossary.html">
+    Glossary
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jman4162/Phased-Array-Antenna-Model" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/phased-array-modeling/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-box fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"></div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">API Reference</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Beamforming Module</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="module-phased_array.beamforming">
+<span id="beamforming-module"></span><h1>Beamforming Module<a class="headerlink" href="#module-phased_array.beamforming" title="Link to this heading">#</a></h1>
+<p>The beamforming module provides amplitude tapering functions for sidelobe
+control, null steering for interference rejection, and multi-beam synthesis.</p>
+<section id="amplitude-tapers-1d">
+<h2>Amplitude Tapers (1D)<a class="headerlink" href="#amplitude-tapers-1d" title="Link to this heading">#</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.taylor_taper_1d">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">taylor_taper_1d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sidelobe_dB</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-30.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nbar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#taylor_taper_1d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.taylor_taper_1d" title="Link to this definition">#</a></dt>
+<dd><p>Generate 1D Taylor window for sidelobe control.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Number of elements</p></li>
+<li><p><strong>sidelobe_dB</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Desired peak sidelobe level in dB (negative)</p></li>
+<li><p><strong>nbar</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Number of nearly equal-level sidelobes</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>taper</strong> – Amplitude taper weights (n,)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.chebyshev_taper_1d">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">chebyshev_taper_1d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sidelobe_dB</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-30.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#chebyshev_taper_1d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.chebyshev_taper_1d" title="Link to this definition">#</a></dt>
+<dd><p>Generate 1D Dolph-Chebyshev window for equi-ripple sidelobes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Number of elements</p></li>
+<li><p><strong>sidelobe_dB</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Desired sidelobe level in dB (negative)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>taper</strong> – Amplitude taper weights</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.hamming_taper_1d">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">hamming_taper_1d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#hamming_taper_1d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.hamming_taper_1d" title="Link to this definition">#</a></dt>
+<dd><p>Generate 1D Hamming window.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.hanning_taper_1d">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">hanning_taper_1d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#hanning_taper_1d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.hanning_taper_1d" title="Link to this definition">#</a></dt>
+<dd><p>Generate 1D Hanning (Hann) window.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.cosine_taper_1d">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">cosine_taper_1d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#cosine_taper_1d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.cosine_taper_1d" title="Link to this definition">#</a></dt>
+<dd><p>Generate 1D cosine (sine) window.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.cosine_on_pedestal_taper_1d">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">cosine_on_pedestal_taper_1d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pedestal</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#cosine_on_pedestal_taper_1d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.cosine_on_pedestal_taper_1d" title="Link to this definition">#</a></dt>
+<dd><p>Generate 1D cosine-on-pedestal window.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Number of elements</p></li>
+<li><p><strong>pedestal</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Minimum amplitude at edges (0 to 1)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>taper</strong> – Amplitude taper</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.gaussian_taper_1d">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">gaussian_taper_1d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.4</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#gaussian_taper_1d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.gaussian_taper_1d" title="Link to this definition">#</a></dt>
+<dd><p>Generate 1D Gaussian window.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Number of elements</p></li>
+<li><p><strong>sigma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Standard deviation as fraction of array (typical: 0.3-0.5)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>taper</strong></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="amplitude-tapers-2d">
+<h2>Amplitude Tapers (2D)<a class="headerlink" href="#amplitude-tapers-2d" title="Link to this heading">#</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.taylor_taper_2d">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">taylor_taper_2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Nx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Ny</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sidelobe_dB</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-30.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nbar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#taylor_taper_2d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.taylor_taper_2d" title="Link to this definition">#</a></dt>
+<dd><p>Generate 2D Taylor window (separable product).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>Nx</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Number of elements in x and y</p></li>
+<li><p><strong>Ny</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Number of elements in x and y</p></li>
+<li><p><strong>sidelobe_dB</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Desired peak sidelobe level in dB</p></li>
+<li><p><strong>nbar</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Number of nearly equal-level sidelobes</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>taper</strong> – 2D amplitude taper (Nx, Ny), flattened row-major</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></p>
+</dd>
+</dl>
+<div class="admonition-examples admonition">
+<p class="admonition-title">Examples</p>
+<p>Apply Taylor taper for -30 dB sidelobes:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">phased_array</span> <span class="k">as</span> <span class="nn">pa</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">taper</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">taylor_taper_2d</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">sidelobe_dB</span><span class="o">=-</span><span class="mi">30</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">taper</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">(256,)</span>
+</pre></div>
+</div>
+<p>Combine with steering weights:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">geom</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">create_rectangular_array</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">k</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">wavelength_to_k</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">weights</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">steering_vector</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geom</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">theta0_deg</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">phi0_deg</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">weights_tapered</span> <span class="o">=</span> <span class="n">weights</span> <span class="o">*</span> <span class="n">pa</span><span class="o">.</span><span class="n">taylor_taper_2d</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">sidelobe_dB</span><span class="o">=-</span><span class="mi">35</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Compare taper efficiency:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">taper</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">taylor_taper_2d</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">sidelobe_dB</span><span class="o">=-</span><span class="mi">40</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">efficiency</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">compute_taper_efficiency</span><span class="p">(</span><span class="n">taper</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">efficiency</span> <span class="o">&lt;</span> <span class="mf">1.0</span>  <span class="c1"># Tapering reduces efficiency</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.chebyshev_taper_2d">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">chebyshev_taper_2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Nx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Ny</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sidelobe_dB</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-30.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#chebyshev_taper_2d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.chebyshev_taper_2d" title="Link to this definition">#</a></dt>
+<dd><p>Generate 2D Chebyshev window (separable product).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>Nx</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Number of elements</p></li>
+<li><p><strong>Ny</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Number of elements</p></li>
+<li><p><strong>sidelobe_dB</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Desired sidelobe level in dB</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>taper</strong> – 2D taper, flattened</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.hamming_taper_2d">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">hamming_taper_2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Nx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Ny</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#hamming_taper_2d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.hamming_taper_2d" title="Link to this definition">#</a></dt>
+<dd><p>Generate 2D Hamming window.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.hanning_taper_2d">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">hanning_taper_2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Nx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Ny</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#hanning_taper_2d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.hanning_taper_2d" title="Link to this definition">#</a></dt>
+<dd><p>Generate 2D Hanning window.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.cosine_taper_2d">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">cosine_taper_2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Nx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Ny</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#cosine_taper_2d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.cosine_taper_2d" title="Link to this definition">#</a></dt>
+<dd><p>Generate 2D cosine window.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.cosine_on_pedestal_taper_2d">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">cosine_on_pedestal_taper_2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Nx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Ny</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pedestal</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#cosine_on_pedestal_taper_2d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.cosine_on_pedestal_taper_2d" title="Link to this definition">#</a></dt>
+<dd><p>Generate 2D cosine-on-pedestal window.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.gaussian_taper_2d">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">gaussian_taper_2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Nx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Ny</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.4</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#gaussian_taper_2d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.gaussian_taper_2d" title="Link to this definition">#</a></dt>
+<dd><p>Generate 2D Gaussian window.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+</section>
+<section id="taper-analysis">
+<h2>Taper Analysis<a class="headerlink" href="#taper-analysis" title="Link to this heading">#</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.compute_taper_efficiency">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">compute_taper_efficiency</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">taper</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#compute_taper_efficiency"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.compute_taper_efficiency" title="Link to this definition">#</a></dt>
+<dd><p>Compute aperture efficiency for a taper.</p>
+<p>Efficiency = (sum of weights)^2 / (N * sum of weights^2)
+Uniform illumination gives 100% efficiency.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>taper</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>) – Amplitude taper weights</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>efficiency</strong> – Aperture efficiency (0 to 1)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.compute_taper_directivity_loss">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">compute_taper_directivity_loss</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">taper</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#compute_taper_directivity_loss"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.compute_taper_directivity_loss" title="Link to this definition">#</a></dt>
+<dd><p>Compute directivity loss due to tapering in dB.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>taper</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>) – Amplitude taper weights</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>loss_dB</strong> – Directivity loss relative to uniform illumination (negative or zero)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.apply_taper_to_geometry">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">apply_taper_to_geometry</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geometry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">taper_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'taylor'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Nx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Ny</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">taper_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#apply_taper_to_geometry"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.apply_taper_to_geometry" title="Link to this definition">#</a></dt>
+<dd><p>Apply an amplitude taper based on element positions.</p>
+<p>For non-rectangular arrays, uses radial distance from center.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>geometry</strong> (<a class="reference internal" href="geometry.html#phased_array.ArrayGeometry" title="phased_array.ArrayGeometry"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArrayGeometry</span></code></a>) – Array geometry</p></li>
+<li><p><strong>taper_func</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – ‘taylor’, ‘chebyshev’, ‘hamming’, ‘hanning’, ‘gaussian’, ‘cosine’</p></li>
+<li><p><strong>Nx</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>, <em>optional</em>) – For rectangular arrays, specify dimensions</p></li>
+<li><p><strong>Ny</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>, <em>optional</em>) – For rectangular arrays, specify dimensions</p></li>
+<li><p><strong>**taper_kwargs</strong> – Additional arguments for the taper function</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>taper</strong> – Amplitude weights for each element</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="null-steering">
+<h2>Null Steering<a class="headerlink" href="#null-steering" title="Link to this heading">#</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.null_steering_projection">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">null_steering_projection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geometry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta_main_deg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi_main_deg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">null_directions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_weights</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#null_steering_projection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.null_steering_projection" title="Link to this definition">#</a></dt>
+<dd><p>Compute weights with nulls using orthogonal projection.</p>
+<p>Projects the desired weight vector onto the null-space of the
+steering vectors for the null directions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>geometry</strong> (<a class="reference internal" href="geometry.html#phased_array.ArrayGeometry" title="phased_array.ArrayGeometry"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArrayGeometry</span></code></a>) – Array geometry</p></li>
+<li><p><strong>k</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Wavenumber</p></li>
+<li><p><strong>theta_main_deg</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Main beam theta in degrees</p></li>
+<li><p><strong>phi_main_deg</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Main beam phi in degrees</p></li>
+<li><p><strong>null_directions</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a> of <code class="xref py py-class docutils literal notranslate"><span class="pre">(theta_deg</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">phi_deg)</span> <span class="pre">tuples</span></code>) – Directions for placing nulls</p></li>
+<li><p><strong>initial_weights</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>, <em>optional</em>) – Starting weights (default: uniform with steering)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>weights</strong> – Complex weights with nulls placed</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></p>
+</dd>
+</dl>
+<div class="admonition-examples admonition">
+<p class="admonition-title">Examples</p>
+<p>Place nulls at specific interference directions:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">phased_array</span> <span class="k">as</span> <span class="nn">pa</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">geom</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">create_rectangular_array</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">k</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">wavelength_to_k</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Main beam at 30 deg, nulls at 45 and 60 degrees</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">null_dirs</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">45</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">60</span><span class="p">,</span> <span class="mi">0</span><span class="p">)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">weights</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">null_steering_projection</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">geom</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">theta_main_deg</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">phi_main_deg</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">null_directions</span><span class="o">=</span><span class="n">null_dirs</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">weights</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">(256,)</span>
+</pre></div>
+</div>
+<p>Verify null depth:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">null_depth</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">compute_null_depth</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">null_dirs</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">null_depth</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mi">30</span>  <span class="c1"># Deep null achieved</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.null_steering_lcmv">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">null_steering_lcmv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geometry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constraints</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_covariance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#null_steering_lcmv"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.null_steering_lcmv" title="Link to this definition">#</a></dt>
+<dd><p>LCMV (Linearly Constrained Minimum Variance) beamformer.</p>
+<p>Minimizes output power subject to linear constraints on response
+in specified directions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>geometry</strong> (<a class="reference internal" href="geometry.html#phased_array.ArrayGeometry" title="phased_array.ArrayGeometry"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArrayGeometry</span></code></a>) – Array geometry</p></li>
+<li><p><strong>k</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Wavenumber</p></li>
+<li><p><strong>constraints</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a> of <code class="xref py py-class docutils literal notranslate"><span class="pre">(theta_deg</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">phi_deg</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">response)</span> <span class="pre">tuples</span></code>) – Each constraint specifies (direction, desired complex response)
+Use response=1+0j for unity gain, response=0 for null</p></li>
+<li><p><strong>noise_covariance</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>, <em>optional</em>) – N x N noise covariance matrix (default: identity)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>weights</strong> – Complex LCMV weights</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.compute_null_depth">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">compute_null_depth</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">weights</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta_deg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi_deg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta_main_deg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi_main_deg</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#compute_null_depth"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.compute_null_depth" title="Link to this definition">#</a></dt>
+<dd><p>Compute null depth relative to main beam in dB.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>weights</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>) – Array weights</p></li>
+<li><p><strong>geometry</strong> (<a class="reference internal" href="geometry.html#phased_array.ArrayGeometry" title="phased_array.ArrayGeometry"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArrayGeometry</span></code></a>) – Array geometry</p></li>
+<li><p><strong>k</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Wavenumber</p></li>
+<li><p><strong>theta_deg</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Null direction</p></li>
+<li><p><strong>phi_deg</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Null direction</p></li>
+<li><p><strong>theta_main_deg</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Main beam direction</p></li>
+<li><p><strong>phi_main_deg</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Main beam direction</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>depth_dB</strong> – Null depth (negative, lower is deeper)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="multi-beam-synthesis">
+<h2>Multi-Beam Synthesis<a class="headerlink" href="#multi-beam-synthesis" title="Link to this heading">#</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.multi_beam_weights_superposition">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">multi_beam_weights_superposition</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geometry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beam_directions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">amplitudes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tapers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#multi_beam_weights_superposition"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.multi_beam_weights_superposition" title="Link to this definition">#</a></dt>
+<dd><p>Compute weights for multiple simultaneous beams via superposition.</p>
+<p>The weights are a weighted sum of individual steering vectors.
+This creates multiple beams but with reduced gain per beam.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>geometry</strong> (<a class="reference internal" href="geometry.html#phased_array.ArrayGeometry" title="phased_array.ArrayGeometry"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArrayGeometry</span></code></a>) – Array geometry</p></li>
+<li><p><strong>k</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Wavenumber</p></li>
+<li><p><strong>beam_directions</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a> of <code class="xref py py-class docutils literal notranslate"><span class="pre">(theta_deg</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">phi_deg)</span> <span class="pre">tuples</span></code>) – Directions for each beam</p></li>
+<li><p><strong>amplitudes</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a> of <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>, <em>optional</em>) – Relative amplitude for each beam (default: equal)</p></li>
+<li><p><strong>tapers</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a> of <code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>, <em>optional</em>) – Amplitude taper for each beam (default: uniform)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>weights</strong> – Combined complex weights</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.multi_beam_weights_orthogonal">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">multi_beam_weights_orthogonal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geometry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beam_directions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#multi_beam_weights_orthogonal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.multi_beam_weights_orthogonal" title="Link to this definition">#</a></dt>
+<dd><p>Compute separate weight vectors for orthogonal digital beamforming.</p>
+<p>Each beam has its own weight vector, allowing digital combination
+with no loss per beam (requires N receive channels).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>geometry</strong> (<a class="reference internal" href="geometry.html#phased_array.ArrayGeometry" title="phased_array.ArrayGeometry"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArrayGeometry</span></code></a>) – Array geometry</p></li>
+<li><p><strong>k</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Wavenumber</p></li>
+<li><p><strong>beam_directions</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a> of <code class="xref py py-class docutils literal notranslate"><span class="pre">(theta_deg</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">phi_deg)</span> <span class="pre">tuples</span></code>) – Directions for each beam</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>weight_vectors</strong> – List of complex weight vectors, one per beam</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a> of <code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.compute_beam_isolation">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">compute_beam_isolation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">weights_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beam_directions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#compute_beam_isolation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.compute_beam_isolation" title="Link to this definition">#</a></dt>
+<dd><p>Compute isolation between multiple beams.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>weights_list</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a> of <code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>) – Weight vector for each beam</p></li>
+<li><p><strong>geometry</strong> (<a class="reference internal" href="geometry.html#phased_array.ArrayGeometry" title="phased_array.ArrayGeometry"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArrayGeometry</span></code></a>) – Array geometry</p></li>
+<li><p><strong>k</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Wavenumber</p></li>
+<li><p><strong>beam_directions</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a> of <code class="xref py py-class docutils literal notranslate"><span class="pre">(theta_deg</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">phi_deg)</span></code>) – Direction of each beam</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>isolation_matrix</strong> – N_beams x N_beams matrix of isolation in dB
+Diagonal is 0 dB, off-diagonal is negative (isolation)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="special-patterns">
+<h2>Special Patterns<a class="headerlink" href="#special-patterns" title="Link to this heading">#</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="phased_array.monopulse_weights">
+<span class="sig-prename descclassname"><span class="pre">phased_array.</span></span><span class="sig-name descname"><span class="pre">monopulse_weights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geometry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta0_deg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi0_deg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'sum'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/phased_array/beamforming.html#monopulse_weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#phased_array.monopulse_weights" title="Link to this definition">#</a></dt>
+<dd><p>Compute monopulse tracking weights.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>geometry</strong> (<a class="reference internal" href="geometry.html#phased_array.ArrayGeometry" title="phased_array.ArrayGeometry"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArrayGeometry</span></code></a>) – Array geometry</p></li>
+<li><p><strong>k</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Wavenumber</p></li>
+<li><p><strong>theta0_deg</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Nominal beam direction theta</p></li>
+<li><p><strong>phi0_deg</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>) – Nominal beam direction phi</p></li>
+<li><p><strong>mode</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – ‘sum’ - sum pattern (normal beam)
+‘delta_az’ - azimuth difference pattern
+‘delta_el’ - elevation difference pattern</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>weights</strong> – Complex weights for the specified mode</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="geometry.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Geometry Module</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="impairments.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Impairments Module</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#amplitude-tapers-1d">Amplitude Tapers (1D)</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.taylor_taper_1d"><code class="docutils literal notranslate"><span class="pre">taylor_taper_1d()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.chebyshev_taper_1d"><code class="docutils literal notranslate"><span class="pre">chebyshev_taper_1d()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.hamming_taper_1d"><code class="docutils literal notranslate"><span class="pre">hamming_taper_1d()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.hanning_taper_1d"><code class="docutils literal notranslate"><span class="pre">hanning_taper_1d()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.cosine_taper_1d"><code class="docutils literal notranslate"><span class="pre">cosine_taper_1d()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.cosine_on_pedestal_taper_1d"><code class="docutils literal notranslate"><span class="pre">cosine_on_pedestal_taper_1d()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.gaussian_taper_1d"><code class="docutils literal notranslate"><span class="pre">gaussian_taper_1d()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#amplitude-tapers-2d">Amplitude Tapers (2D)</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.taylor_taper_2d"><code class="docutils literal notranslate"><span class="pre">taylor_taper_2d()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.chebyshev_taper_2d"><code class="docutils literal notranslate"><span class="pre">chebyshev_taper_2d()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.hamming_taper_2d"><code class="docutils literal notranslate"><span class="pre">hamming_taper_2d()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.hanning_taper_2d"><code class="docutils literal notranslate"><span class="pre">hanning_taper_2d()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.cosine_taper_2d"><code class="docutils literal notranslate"><span class="pre">cosine_taper_2d()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.cosine_on_pedestal_taper_2d"><code class="docutils literal notranslate"><span class="pre">cosine_on_pedestal_taper_2d()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.gaussian_taper_2d"><code class="docutils literal notranslate"><span class="pre">gaussian_taper_2d()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#taper-analysis">Taper Analysis</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.compute_taper_efficiency"><code class="docutils literal notranslate"><span class="pre">compute_taper_efficiency()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.compute_taper_directivity_loss"><code class="docutils literal notranslate"><span class="pre">compute_taper_directivity_loss()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.apply_taper_to_geometry"><code class="docutils literal notranslate"><span class="pre">apply_taper_to_geometry()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#null-steering">Null Steering</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.null_steering_projection"><code class="docutils literal notranslate"><span class="pre">null_steering_projection()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.null_steering_lcmv"><code class="docutils literal notranslate"><span class="pre">null_steering_lcmv()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.compute_null_depth"><code class="docutils literal notranslate"><span class="pre">compute_null_depth()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#multi-beam-synthesis">Multi-Beam Synthesis</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.multi_beam_weights_superposition"><code class="docutils literal notranslate"><span class="pre">multi_beam_weights_superposition()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.multi_beam_weights_orthogonal"><code class="docutils literal notranslate"><span class="pre">multi_beam_weights_orthogonal()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.compute_beam_isolation"><code class="docutils literal notranslate"><span class="pre">compute_beam_isolation()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#special-patterns">Special Patterns</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#phased_array.monopulse_weights"><code class="docutils literal notranslate"><span class="pre">monopulse_weights()</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/jman4162/Phased-Array-Antenna-Model/edit/main/docs/api/beamforming.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/api/beamforming.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, John Hodge.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.7.
+    <br/>
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

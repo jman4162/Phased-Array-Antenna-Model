@@ -427,6 +427,33 @@ def plot_pattern_3d_plotly(
     Returns
     -------
     fig : plotly.graph_objects.Figure
+
+    Examples
+    --------
+    Create an interactive 3D pattern plot:
+
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> geom = pa.create_rectangular_array(16, 16, dx=0.5, dy=0.5)
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> weights = pa.steering_vector(k, geom.x, geom.y, theta0_deg=20, phi0_deg=45)
+    >>> weights *= pa.taylor_taper_2d(16, 16, sidelobe_dB=-30)
+    >>> theta, phi, pattern_dB = pa.compute_full_pattern(
+    ...     geom.x, geom.y, weights, k
+    ... )
+    >>> fig = pa.plot_pattern_3d_plotly(
+    ...     theta, phi, pattern_dB,
+    ...     title="16x16 Array - Steered to 20 deg",
+    ...     min_dB=-40
+    ... )
+    >>> # fig.show()  # Display in browser
+
+    Cartesian projection (theta/phi/gain axes):
+
+    >>> fig = pa.plot_pattern_3d_plotly(
+    ...     theta, phi, pattern_dB,
+    ...     surface_type='cartesian'
+    ... )
     """
     if not PLOTLY_AVAILABLE:
         raise ImportError("plotly is required for this function. Install with: pip install plotly")

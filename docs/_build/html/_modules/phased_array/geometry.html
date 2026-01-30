@@ -1,0 +1,1855 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>phased_array.geometry &#8212; Phased Array Modeling</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../_static/documentation_options.js?v=872021ae"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=fd10adb8"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/phased_array/geometry';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="1.2.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Phased Array Modeling</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/concepts.html">
+    Core Concepts
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../user_guide/geometry.html">
+    Array Geometries
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../user_guide/beamforming.html">
+    Beamforming
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../user_guide/impairments.html">
+    Impairments
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../user_guide/wideband.html">
+    Wideband Beamforming
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../user_guide/visualization.html">
+    Visualization
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../api/core.html">
+    Core Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../api/geometry.html">
+    Geometry Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../api/beamforming.html">
+    Beamforming Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../api/impairments.html">
+    Impairments Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../api/visualization.html">
+    Visualization Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../api/wideband.html">
+    Wideband Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../api/utils.html">
+    Utilities Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../api/export.html">
+    Export Module
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../cookbook/index.html">
+    Cookbook
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../cookbook/hardware_recipes.html">
+    Hardware Engineer Recipes
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../cookbook/systems_recipes.html">
+    Systems Engineer Recipes
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../cookbook/research_recipes.html">
+    Research Recipes
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../theory/index.html">
+    Theory Background
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../theory/fundamentals.html">
+    Array Fundamentals
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../theory/coordinate_systems.html">
+    Coordinate Systems
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../theory/tapering_theory.html">
+    Tapering Theory
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../troubleshooting.html">
+    Troubleshooting & FAQ
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../glossary.html">
+    Glossary
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jman4162/Phased-Array-Antenna-Model" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/phased-array-modeling/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-box fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/concepts.html">
+    Core Concepts
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../user_guide/geometry.html">
+    Array Geometries
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../user_guide/beamforming.html">
+    Beamforming
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../user_guide/impairments.html">
+    Impairments
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../user_guide/wideband.html">
+    Wideband Beamforming
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../user_guide/visualization.html">
+    Visualization
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/core.html">
+    Core Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/geometry.html">
+    Geometry Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/beamforming.html">
+    Beamforming Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/impairments.html">
+    Impairments Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/visualization.html">
+    Visualization Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/wideband.html">
+    Wideband Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/utils.html">
+    Utilities Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/export.html">
+    Export Module
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../cookbook/index.html">
+    Cookbook
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../cookbook/hardware_recipes.html">
+    Hardware Engineer Recipes
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../cookbook/systems_recipes.html">
+    Systems Engineer Recipes
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../cookbook/research_recipes.html">
+    Research Recipes
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../theory/index.html">
+    Theory Background
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../theory/fundamentals.html">
+    Array Fundamentals
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../theory/coordinate_systems.html">
+    Coordinate Systems
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../theory/tapering_theory.html">
+    Tapering Theory
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../troubleshooting.html">
+    Troubleshooting & FAQ
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../glossary.html">
+    Glossary
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jman4162/Phased-Array-Antenna-Model" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://pypi.org/project/phased-array-modeling/" title="PyPI" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-box fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">PyPI</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">phased_array.geometry</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for phased_array.geometry</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Array geometry definitions and generation functions.</span>
+
+<span class="sd">Includes rectangular, circular, conformal, sparse, and subarray architectures.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+
+<div class="viewcode-block" id="ArrayGeometry">
+<a class="viewcode-back" href="../../api/geometry.html#phased_array.ArrayGeometry">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">ArrayGeometry</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Container for phased array element positions and orientations.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    x : ndarray</span>
+<span class="sd">        Element x-positions in meters</span>
+<span class="sd">    y : ndarray</span>
+<span class="sd">        Element y-positions in meters</span>
+<span class="sd">    z : ndarray, optional</span>
+<span class="sd">        Element z-positions in meters (for 3D/conformal arrays)</span>
+<span class="sd">    nx : ndarray, optional</span>
+<span class="sd">        Element normal x-components (unit vectors)</span>
+<span class="sd">    ny : ndarray, optional</span>
+<span class="sd">        Element normal y-components</span>
+<span class="sd">    nz : ndarray, optional</span>
+<span class="sd">        Element normal z-components</span>
+<span class="sd">    element_indices : ndarray, optional</span>
+<span class="sd">        Original indices before any thinning (for tracking)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">z</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">nx</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">ny</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">nz</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">element_indices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">n_elements</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Number of elements in the array.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_planar</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if array is planar (all z and normals the same).&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">z</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_conformal</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if array has varying element orientations.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nx</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">ny</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">nz</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="c1"># Check if all normals point the same direction</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nx</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">and</span> \
+           <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ny</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ny</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">and</span> \
+           <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nz</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nz</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+<div class="viewcode-block" id="ArrayGeometry.copy">
+<a class="viewcode-back" href="../../api/geometry.html#phased_array.ArrayGeometry.copy">[docs]</a>
+    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;ArrayGeometry&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a deep copy of the geometry.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">ArrayGeometry</span><span class="p">(</span>
+            <span class="n">x</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+            <span class="n">y</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+            <span class="n">z</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">z</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">nx</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nx</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">ny</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ny</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ny</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">nz</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nz</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nz</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">element_indices</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">element_indices</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">element_indices</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="SubarrayArchitecture">
+<a class="viewcode-back" href="../../api/geometry.html#phased_array.SubarrayArchitecture">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">SubarrayArchitecture</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines subarray partitioning of a phased array.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">        Full array geometry</span>
+<span class="sd">    subarray_assignments : ndarray</span>
+<span class="sd">        Subarray index for each element (shape: n_elements,)</span>
+<span class="sd">    n_subarrays : int</span>
+<span class="sd">        Number of subarrays</span>
+<span class="sd">    subarray_centers : ndarray, optional</span>
+<span class="sd">        Center positions of each subarray (n_subarrays, 2 or 3)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">geometry</span><span class="p">:</span> <span class="n">ArrayGeometry</span>
+    <span class="n">subarray_assignments</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">n_subarrays</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">subarray_centers</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="SubarrayArchitecture.get_subarray_elements">
+<a class="viewcode-back" href="../../api/geometry.html#phased_array.SubarrayArchitecture.get_subarray_elements">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_subarray_elements</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subarray_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get element indices and mask for a specific subarray.&quot;&quot;&quot;</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">subarray_assignments</span> <span class="o">==</span> <span class="n">subarray_idx</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mask</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">indices</span><span class="p">,</span> <span class="n">mask</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="create_rectangular_array">
+<a class="viewcode-back" href="../../api/geometry.html#phased_array.create_rectangular_array">[docs]</a>
+<span class="k">def</span> <span class="nf">create_rectangular_array</span><span class="p">(</span>
+    <span class="n">Nx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">Ny</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">dx</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">dy</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">wavelength</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">center</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ArrayGeometry</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a rectangular planar array.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Nx : int</span>
+<span class="sd">        Number of elements in x</span>
+<span class="sd">    Ny : int</span>
+<span class="sd">        Number of elements in y</span>
+<span class="sd">    dx : float</span>
+<span class="sd">        Element spacing in x (in wavelengths)</span>
+<span class="sd">    dy : float</span>
+<span class="sd">        Element spacing in y (in wavelengths)</span>
+<span class="sd">    wavelength : float</span>
+<span class="sd">        Wavelength in meters (converts spacing to meters)</span>
+<span class="sd">    center : bool</span>
+<span class="sd">        If True, center array at origin</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">        Array geometry with element positions</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    Create a 16x16 array with half-wavelength spacing:</span>
+
+<span class="sd">    &gt;&gt;&gt; import phased_array as pa</span>
+<span class="sd">    &gt;&gt;&gt; geom = pa.create_rectangular_array(16, 16, dx=0.5, dy=0.5)</span>
+<span class="sd">    &gt;&gt;&gt; geom.n_elements</span>
+<span class="sd">    256</span>
+<span class="sd">    &gt;&gt;&gt; geom.x.shape</span>
+<span class="sd">    (256,)</span>
+
+<span class="sd">    Create a 10x10 array at 10 GHz (3 cm wavelength):</span>
+
+<span class="sd">    &gt;&gt;&gt; geom = pa.create_rectangular_array(10, 10, dx=0.5, dy=0.5, wavelength=0.03)</span>
+<span class="sd">    &gt;&gt;&gt; geom.n_elements</span>
+<span class="sd">    100</span>
+
+<span class="sd">    Access element positions:</span>
+
+<span class="sd">    &gt;&gt;&gt; geom = pa.create_rectangular_array(4, 4, dx=0.5, dy=0.5)</span>
+<span class="sd">    &gt;&gt;&gt; geom.is_planar</span>
+<span class="sd">    True</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Convert spacing to meters</span>
+    <span class="n">dx_m</span> <span class="o">=</span> <span class="n">dx</span> <span class="o">*</span> <span class="n">wavelength</span>
+    <span class="n">dy_m</span> <span class="o">=</span> <span class="n">dy</span> <span class="o">*</span> <span class="n">wavelength</span>
+
+    <span class="c1"># Create grid</span>
+    <span class="n">x_1d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">Nx</span><span class="p">)</span> <span class="o">*</span> <span class="n">dx_m</span>
+    <span class="n">y_1d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">Ny</span><span class="p">)</span> <span class="o">*</span> <span class="n">dy_m</span>
+
+    <span class="k">if</span> <span class="n">center</span><span class="p">:</span>
+        <span class="n">x_1d</span> <span class="o">-=</span> <span class="n">x_1d</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+        <span class="n">y_1d</span> <span class="o">-=</span> <span class="n">y_1d</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+    <span class="n">x_grid</span><span class="p">,</span> <span class="n">y_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x_1d</span><span class="p">,</span> <span class="n">y_1d</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s1">&#39;ij&#39;</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">x_grid</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">y_grid</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">ArrayGeometry</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+        <span class="n">z</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+        <span class="n">nx</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+        <span class="n">ny</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+        <span class="n">nz</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+        <span class="n">element_indices</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="create_triangular_array">
+<a class="viewcode-back" href="../../api/geometry.html#phased_array.create_triangular_array">[docs]</a>
+<span class="k">def</span> <span class="nf">create_triangular_array</span><span class="p">(</span>
+    <span class="n">Nx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">Ny</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">dx</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">dy</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">wavelength</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">center</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ArrayGeometry</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create an offset triangular (hexagonal) array.</span>
+
+<span class="sd">    Rows are offset by half the x-spacing for optimal packing.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Nx : int</span>
+<span class="sd">        Approximate number of elements in x</span>
+<span class="sd">    Ny : int</span>
+<span class="sd">        Number of rows in y</span>
+<span class="sd">    dx : float</span>
+<span class="sd">        Element spacing in x (in wavelengths)</span>
+<span class="sd">    dy : float, optional</span>
+<span class="sd">        Row spacing in y. Default: dx * sqrt(3)/2 for equilateral</span>
+<span class="sd">    wavelength : float</span>
+<span class="sd">        Wavelength in meters</span>
+<span class="sd">    center : bool</span>
+<span class="sd">        If True, center array at origin</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    Create a triangular grid array (hexagonal packing):</span>
+
+<span class="sd">    &gt;&gt;&gt; import phased_array as pa</span>
+<span class="sd">    &gt;&gt;&gt; geom = pa.create_triangular_array(10, 10, dx=0.5)</span>
+<span class="sd">    &gt;&gt;&gt; geom.n_elements  # Slightly fewer than 10x10 due to offset rows</span>
+<span class="sd">    95</span>
+<span class="sd">    &gt;&gt;&gt; geom.is_planar</span>
+<span class="sd">    True</span>
+
+<span class="sd">    Triangular grids provide ~13% better packing efficiency:</span>
+
+<span class="sd">    &gt;&gt;&gt; rect = pa.create_rectangular_array(10, 10, dx=0.5, dy=0.5)</span>
+<span class="sd">    &gt;&gt;&gt; tri = pa.create_triangular_array(10, 10, dx=0.5)</span>
+<span class="sd">    &gt;&gt;&gt; rect.n_elements &gt; tri.n_elements  # Rect has more for same Nx, Ny</span>
+<span class="sd">    True</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">dy</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">dy</span> <span class="o">=</span> <span class="n">dx</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+
+    <span class="n">dx_m</span> <span class="o">=</span> <span class="n">dx</span> <span class="o">*</span> <span class="n">wavelength</span>
+    <span class="n">dy_m</span> <span class="o">=</span> <span class="n">dy</span> <span class="o">*</span> <span class="n">wavelength</span>
+
+    <span class="n">x_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">y_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Ny</span><span class="p">):</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="p">(</span><span class="n">dx_m</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="k">if</span> <span class="p">(</span><span class="n">row</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="k">else</span> <span class="mi">0</span>
+        <span class="n">n_in_row</span> <span class="o">=</span> <span class="n">Nx</span> <span class="k">if</span> <span class="p">(</span><span class="n">row</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="n">Nx</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_in_row</span><span class="p">):</span>
+            <span class="n">x_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">col</span> <span class="o">*</span> <span class="n">dx_m</span> <span class="o">+</span> <span class="n">offset</span><span class="p">)</span>
+            <span class="n">y_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span> <span class="o">*</span> <span class="n">dy_m</span><span class="p">)</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x_list</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y_list</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">center</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">-=</span> <span class="n">x</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+        <span class="n">y</span> <span class="o">-=</span> <span class="n">y</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">ArrayGeometry</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+        <span class="n">z</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+        <span class="n">nx</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+        <span class="n">ny</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+        <span class="n">nz</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+        <span class="n">element_indices</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="create_elliptical_array">
+<a class="viewcode-back" href="../../api/geometry.html#phased_array.create_elliptical_array">[docs]</a>
+<span class="k">def</span> <span class="nf">create_elliptical_array</span><span class="p">(</span>
+    <span class="n">a</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">b</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">dx</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">dy</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">grid_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;rectangular&#39;</span><span class="p">,</span>
+    <span class="n">wavelength</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ArrayGeometry</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create an array within an elliptical boundary.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    a : float</span>
+<span class="sd">        Ellipse semi-axis in x (in wavelengths)</span>
+<span class="sd">    b : float</span>
+<span class="sd">        Ellipse semi-axis in y (in wavelengths)</span>
+<span class="sd">    dx : float</span>
+<span class="sd">        Element spacing in x (in wavelengths)</span>
+<span class="sd">    dy : float, optional</span>
+<span class="sd">        Element spacing in y (default: same as dx)</span>
+<span class="sd">    grid_type : str</span>
+<span class="sd">        &#39;rectangular&#39; or &#39;triangular&#39;</span>
+<span class="sd">    wavelength : float</span>
+<span class="sd">        Wavelength in meters</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">dy</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">dy</span> <span class="o">=</span> <span class="n">dx</span>
+
+    <span class="n">a_m</span> <span class="o">=</span> <span class="n">a</span> <span class="o">*</span> <span class="n">wavelength</span>
+    <span class="n">b_m</span> <span class="o">=</span> <span class="n">b</span> <span class="o">*</span> <span class="n">wavelength</span>
+    <span class="n">dx_m</span> <span class="o">=</span> <span class="n">dx</span> <span class="o">*</span> <span class="n">wavelength</span>
+    <span class="n">dy_m</span> <span class="o">=</span> <span class="n">dy</span> <span class="o">*</span> <span class="n">wavelength</span> <span class="k">if</span> <span class="n">grid_type</span> <span class="o">==</span> <span class="s1">&#39;rectangular&#39;</span> <span class="k">else</span> <span class="n">dx</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">wavelength</span>
+
+    <span class="c1"># Generate grid larger than ellipse</span>
+    <span class="n">nx_max</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">a</span> <span class="o">/</span> <span class="n">dx</span><span class="p">))</span> <span class="o">+</span> <span class="mi">2</span>
+    <span class="n">ny_max</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">b</span> <span class="o">/</span> <span class="n">dy</span><span class="p">))</span> <span class="o">+</span> <span class="mi">2</span>
+
+    <span class="n">x_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">y_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ny_max</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">grid_type</span> <span class="o">==</span> <span class="s1">&#39;triangular&#39;</span><span class="p">:</span>
+            <span class="n">offset</span> <span class="o">=</span> <span class="p">(</span><span class="n">dx_m</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="k">if</span> <span class="p">(</span><span class="n">row</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="k">else</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nx_max</span><span class="p">):</span>
+            <span class="n">x_pos</span> <span class="o">=</span> <span class="n">col</span> <span class="o">*</span> <span class="n">dx_m</span> <span class="o">+</span> <span class="n">offset</span> <span class="o">-</span> <span class="n">a_m</span>
+            <span class="n">y_pos</span> <span class="o">=</span> <span class="n">row</span> <span class="o">*</span> <span class="n">dy_m</span> <span class="o">-</span> <span class="n">b_m</span>
+
+            <span class="c1"># Check if inside ellipse</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">x_pos</span> <span class="o">/</span> <span class="n">a_m</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">y_pos</span> <span class="o">/</span> <span class="n">b_m</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">&lt;=</span> <span class="mf">1.0</span><span class="p">:</span>
+                <span class="n">x_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x_pos</span><span class="p">)</span>
+                <span class="n">y_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y_pos</span><span class="p">)</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x_list</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y_list</span><span class="p">)</span>
+
+    <span class="c1"># Center</span>
+    <span class="n">x</span> <span class="o">-=</span> <span class="n">x</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+    <span class="n">y</span> <span class="o">-=</span> <span class="n">y</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">ArrayGeometry</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+        <span class="n">z</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+        <span class="n">nx</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+        <span class="n">ny</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+        <span class="n">nz</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+        <span class="n">element_indices</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="create_circular_array">
+<a class="viewcode-back" href="../../api/geometry.html#phased_array.create_circular_array">[docs]</a>
+<span class="k">def</span> <span class="nf">create_circular_array</span><span class="p">(</span>
+    <span class="n">n_elements</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">radius</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">wavelength</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">start_angle</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ArrayGeometry</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a circular (ring) array in the xy-plane.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_elements : int</span>
+<span class="sd">        Number of elements</span>
+<span class="sd">    radius : float</span>
+<span class="sd">        Ring radius in wavelengths</span>
+<span class="sd">    wavelength : float</span>
+<span class="sd">        Wavelength in meters</span>
+<span class="sd">    start_angle : float</span>
+<span class="sd">        Starting angle in radians</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">r_m</span> <span class="o">=</span> <span class="n">radius</span> <span class="o">*</span> <span class="n">wavelength</span>
+    <span class="n">angles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">start_angle</span><span class="p">,</span> <span class="n">start_angle</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">n_elements</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">r_m</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">angles</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">r_m</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">angles</span><span class="p">)</span>
+
+    <span class="c1"># Normals point radially outward for circular array</span>
+    <span class="n">nx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">angles</span><span class="p">)</span>
+    <span class="n">ny</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">angles</span><span class="p">)</span>
+    <span class="n">nz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ArrayGeometry</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+        <span class="n">z</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+        <span class="n">nx</span><span class="o">=</span><span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="o">=</span><span class="n">ny</span><span class="p">,</span> <span class="n">nz</span><span class="o">=</span><span class="n">nz</span><span class="p">,</span>
+        <span class="n">element_indices</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_elements</span><span class="p">)</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="create_concentric_rings_array">
+<a class="viewcode-back" href="../../api/geometry.html#phased_array.create_concentric_rings_array">[docs]</a>
+<span class="k">def</span> <span class="nf">create_concentric_rings_array</span><span class="p">(</span>
+    <span class="n">n_rings</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">elements_per_ring</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
+    <span class="n">ring_spacing</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">wavelength</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">include_center</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ArrayGeometry</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a concentric rings array.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_rings : int</span>
+<span class="sd">        Number of rings</span>
+<span class="sd">    elements_per_ring : int or list</span>
+<span class="sd">        Elements per ring (int applies to all, list for custom)</span>
+<span class="sd">    ring_spacing : float</span>
+<span class="sd">        Spacing between rings in wavelengths</span>
+<span class="sd">    wavelength : float</span>
+<span class="sd">        Wavelength in meters</span>
+<span class="sd">    include_center : bool</span>
+<span class="sd">        Include a center element</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">x_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">y_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">nx_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">ny_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">if</span> <span class="n">include_center</span><span class="p">:</span>
+        <span class="n">x_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
+        <span class="n">y_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
+        <span class="n">nx_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
+        <span class="n">ny_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">elements_per_ring</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="n">elements_per_ring</span> <span class="o">=</span> <span class="p">[</span><span class="n">elements_per_ring</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_rings</span>
+
+    <span class="k">for</span> <span class="n">ring_idx</span><span class="p">,</span> <span class="n">n_elem</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">elements_per_ring</span><span class="p">[:</span><span class="n">n_rings</span><span class="p">]):</span>
+        <span class="n">radius</span> <span class="o">=</span> <span class="p">(</span><span class="n">ring_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">ring_spacing</span> <span class="o">*</span> <span class="n">wavelength</span>
+        <span class="n">angles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">n_elem</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">angle</span> <span class="ow">in</span> <span class="n">angles</span><span class="p">:</span>
+            <span class="n">x_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">radius</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">angle</span><span class="p">))</span>
+            <span class="n">y_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">radius</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">angle</span><span class="p">))</span>
+            <span class="n">nx_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">angle</span><span class="p">))</span>
+            <span class="n">ny_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">angle</span><span class="p">))</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x_list</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y_list</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ArrayGeometry</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+        <span class="n">z</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+        <span class="n">nx</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">nx_list</span><span class="p">),</span>
+        <span class="n">ny</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ny_list</span><span class="p">),</span>
+        <span class="n">nz</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+        <span class="n">element_indices</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="create_cylindrical_array">
+<a class="viewcode-back" href="../../api/geometry.html#phased_array.create_cylindrical_array">[docs]</a>
+<span class="k">def</span> <span class="nf">create_cylindrical_array</span><span class="p">(</span>
+    <span class="n">n_azimuth</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">n_vertical</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">radius</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">height</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">wavelength</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ArrayGeometry</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a cylindrical conformal array.</span>
+
+<span class="sd">    Elements are distributed on a cylinder surface with normals</span>
+<span class="sd">    pointing radially outward.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_azimuth : int</span>
+<span class="sd">        Number of elements around circumference</span>
+<span class="sd">    n_vertical : int</span>
+<span class="sd">        Number of vertical rings</span>
+<span class="sd">    radius : float</span>
+<span class="sd">        Cylinder radius in wavelengths</span>
+<span class="sd">    height : float</span>
+<span class="sd">        Cylinder height in wavelengths</span>
+<span class="sd">    wavelength : float</span>
+<span class="sd">        Wavelength in meters</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">r_m</span> <span class="o">=</span> <span class="n">radius</span> <span class="o">*</span> <span class="n">wavelength</span>
+    <span class="n">h_m</span> <span class="o">=</span> <span class="n">height</span> <span class="o">*</span> <span class="n">wavelength</span>
+
+    <span class="n">phi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">n_azimuth</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">z_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">h_m</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">h_m</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">n_vertical</span><span class="p">)</span>
+
+    <span class="n">phi_grid</span><span class="p">,</span> <span class="n">z_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">z_vals</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s1">&#39;ij&#39;</span><span class="p">)</span>
+    <span class="n">phi_flat</span> <span class="o">=</span> <span class="n">phi_grid</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="n">z_flat</span> <span class="o">=</span> <span class="n">z_grid</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">r_m</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi_flat</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">r_m</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi_flat</span><span class="p">)</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">z_flat</span>
+
+    <span class="c1"># Normals point radially outward</span>
+    <span class="n">nx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi_flat</span><span class="p">)</span>
+    <span class="n">ny</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi_flat</span><span class="p">)</span>
+    <span class="n">nz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ArrayGeometry</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="n">z</span><span class="p">,</span>
+        <span class="n">nx</span><span class="o">=</span><span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="o">=</span><span class="n">ny</span><span class="p">,</span> <span class="n">nz</span><span class="o">=</span><span class="n">nz</span><span class="p">,</span>
+        <span class="n">element_indices</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="create_spherical_array">
+<a class="viewcode-back" href="../../api/geometry.html#phased_array.create_spherical_array">[docs]</a>
+<span class="k">def</span> <span class="nf">create_spherical_array</span><span class="p">(</span>
+    <span class="n">n_theta</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">n_phi</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">radius</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">theta_min</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">theta_max</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">wavelength</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ArrayGeometry</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a spherical conformal array.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n_theta : int</span>
+<span class="sd">        Number of elements in theta (elevation)</span>
+<span class="sd">    n_phi : int</span>
+<span class="sd">        Number of elements in phi (azimuth)</span>
+<span class="sd">    radius : float</span>
+<span class="sd">        Sphere radius in wavelengths</span>
+<span class="sd">    theta_min : float</span>
+<span class="sd">        Minimum theta in radians (0 = north pole)</span>
+<span class="sd">    theta_max : float</span>
+<span class="sd">        Maximum theta in radians</span>
+<span class="sd">    wavelength : float</span>
+<span class="sd">        Wavelength in meters</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">r_m</span> <span class="o">=</span> <span class="n">radius</span> <span class="o">*</span> <span class="n">wavelength</span>
+
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">theta_min</span><span class="p">,</span> <span class="n">theta_max</span><span class="p">,</span> <span class="n">n_theta</span><span class="p">)</span>
+    <span class="n">phi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">n_phi</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="n">theta_grid</span><span class="p">,</span> <span class="n">phi_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s1">&#39;ij&#39;</span><span class="p">)</span>
+    <span class="n">theta_flat</span> <span class="o">=</span> <span class="n">theta_grid</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="n">phi_flat</span> <span class="o">=</span> <span class="n">phi_grid</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+    <span class="c1"># Spherical to Cartesian</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">r_m</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta_flat</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi_flat</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">r_m</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta_flat</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi_flat</span><span class="p">)</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">r_m</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta_flat</span><span class="p">)</span>
+
+    <span class="c1"># Normals point radially outward</span>
+    <span class="n">nx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta_flat</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi_flat</span><span class="p">)</span>
+    <span class="n">ny</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta_flat</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi_flat</span><span class="p">)</span>
+    <span class="n">nz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta_flat</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ArrayGeometry</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="n">z</span><span class="p">,</span>
+        <span class="n">nx</span><span class="o">=</span><span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="o">=</span><span class="n">ny</span><span class="p">,</span> <span class="n">nz</span><span class="o">=</span><span class="n">nz</span><span class="p">,</span>
+        <span class="n">element_indices</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="c1"># ============== Sparse/Thinned Arrays ==============</span>
+
+<div class="viewcode-block" id="thin_array_random">
+<a class="viewcode-back" href="../../api/geometry.html#phased_array.thin_array_random">[docs]</a>
+<span class="k">def</span> <span class="nf">thin_array_random</span><span class="p">(</span>
+    <span class="n">geometry</span><span class="p">:</span> <span class="n">ArrayGeometry</span><span class="p">,</span>
+    <span class="n">thinning_factor</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">seed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ArrayGeometry</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Randomly thin an array by removing elements.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">        Original array geometry</span>
+<span class="sd">    thinning_factor : float</span>
+<span class="sd">        Fraction of elements to keep (0 to 1)</span>
+<span class="sd">    seed : int, optional</span>
+<span class="sd">        Random seed for reproducibility</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">        Thinned array geometry</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+
+    <span class="n">n_keep</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">n_elements</span> <span class="o">*</span> <span class="n">thinning_factor</span><span class="p">)</span>
+    <span class="n">keep_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">n_elements</span><span class="p">,</span> <span class="n">n_keep</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">keep_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">keep_indices</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ArrayGeometry</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">keep_indices</span><span class="p">],</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">keep_indices</span><span class="p">],</span>
+        <span class="n">z</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">z</span><span class="p">[</span><span class="n">keep_indices</span><span class="p">]</span> <span class="k">if</span> <span class="n">geometry</span><span class="o">.</span><span class="n">z</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">nx</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">nx</span><span class="p">[</span><span class="n">keep_indices</span><span class="p">]</span> <span class="k">if</span> <span class="n">geometry</span><span class="o">.</span><span class="n">nx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ny</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">ny</span><span class="p">[</span><span class="n">keep_indices</span><span class="p">]</span> <span class="k">if</span> <span class="n">geometry</span><span class="o">.</span><span class="n">ny</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">nz</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">nz</span><span class="p">[</span><span class="n">keep_indices</span><span class="p">]</span> <span class="k">if</span> <span class="n">geometry</span><span class="o">.</span><span class="n">nz</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">element_indices</span><span class="o">=</span><span class="n">keep_indices</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="thin_array_density_tapered">
+<a class="viewcode-back" href="../../api/geometry.html#phased_array.thin_array_density_tapered">[docs]</a>
+<span class="k">def</span> <span class="nf">thin_array_density_tapered</span><span class="p">(</span>
+    <span class="n">geometry</span><span class="p">:</span> <span class="n">ArrayGeometry</span><span class="p">,</span>
+    <span class="n">density_func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+    <span class="n">seed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ArrayGeometry</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Thin array with position-dependent density (statistical thinning).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">        Original array geometry</span>
+<span class="sd">    density_func : callable</span>
+<span class="sd">        Function(x, y) -&gt; probability of keeping each element (0 to 1)</span>
+<span class="sd">    seed : int, optional</span>
+<span class="sd">        Random seed</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">        Thinned geometry</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+
+    <span class="c1"># Compute keep probability for each element</span>
+    <span class="n">keep_prob</span> <span class="o">=</span> <span class="n">density_func</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">keep_prob</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">keep_prob</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Random selection based on probability</span>
+    <span class="n">keep_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">n_elements</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">keep_prob</span>
+    <span class="n">keep_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">keep_mask</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">ArrayGeometry</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">keep_indices</span><span class="p">],</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">keep_indices</span><span class="p">],</span>
+        <span class="n">z</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">z</span><span class="p">[</span><span class="n">keep_indices</span><span class="p">]</span> <span class="k">if</span> <span class="n">geometry</span><span class="o">.</span><span class="n">z</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">nx</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">nx</span><span class="p">[</span><span class="n">keep_indices</span><span class="p">]</span> <span class="k">if</span> <span class="n">geometry</span><span class="o">.</span><span class="n">nx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ny</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">ny</span><span class="p">[</span><span class="n">keep_indices</span><span class="p">]</span> <span class="k">if</span> <span class="n">geometry</span><span class="o">.</span><span class="n">ny</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">nz</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">nz</span><span class="p">[</span><span class="n">keep_indices</span><span class="p">]</span> <span class="k">if</span> <span class="n">geometry</span><span class="o">.</span><span class="n">nz</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">element_indices</span><span class="o">=</span><span class="n">keep_indices</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="thin_array_genetic_algorithm">
+<a class="viewcode-back" href="../../api/geometry.html#phased_array.thin_array_genetic_algorithm">[docs]</a>
+<span class="k">def</span> <span class="nf">thin_array_genetic_algorithm</span><span class="p">(</span>
+    <span class="n">geometry</span><span class="p">:</span> <span class="n">ArrayGeometry</span><span class="p">,</span>
+    <span class="n">n_target</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">objective_func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">ArrayGeometry</span><span class="p">],</span> <span class="nb">float</span><span class="p">],</span>
+    <span class="n">population_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+    <span class="n">n_generations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
+    <span class="n">mutation_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">seed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ArrayGeometry</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Optimize element selection using a genetic algorithm.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">        Original full array geometry</span>
+<span class="sd">    n_target : int</span>
+<span class="sd">        Target number of elements to keep</span>
+<span class="sd">    objective_func : callable</span>
+<span class="sd">        Function(ArrayGeometry) -&gt; float to minimize</span>
+<span class="sd">    population_size : int</span>
+<span class="sd">        GA population size</span>
+<span class="sd">    n_generations : int</span>
+<span class="sd">        Number of generations</span>
+<span class="sd">    mutation_rate : float</span>
+<span class="sd">        Probability of mutation per gene</span>
+<span class="sd">    seed : int, optional</span>
+<span class="sd">        Random seed</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">        Optimized thinned geometry</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+
+    <span class="n">n_elements</span> <span class="o">=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">n_elements</span>
+
+    <span class="k">def</span> <span class="nf">create_individual</span><span class="p">():</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a random selection of n_target elements.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">n_elements</span><span class="p">,</span> <span class="n">n_target</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="n">individual</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Evaluate fitness of an individual.&quot;&quot;&quot;</span>
+        <span class="n">geom</span> <span class="o">=</span> <span class="n">ArrayGeometry</span><span class="p">(</span>
+            <span class="n">x</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">individual</span><span class="p">],</span>
+            <span class="n">y</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">individual</span><span class="p">],</span>
+            <span class="n">z</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">z</span><span class="p">[</span><span class="n">individual</span><span class="p">]</span> <span class="k">if</span> <span class="n">geometry</span><span class="o">.</span><span class="n">z</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">nx</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">nx</span><span class="p">[</span><span class="n">individual</span><span class="p">]</span> <span class="k">if</span> <span class="n">geometry</span><span class="o">.</span><span class="n">nx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">ny</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">ny</span><span class="p">[</span><span class="n">individual</span><span class="p">]</span> <span class="k">if</span> <span class="n">geometry</span><span class="o">.</span><span class="n">ny</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">nz</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">nz</span><span class="p">[</span><span class="n">individual</span><span class="p">]</span> <span class="k">if</span> <span class="n">geometry</span><span class="o">.</span><span class="n">nz</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">element_indices</span><span class="o">=</span><span class="n">individual</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">objective_func</span><span class="p">(</span><span class="n">geom</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">crossover</span><span class="p">(</span><span class="n">parent1</span><span class="p">,</span> <span class="n">parent2</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Single-point crossover maintaining n_target elements.&quot;&quot;&quot;</span>
+        <span class="c1"># Combine unique elements from both parents</span>
+        <span class="n">combined</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">parent1</span><span class="p">,</span> <span class="n">parent2</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">combined</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">n_target</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">combined</span><span class="p">,</span> <span class="n">n_target</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Fill with random elements if needed</span>
+            <span class="n">remaining</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">setdiff1d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_elements</span><span class="p">),</span> <span class="n">combined</span><span class="p">)</span>
+            <span class="n">additional</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">remaining</span><span class="p">,</span> <span class="n">n_target</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">combined</span><span class="p">),</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">combined</span><span class="p">,</span> <span class="n">additional</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">mutate</span><span class="p">(</span><span class="n">individual</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Mutate by swapping elements.&quot;&quot;&quot;</span>
+        <span class="n">individual</span> <span class="o">=</span> <span class="n">individual</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">individual</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">mutation_rate</span><span class="p">:</span>
+                <span class="c1"># Swap with a random element not in the array</span>
+                <span class="n">available</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">setdiff1d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_elements</span><span class="p">),</span> <span class="n">individual</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">available</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">individual</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">available</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">individual</span>
+
+    <span class="c1"># Initialize population</span>
+    <span class="n">population</span> <span class="o">=</span> <span class="p">[</span><span class="n">create_individual</span><span class="p">()</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">population_size</span><span class="p">)]</span>
+    <span class="n">fitness</span> <span class="o">=</span> <span class="p">[</span><span class="n">evaluate</span><span class="p">(</span><span class="n">ind</span><span class="p">)</span> <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="n">population</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">gen</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_generations</span><span class="p">):</span>
+        <span class="c1"># Selection (tournament)</span>
+        <span class="n">new_population</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">elite_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">fitness</span><span class="p">)</span>
+        <span class="n">new_population</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">population</span><span class="p">[</span><span class="n">elite_idx</span><span class="p">])</span>  <span class="c1"># Elitism</span>
+
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_population</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">population_size</span><span class="p">:</span>
+            <span class="c1"># Tournament selection</span>
+            <span class="n">i1</span><span class="p">,</span> <span class="n">i2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">population_size</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">parent1</span> <span class="o">=</span> <span class="n">population</span><span class="p">[</span><span class="n">i1</span><span class="p">]</span> <span class="k">if</span> <span class="n">fitness</span><span class="p">[</span><span class="n">i1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">fitness</span><span class="p">[</span><span class="n">i2</span><span class="p">]</span> <span class="k">else</span> <span class="n">population</span><span class="p">[</span><span class="n">i2</span><span class="p">]</span>
+
+            <span class="n">i3</span><span class="p">,</span> <span class="n">i4</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">population_size</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">parent2</span> <span class="o">=</span> <span class="n">population</span><span class="p">[</span><span class="n">i3</span><span class="p">]</span> <span class="k">if</span> <span class="n">fitness</span><span class="p">[</span><span class="n">i3</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">fitness</span><span class="p">[</span><span class="n">i4</span><span class="p">]</span> <span class="k">else</span> <span class="n">population</span><span class="p">[</span><span class="n">i4</span><span class="p">]</span>
+
+            <span class="n">child</span> <span class="o">=</span> <span class="n">crossover</span><span class="p">(</span><span class="n">parent1</span><span class="p">,</span> <span class="n">parent2</span><span class="p">)</span>
+            <span class="n">child</span> <span class="o">=</span> <span class="n">mutate</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+            <span class="n">new_population</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+
+        <span class="n">population</span> <span class="o">=</span> <span class="n">new_population</span>
+        <span class="n">fitness</span> <span class="o">=</span> <span class="p">[</span><span class="n">evaluate</span><span class="p">(</span><span class="n">ind</span><span class="p">)</span> <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="n">population</span><span class="p">]</span>
+
+    <span class="c1"># Return best individual</span>
+    <span class="n">best_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">fitness</span><span class="p">)</span>
+    <span class="n">best_individual</span> <span class="o">=</span> <span class="n">population</span><span class="p">[</span><span class="n">best_idx</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">ArrayGeometry</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">best_individual</span><span class="p">],</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">best_individual</span><span class="p">],</span>
+        <span class="n">z</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">z</span><span class="p">[</span><span class="n">best_individual</span><span class="p">]</span> <span class="k">if</span> <span class="n">geometry</span><span class="o">.</span><span class="n">z</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">nx</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">nx</span><span class="p">[</span><span class="n">best_individual</span><span class="p">]</span> <span class="k">if</span> <span class="n">geometry</span><span class="o">.</span><span class="n">nx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ny</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">ny</span><span class="p">[</span><span class="n">best_individual</span><span class="p">]</span> <span class="k">if</span> <span class="n">geometry</span><span class="o">.</span><span class="n">ny</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">nz</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">nz</span><span class="p">[</span><span class="n">best_individual</span><span class="p">]</span> <span class="k">if</span> <span class="n">geometry</span><span class="o">.</span><span class="n">nz</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">element_indices</span><span class="o">=</span><span class="n">best_individual</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="c1"># ============== Subarray Architectures ==============</span>
+
+<div class="viewcode-block" id="create_rectangular_subarrays">
+<a class="viewcode-back" href="../../api/geometry.html#phased_array.create_rectangular_subarrays">[docs]</a>
+<span class="k">def</span> <span class="nf">create_rectangular_subarrays</span><span class="p">(</span>
+    <span class="n">Nx_total</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">Ny_total</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">Nx_sub</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">Ny_sub</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">dx</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">dy</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">wavelength</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SubarrayArchitecture</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create rectangular subarrays from a rectangular array.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Nx_total : int</span>
+<span class="sd">        Total elements in x</span>
+<span class="sd">    Ny_total : int</span>
+<span class="sd">        Total elements in y</span>
+<span class="sd">    Nx_sub : int</span>
+<span class="sd">        Elements per subarray in x</span>
+<span class="sd">    Ny_sub : int</span>
+<span class="sd">        Elements per subarray in y</span>
+<span class="sd">    dx, dy : float</span>
+<span class="sd">        Element spacing in wavelengths</span>
+<span class="sd">    wavelength : float</span>
+<span class="sd">        Wavelength in meters</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    architecture : SubarrayArchitecture</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Create full array</span>
+    <span class="n">geometry</span> <span class="o">=</span> <span class="n">create_rectangular_array</span><span class="p">(</span><span class="n">Nx_total</span><span class="p">,</span> <span class="n">Ny_total</span><span class="p">,</span> <span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">)</span>
+
+    <span class="c1"># Number of subarrays</span>
+    <span class="n">n_sub_x</span> <span class="o">=</span> <span class="n">Nx_total</span> <span class="o">//</span> <span class="n">Nx_sub</span>
+    <span class="n">n_sub_y</span> <span class="o">=</span> <span class="n">Ny_total</span> <span class="o">//</span> <span class="n">Ny_sub</span>
+    <span class="n">n_subarrays</span> <span class="o">=</span> <span class="n">n_sub_x</span> <span class="o">*</span> <span class="n">n_sub_y</span>
+
+    <span class="c1"># Assign elements to subarrays</span>
+    <span class="n">assignments</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">n_elements</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">subarray_centers</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Element positions on the original grid</span>
+    <span class="k">for</span> <span class="n">sub_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_subarrays</span><span class="p">):</span>
+        <span class="n">sub_ix</span> <span class="o">=</span> <span class="n">sub_idx</span> <span class="o">%</span> <span class="n">n_sub_x</span>
+        <span class="n">sub_iy</span> <span class="o">=</span> <span class="n">sub_idx</span> <span class="o">//</span> <span class="n">n_sub_x</span>
+
+        <span class="c1"># Elements in this subarray</span>
+        <span class="n">x_start</span> <span class="o">=</span> <span class="n">sub_ix</span> <span class="o">*</span> <span class="n">Nx_sub</span>
+        <span class="n">y_start</span> <span class="o">=</span> <span class="n">sub_iy</span> <span class="o">*</span> <span class="n">Ny_sub</span>
+
+        <span class="n">center_x</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">center_y</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">for</span> <span class="n">ix</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Nx_sub</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">iy</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Ny_sub</span><span class="p">):</span>
+                <span class="n">global_ix</span> <span class="o">=</span> <span class="n">x_start</span> <span class="o">+</span> <span class="n">ix</span>
+                <span class="n">global_iy</span> <span class="o">=</span> <span class="n">y_start</span> <span class="o">+</span> <span class="n">iy</span>
+                <span class="k">if</span> <span class="n">global_ix</span> <span class="o">&lt;</span> <span class="n">Nx_total</span> <span class="ow">and</span> <span class="n">global_iy</span> <span class="o">&lt;</span> <span class="n">Ny_total</span><span class="p">:</span>
+                    <span class="n">elem_idx</span> <span class="o">=</span> <span class="n">global_ix</span> <span class="o">*</span> <span class="n">Ny_total</span> <span class="o">+</span> <span class="n">global_iy</span>
+                    <span class="k">if</span> <span class="n">elem_idx</span> <span class="o">&lt;</span> <span class="n">geometry</span><span class="o">.</span><span class="n">n_elements</span><span class="p">:</span>
+                        <span class="n">assignments</span><span class="p">[</span><span class="n">elem_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">sub_idx</span>
+                        <span class="n">center_x</span> <span class="o">+=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">elem_idx</span><span class="p">]</span>
+                        <span class="n">center_y</span> <span class="o">+=</span> <span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">elem_idx</span><span class="p">]</span>
+                        <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">subarray_centers</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">center_x</span> <span class="o">/</span> <span class="n">count</span><span class="p">,</span> <span class="n">center_y</span> <span class="o">/</span> <span class="n">count</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">subarray_centers</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">SubarrayArchitecture</span><span class="p">(</span>
+        <span class="n">geometry</span><span class="o">=</span><span class="n">geometry</span><span class="p">,</span>
+        <span class="n">subarray_assignments</span><span class="o">=</span><span class="n">assignments</span><span class="p">,</span>
+        <span class="n">n_subarrays</span><span class="o">=</span><span class="n">n_subarrays</span><span class="p">,</span>
+        <span class="n">subarray_centers</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">subarray_centers</span><span class="p">)</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="compute_subarray_weights">
+<a class="viewcode-back" href="../../api/geometry.html#phased_array.compute_subarray_weights">[docs]</a>
+<span class="k">def</span> <span class="nf">compute_subarray_weights</span><span class="p">(</span>
+    <span class="n">architecture</span><span class="p">:</span> <span class="n">SubarrayArchitecture</span><span class="p">,</span>
+    <span class="n">k</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">theta0_deg</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">phi0_deg</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">intra_subarray_weights</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute element weights for subarray-level beamforming.</span>
+
+<span class="sd">    Phase is quantized to subarray centers (one phase shifter per subarray).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    architecture : SubarrayArchitecture</span>
+<span class="sd">        Subarray architecture</span>
+<span class="sd">    k : float</span>
+<span class="sd">        Wavenumber</span>
+<span class="sd">    theta0_deg, phi0_deg : float</span>
+<span class="sd">        Steering direction in degrees</span>
+<span class="sd">    intra_subarray_weights : ndarray, optional</span>
+<span class="sd">        Amplitude taper applied within each subarray</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    weights : ndarray</span>
+<span class="sd">        Complex weights for all elements</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">.core</span> <span class="kn">import</span> <span class="n">steering_vector</span>
+
+    <span class="n">geom</span> <span class="o">=</span> <span class="n">architecture</span><span class="o">.</span><span class="n">geometry</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">geom</span><span class="o">.</span><span class="n">n_elements</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+
+    <span class="c1"># Apply intra-subarray amplitude weights if provided</span>
+    <span class="k">if</span> <span class="n">intra_subarray_weights</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">weights</span> <span class="o">*=</span> <span class="n">intra_subarray_weights</span>
+
+    <span class="c1"># Compute steering phase for each subarray center</span>
+    <span class="n">theta0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">theta0_deg</span><span class="p">)</span>
+    <span class="n">phi0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">phi0_deg</span><span class="p">)</span>
+    <span class="n">u0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta0</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi0</span><span class="p">)</span>
+    <span class="n">v0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta0</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi0</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">sub_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">architecture</span><span class="o">.</span><span class="n">n_subarrays</span><span class="p">):</span>
+        <span class="n">center</span> <span class="o">=</span> <span class="n">architecture</span><span class="o">.</span><span class="n">subarray_centers</span><span class="p">[</span><span class="n">sub_idx</span><span class="p">]</span>
+        <span class="n">phase</span> <span class="o">=</span> <span class="n">k</span> <span class="o">*</span> <span class="p">(</span><span class="n">center</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">u0</span> <span class="o">+</span> <span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">v0</span><span class="p">)</span>
+
+        <span class="c1"># Apply this phase to all elements in the subarray</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">architecture</span><span class="o">.</span><span class="n">subarray_assignments</span> <span class="o">==</span> <span class="n">sub_idx</span>
+        <span class="n">weights</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">phase</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">weights</span></div>
+
+
+
+<div class="viewcode-block" id="array_factor_conformal">
+<a class="viewcode-back" href="../../api/geometry.html#phased_array.array_factor_conformal">[docs]</a>
+<span class="k">def</span> <span class="nf">array_factor_conformal</span><span class="p">(</span>
+    <span class="n">theta</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">phi</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">geometry</span><span class="p">:</span> <span class="n">ArrayGeometry</span><span class="p">,</span>
+    <span class="n">weights</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">k</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">element_pattern_func</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">element_kwargs</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute array factor for conformal arrays with element orientation.</span>
+
+<span class="sd">    Each element&#39;s contribution is weighted by its projected pattern</span>
+<span class="sd">    in the observation direction.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    theta : ndarray</span>
+<span class="sd">        Observation theta angles in radians</span>
+<span class="sd">    phi : ndarray</span>
+<span class="sd">        Observation phi angles in radians</span>
+<span class="sd">    geometry : ArrayGeometry</span>
+<span class="sd">        Array geometry with element normals</span>
+<span class="sd">    weights : ndarray</span>
+<span class="sd">        Complex element weights</span>
+<span class="sd">    k : float</span>
+<span class="sd">        Wavenumber</span>
+<span class="sd">    element_pattern_func : callable, optional</span>
+<span class="sd">        Element pattern function</span>
+<span class="sd">    **element_kwargs</span>
+<span class="sd">        Arguments for element pattern function</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    AF : ndarray</span>
+<span class="sd">        Array factor (same shape as theta)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">original_shape</span> <span class="o">=</span> <span class="n">theta</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">theta_flat</span> <span class="o">=</span> <span class="n">theta</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="n">phi_flat</span> <span class="o">=</span> <span class="n">phi</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="n">n_angles</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">theta_flat</span><span class="p">)</span>
+
+    <span class="c1"># Observation direction unit vectors</span>
+    <span class="n">obs_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta_flat</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi_flat</span><span class="p">)</span>
+    <span class="n">obs_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta_flat</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi_flat</span><span class="p">)</span>
+    <span class="n">obs_z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta_flat</span><span class="p">)</span>
+
+    <span class="n">AF</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_angles</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">n_elements</span><span class="p">):</span>
+        <span class="c1"># Phase from element position</span>
+        <span class="n">phase</span> <span class="o">=</span> <span class="n">k</span> <span class="o">*</span> <span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">obs_x</span> <span class="o">+</span> <span class="n">geometry</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">obs_y</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">geometry</span><span class="o">.</span><span class="n">z</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">phase</span> <span class="o">+=</span> <span class="n">k</span> <span class="o">*</span> <span class="n">geometry</span><span class="o">.</span><span class="n">z</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">obs_z</span>
+
+        <span class="c1"># Element pattern correction for orientation</span>
+        <span class="k">if</span> <span class="n">geometry</span><span class="o">.</span><span class="n">nx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">geometry</span><span class="o">.</span><span class="n">ny</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">geometry</span><span class="o">.</span><span class="n">nz</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Cosine of angle between observation direction and element normal</span>
+            <span class="n">cos_angle</span> <span class="o">=</span> <span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">nx</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">obs_x</span> <span class="o">+</span>
+                        <span class="n">geometry</span><span class="o">.</span><span class="n">ny</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">obs_y</span> <span class="o">+</span>
+                        <span class="n">geometry</span><span class="o">.</span><span class="n">nz</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">obs_z</span><span class="p">)</span>
+            <span class="n">cos_angle</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">cos_angle</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># Only forward hemisphere</span>
+
+            <span class="k">if</span> <span class="n">element_pattern_func</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="c1"># Local theta for this element (angle from its normal)</span>
+                <span class="n">local_theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">cos_angle</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+                <span class="n">element_gain</span> <span class="o">=</span> <span class="n">element_pattern_func</span><span class="p">(</span><span class="n">local_theta</span><span class="p">,</span> <span class="n">phi_flat</span><span class="p">,</span> <span class="o">**</span><span class="n">element_kwargs</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">element_gain</span> <span class="o">=</span> <span class="n">cos_angle</span>  <span class="c1"># Simple cosine pattern</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">element_gain</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+        <span class="n">AF</span> <span class="o">+=</span> <span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">element_gain</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">phase</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">AF</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">original_shape</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, John Hodge.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.7.
+    <br/>
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
