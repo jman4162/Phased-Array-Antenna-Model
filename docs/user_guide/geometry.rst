@@ -265,6 +265,104 @@ cost at the expense of beam quality.
        theta0_deg=20, phi0_deg=0
    )
 
+Overlapped Subarrays
+^^^^^^^^^^^^^^^^^^^^
+
+Overlapped subarrays share elements between adjacent subarrays. This improves
+pattern characteristics and reduces grating lobes compared to non-overlapped
+subarrays, while still reducing hardware cost compared to element-level control.
+
+.. code-block:: python
+
+   import phased_array as pa
+   import numpy as np
+
+   # Create overlapped subarray architecture
+   # 50% overlap: 4x4 subarrays with 2-element overlap
+   arch = pa.create_overlapped_subarrays(
+       Nx_total=16, Ny_total=16,
+       Nx_sub=4, Ny_sub=4,       # Subarray size
+       overlap_x=2, overlap_y=2,  # Overlap in each direction
+       dx=0.5, dy=0.5,
+       taper_overlap=True  # Apply taper to shared elements
+   )
+
+   print(f"Overlapped architecture: {arch.overlapped}")  # True
+   print(f"Number of subarrays: {arch.n_subarrays}")
+
+   # Subarray stride (non-overlapping portion)
+   stride_x = 4 - 2  # = 2
+   stride_y = 4 - 2  # = 2
+
+**Overlap parameter effects:**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 25 50
+
+   * - Overlap
+     - Pattern Quality
+     - Hardware Complexity
+   * - 0%
+     - Grating lobes visible
+     - Minimum (one phase shifter per subarray)
+   * - 50%
+     - Significantly reduced grating lobes
+     - Moderate (elements in multiple subarrays)
+   * - >50%
+     - Near element-level quality
+     - Higher (more overlap processing)
+
+Computing Overlapped Subarray Weights
+"""""""""""""""""""""""""""""""""""""
+
+.. code-block:: python
+
+   k = pa.wavelength_to_k(1.0)
+
+   # Compute element weights for steering
+   weights = pa.overlapped_subarray_weights(
+       arch, k,
+       theta0_deg=15, phi0_deg=0,
+       subarray_weights=None  # Use uniform subarray weights
+   )
+
+   print(f"Element weights shape: {weights.shape}")  # (256,)
+
+   # Apply custom subarray-level taper
+   subarray_taper = np.ones(arch.n_subarrays)  # Could apply Taylor taper here
+   weights_tapered = pa.overlapped_subarray_weights(
+       arch, k,
+       theta0_deg=15, phi0_deg=0,
+       subarray_weights=subarray_taper
+   )
+
+Computing Overlapped Subarray Patterns
+""""""""""""""""""""""""""""""""""""""
+
+.. code-block:: python
+
+   # Compute pattern cut
+   theta_deg, pattern_dB = pa.compute_overlapped_pattern(
+       arch, k,
+       theta0_deg=15, phi0_deg=0,
+       theta_range=(0, np.pi/2),
+       n_points=361,
+       phi_cut_deg=0.0
+   )
+
+   # Compare with non-overlapped subarray
+   arch_non = pa.create_rectangular_subarrays(
+       Nx_total=16, Ny_total=16,
+       Nx_sub=4, Ny_sub=4,
+       dx=0.5, dy=0.5
+   )
+
+   # The overlapped architecture typically shows:
+   # - Lower grating lobes
+   # - Smoother transitions between subarrays
+   # - Better pattern quality at wide scan angles
+
 ArrayGeometry Class
 -------------------
 

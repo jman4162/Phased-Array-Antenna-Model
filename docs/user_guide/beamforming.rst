@@ -255,6 +255,230 @@ For non-rectangular arrays, use ``apply_taper_to_geometry``:
        sidelobe_dB=-30
    )
 
+Beam Spoiling
+-------------
+
+Beam spoiling broadens the beam by introducing quadratic phase across the
+aperture. This is commonly used in search/surveillance modes to cover larger
+areas with reduced update rate.
+
+Quadratic Phase Spoiling
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+   import phased_array as pa
+   import numpy as np
+
+   geom = pa.create_rectangular_array(16, 16, dx=0.5, dy=0.5)
+   k = pa.wavelength_to_k(1.0)
+
+   # Create spoiled beam with spoil_factor=2.0
+   weights = pa.quadratic_phase_spoil(
+       geom, k,
+       theta0_deg=0, phi0_deg=0,
+       spoil_factor=2.0,  # Higher = broader beam
+       axis='both'  # Spoil in both x and y
+   )
+
+   # Spoil only in one axis (fan beam)
+   weights_fan = pa.quadratic_phase_spoil(
+       geom, k,
+       theta0_deg=0, phi0_deg=0,
+       spoil_factor=3.0,
+       axis='x'  # Only spoil in x-direction
+   )
+
+Computing Required Spoil Factor
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+   # Calculate spoil factor needed for desired beamwidth
+   unspoiled_bw = 6.0  # degrees (natural beamwidth)
+   desired_bw = 15.0   # degrees (target beamwidth)
+
+   spoil_factor = pa.compute_spoil_factor(
+       geom,
+       desired_beamwidth_deg=desired_bw,
+       unspoiled_beamwidth_deg=unspoiled_bw
+   )
+   print(f"Required spoil factor: {spoil_factor:.2f}")
+
+Spoiled Beam Characteristics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+   # Estimate spoiled beamwidth
+   bw_spoiled = pa.spoiled_beamwidth(6.0, spoil_factor=2.0)
+   print(f"Spoiled beamwidth: {bw_spoiled:.1f} deg")  # ~13.4 deg
+
+   # Estimate spoiled beam gain
+   gain_spoiled = pa.spoiled_beam_gain(
+       n_elements=256,
+       element_gain_dBi=5.0,
+       spoil_factor=2.0,
+       taper_efficiency=0.9
+   )
+   print(f"Spoiled beam gain: {gain_spoiled:.1f} dBi")
+
+**Spoiling effects:**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 25 25 30
+
+   * - Spoil Factor
+     - BW Multiplier
+     - Gain Loss (dB)
+     - Typical Use
+   * - 0
+     - 1.0x
+     - 0.0
+     - Normal operation
+   * - 1
+     - 1.4x
+     - 3.0
+     - Moderate broadening
+   * - 2
+     - 2.2x
+     - 7.0
+     - Search mode
+   * - 3
+     - 3.2x
+     - 10.0
+     - Wide area surveillance
+
+Adaptive Beamforming
+--------------------
+
+Adaptive beamforming automatically adjusts weights to suppress interference
+while maintaining gain toward the desired signal direction.
+
+Sample Matrix Inversion (SMI/MVDR)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+SMI directly computes the optimal MVDR weights from sample covariance:
+
+.. code-block:: python
+
+   import phased_array as pa
+   import numpy as np
+
+   geom = pa.create_rectangular_array(8, 8, dx=0.5, dy=0.5)
+   k = pa.wavelength_to_k(1.0)
+
+   # Simulate interference data (in practice, from receiver)
+   n_snapshots = 100
+   n_elements = geom.n_elements
+
+   # Create interference scenario: jammer at 35 deg + noise
+   jammer_sv = pa.steering_vector(k, geom.x, geom.y, 35, 0)
+   noise = (np.random.randn(n_snapshots, n_elements) +
+            1j * np.random.randn(n_snapshots, n_elements)) / np.sqrt(2)
+   jammer = 10 * np.outer(np.random.randn(n_snapshots) +
+                          1j * np.random.randn(n_snapshots), jammer_sv)
+   interference_data = jammer + noise
+
+   # Compute adaptive weights for signal at 0 deg
+   weights_adapted = pa.adaptive_weights_smi(
+       geom, k,
+       theta_desired_deg=0,
+       phi_desired_deg=0,
+       interference_data=interference_data,
+       diagonal_loading=0.01  # Improves robustness
+   )
+
+   # Compare with quiescent (non-adaptive) weights
+   weights_quiescent = pa.steering_vector(k, geom.x, geom.y, 0, 0)
+
+**Diagonal loading** adds robustness when:
+
+- Number of snapshots is limited
+- Signal of interest is present in training data
+- Mismatch exists between assumed and actual steering vectors
+
+Generalized Sidelobe Canceller (GSC)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+GSC provides a constrained adaptive structure that guarantees distortionless
+response in the look direction:
+
+.. code-block:: python
+
+   # Compute GSC weights
+   weights_gsc, blocking_matrix = pa.adaptive_weights_gsc(
+       geom, k,
+       theta_desired_deg=0,
+       phi_desired_deg=0,
+       interference_data=interference_data,
+       n_blocking_vectors=None,  # Auto: n_elements - 1
+       mu=0.01  # LMS step size
+   )
+
+   # GSC structure:
+   # w = w_quiescent - B @ w_adaptive
+   # where B is the blocking matrix orthogonal to desired steering vector
+
+SINR Analysis
+^^^^^^^^^^^^^
+
+Quantify the improvement from adaptive beamforming:
+
+.. code-block:: python
+
+   # Compute SINR improvement
+   sinr_before, sinr_after, improvement = pa.compute_sinr_improvement(
+       weights_before=weights_quiescent,
+       weights_after=weights_adapted,
+       geometry=geom,
+       k=k,
+       signal_direction=(0, 0),
+       interference_directions=[(35, 0)],
+       signal_power=1.0,
+       interference_powers=[100.0],  # 20 dB INR
+       noise_power=0.1
+   )
+
+   print(f"SINR before: {sinr_before:.1f} dB")
+   print(f"SINR after:  {sinr_after:.1f} dB")
+   print(f"Improvement: {improvement:.1f} dB")
+
+Visualizing Adapted Patterns
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+   # Plot comparison of quiescent and adapted patterns
+   ax = pa.plot_adapted_pattern(
+       geom, k,
+       weights_quiescent=weights_quiescent,
+       weights_adapted=weights_adapted,
+       interference_directions=[(35, 0)],
+       title="Adaptive Null at 35 degrees",
+       phi_cut_deg=0.0
+   )
+
+**Adaptive beamforming guidelines:**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 35 40
+
+   * - Parameter
+     - Typical Range
+     - Effect
+   * - Snapshots
+     - 2N to 10N
+     - More = better estimate, slower adaptation
+   * - Diagonal loading
+     - 0.001 to 0.1
+     - Higher = more robust, less cancellation
+   * - LMS step size (mu)
+     - 0.001 to 0.1
+     - Higher = faster adaptation, risk of instability
+
 Best Practices
 --------------
 
@@ -270,3 +494,8 @@ Best Practices
    control can cost 2-3 dB of directivity.
 
 5. **For multi-beam**, check isolation between beams when directions are close.
+
+6. **For beam spoiling**, ensure gain budget accounts for the spoiling loss.
+
+7. **For adaptive beamforming**, use diagonal loading when snapshots are limited
+   or signal is present in training data.

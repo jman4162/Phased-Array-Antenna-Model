@@ -148,3 +148,138 @@ Coordinate Grid Generation
 
    # Check visible region
    is_visible = pa.is_visible_region(u_grid, v_grid)
+
+Antenna vs Radar Coordinate Systems
+-----------------------------------
+
+Different communities use different coordinate conventions. The library
+provides conversion functions between the two most common systems.
+
+**Antenna Coordinates (theta/phi):**
+
+- Standard physics spherical coordinates
+- :math:`\theta` measured from boresight (z-axis)
+- :math:`\phi` measured in the xy-plane from x-axis
+
+**Radar Coordinates (az/el):**
+
+- Engineering convention for tracking systems
+- Azimuth in horizontal plane
+- Elevation above horizon
+
+.. code-block:: python
+
+   import phased_array as pa
+   import numpy as np
+
+   # Convert antenna coords to radar coords
+   theta_ant = np.deg2rad(30)  # 30 deg from boresight
+   phi_ant = np.deg2rad(45)    # 45 deg azimuthal
+
+   az, el = pa.antenna_to_radar(theta_ant, phi_ant)
+   print(f"Antenna: theta={np.rad2deg(theta_ant):.1f}, phi={np.rad2deg(phi_ant):.1f}")
+   print(f"Radar: az={np.rad2deg(az):.1f}, el={np.rad2deg(el):.1f}")
+
+   # Convert back
+   theta_back, phi_back = pa.radar_to_antenna(az, el)
+   print(f"Round-trip: theta={np.rad2deg(theta_back):.1f}, phi={np.rad2deg(phi_back):.1f}")
+
+Cone/Clock Coordinates
+----------------------
+
+Cone/clock coordinates are useful for describing patterns on aircraft
+radomes or for visualizing scan limits in a polar format.
+
+- **Cone angle**: Distance from boresight (same as theta)
+- **Clock angle**: Azimuthal position (same as phi)
+
+.. code-block:: python
+
+   # Convert antenna to cone/clock
+   theta = np.deg2rad(30)
+   phi = np.deg2rad(60)
+
+   cone, clock = pa.antenna_to_cone(theta, phi)
+   print(f"Cone angle: {np.rad2deg(cone):.1f} deg")
+   print(f"Clock angle: {np.rad2deg(clock):.1f} deg")
+
+   # Convert back
+   theta_back, phi_back = pa.cone_to_antenna(cone, clock)
+
+This representation is intuitive for displaying scan coverage:
+
+- The cone angle represents "how far" from boresight
+- The clock angle represents "which direction" from boresight (like a clock face)
+
+Rotation Matrices
+-----------------
+
+For transforming between coordinate systems or rotating patterns, the library
+provides standard rotation matrices using aircraft/aerospace conventions.
+
+.. code-block:: python
+
+   import phased_array as pa
+   import numpy as np
+
+   # Roll: rotation about x-axis (right wing down is positive)
+   R_roll = pa.rotation_matrix_roll(np.deg2rad(10))
+
+   # Pitch: rotation about y-axis (nose up is positive)
+   R_pitch = pa.rotation_matrix_pitch(np.deg2rad(5))
+
+   # Yaw: rotation about z-axis (nose left is positive)
+   R_yaw = pa.rotation_matrix_yaw(np.deg2rad(-3))
+
+   # Combined rotation (yaw-pitch-roll order)
+   R_combined = R_yaw @ R_pitch @ R_roll
+
+   # Apply to a direction vector
+   v = np.array([0, 0, 1])  # Boresight direction
+   v_rotated = R_combined @ v
+   print(f"Original: {v}")
+   print(f"Rotated: {v_rotated}")
+
+Pattern Rotation
+----------------
+
+Rotate an entire radiation pattern by specified Euler angles:
+
+.. code-block:: python
+
+   import phased_array as pa
+   import numpy as np
+
+   # Create a pattern grid
+   theta = np.linspace(0, np.pi/2, 46)
+   phi = np.linspace(0, 2*np.pi, 73)
+   theta_grid, phi_grid = np.meshgrid(theta, phi, indexing='ij')
+
+   # Simple cosine pattern
+   pattern = np.cos(theta_grid)
+
+   # Rotate pattern by 30 degrees in yaw
+   theta_rot, phi_rot, pattern_rot = pa.rotate_pattern(
+       theta_grid, phi_grid, pattern,
+       roll_deg=0,
+       pitch_deg=0,
+       yaw_deg=30
+   )
+
+   print(f"Original pattern shape: {pattern.shape}")
+   print(f"Rotated pattern shape: {pattern_rot.shape}")
+
+**Rotation order (intrinsic):**
+
+1. Yaw (about z-axis)
+2. Pitch (about y-axis)
+3. Roll (about x-axis)
+
+This follows the standard aerospace convention for describing aircraft attitude.
+
+**Use cases:**
+
+- Mounting the array at an angle on a platform
+- Compensating for platform attitude in tracking systems
+- Transforming measured patterns to different reference frames
+- Visualizing patterns from different observation perspectives

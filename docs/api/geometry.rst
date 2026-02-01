@@ -60,3 +60,16 @@ Subarrays
 .. autofunction:: phased_array.create_rectangular_subarrays
 
 .. autofunction:: phased_array.compute_subarray_weights
+
+Overlapped Subarrays
+--------------------
+
+Overlapped subarray architectures share elements between adjacent subarrays,
+improving pattern characteristics and reducing grating lobes while maintaining
+independent subarray beam control.
+
+.. autofunction:: phased_array.create_overlapped_subarrays
+
+.. autofunction:: phased_array.overlapped_subarray_weights
+
+.. autofunction:: phased_array.compute_overlapped_pattern

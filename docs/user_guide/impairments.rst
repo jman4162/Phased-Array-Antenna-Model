@@ -318,6 +318,173 @@ In practice, multiple impairments occur simultaneously:
    # Compute final pattern
    theta, phi, pattern_dB = pa.compute_full_pattern(geom.x, geom.y, weights, k)
 
+Active Impedance and VSWR
+-------------------------
+
+In a phased array, mutual coupling causes each element to see a different
+impedance depending on the scan angle and the excitations of neighboring
+elements. This "active impedance" can vary significantly from the isolated
+element impedance.
+
+Active Reflection Coefficient
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The active reflection coefficient accounts for coupling from all other
+elements when the array is excited with given weights:
+
+.. code-block:: python
+
+   import phased_array as pa
+   import numpy as np
+
+   geom = pa.create_rectangular_array(8, 8, dx=0.5, dy=0.5)
+   k = pa.wavelength_to_k(1.0)
+
+   # Create coupling matrix
+   C = pa.mutual_coupling_matrix_theoretical(geom, k, coupling_coeff=0.2)
+
+   # Compute steering weights
+   weights = pa.steering_vector(k, geom.x, geom.y, theta0_deg=30, phi0_deg=0)
+
+   # Active reflection coefficient for center element
+   gamma = pa.active_reflection_coefficient(C, weights, element_idx=32)
+   print(f"Active reflection coeff: {np.abs(gamma):.3f} at {np.rad2deg(np.angle(gamma)):.1f} deg")
+
+Active Impedance
+^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+   # Active impedance seen at element port
+   Z_active = pa.active_impedance(C, weights, element_idx=32, Z0=50.0)
+   print(f"Active impedance: {Z_active.real:.1f} + j{Z_active.imag:.1f} ohms")
+
+   # Compare with nominal 50 ohms
+   # Active impedance varies with scan angle and position in array
+
+   # Get active impedance for all elements at a scan angle
+   Z_all = pa.active_scan_impedance_matrix(
+       geom, C, k,
+       theta_deg=30, phi_deg=0,
+       Z0=50.0
+   )
+   print(f"Impedance range: {Z_all.real.min():.1f} to {Z_all.real.max():.1f} ohms (real)")
+
+VSWR vs Scan Angle
+^^^^^^^^^^^^^^^^^^
+
+VSWR is a critical metric that indicates how well elements remain matched
+as the array scans. High VSWR indicates potential scan blindness or poor
+matching conditions.
+
+.. code-block:: python
+
+   # Compute VSWR for all elements vs scan angle
+   theta_deg, vswr_all, vswr_max = pa.vswr_vs_scan(
+       geom, C, k,
+       theta_range=(0, 60),
+       n_angles=31,
+       phi_deg=0.0
+   )
+
+   # Find maximum VSWR at each scan angle
+   for i, theta in enumerate(theta_deg[::5]):  # Every 5th angle
+       print(f"Scan {theta:.0f} deg: Max VSWR = {vswr_max[i*5]:.2f}:1")
+
+   # Plot VSWR vs scan angle
+   import matplotlib.pyplot as plt
+   plt.plot(theta_deg, vswr_max)
+   plt.xlabel('Scan Angle (deg)')
+   plt.ylabel('Maximum VSWR')
+   plt.title('VSWR vs Scan Angle')
+   plt.grid(True)
+   plt.axhline(y=2.0, color='r', linestyle='--', label='2:1 VSWR spec')
+   plt.legend()
+
+**VSWR guidelines:**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 30 50
+
+   * - VSWR
+     - Reflection Loss
+     - Interpretation
+   * - 1.0:1
+     - 0.0 dB
+     - Perfect match
+   * - 1.5:1
+     - 0.2 dB
+     - Excellent
+   * - 2.0:1
+     - 0.5 dB
+     - Good (typical spec)
+   * - 3.0:1
+     - 1.2 dB
+     - Marginal
+   * - >5:1
+     - >2.5 dB
+     - Potential scan blindness
+
+Mismatch Loss
+^^^^^^^^^^^^^
+
+.. code-block:: python
+
+   # Compute mismatch loss from reflection coefficient
+   gamma = 0.333  # Corresponds to 2:1 VSWR
+   loss = pa.mismatch_loss(gamma)
+   print(f"Mismatch loss at 2:1 VSWR: {loss:.2f} dB")  # ~-0.5 dB
+
+   # Array of reflection coefficients
+   gamma_array = np.array([0.0, 0.1, 0.2, 0.333, 0.5])
+   loss_array = pa.mismatch_loss(gamma_array)
+   for g, l in zip(gamma_array, loss_array):
+       vswr = (1 + g) / (1 - g)
+       print(f"Gamma={g:.2f}, VSWR={vswr:.1f}:1, Loss={l:.2f} dB")
+
+Edge Effects
+^^^^^^^^^^^^
+
+Elements near the array edges typically have different active impedance than
+interior elements due to the asymmetric coupling environment:
+
+.. code-block:: python
+
+   # Compare edge and center element active impedance
+   Z_center = pa.active_impedance(C, weights, element_idx=27, Z0=50.0)  # Center
+   Z_corner = pa.active_impedance(C, weights, element_idx=0, Z0=50.0)   # Corner
+   Z_edge = pa.active_impedance(C, weights, element_idx=3, Z0=50.0)     # Edge
+
+   print(f"Center element Z: {Z_center.real:.1f} + j{Z_center.imag:.1f}")
+   print(f"Edge element Z: {Z_edge.real:.1f} + j{Z_edge.imag:.1f}")
+   print(f"Corner element Z: {Z_corner.real:.1f} + j{Z_corner.imag:.1f}")
+
+Combined Impairments
+--------------------
+
+In practice, multiple impairments occur simultaneously:
+
+.. code-block:: python
+
+   # Start with ideal steering
+   weights = pa.steering_vector(k, geom.x, geom.y, theta0_deg=30, phi0_deg=0)
+   weights *= pa.taylor_taper_2d(16, 16, sidelobe_dB=-30)
+
+   # Apply impairments in order
+   # 1. Mutual coupling
+   coupling = pa.mutual_coupling_matrix_theoretical(geom.x, geom.y)
+   weights = pa.apply_mutual_coupling(weights, coupling)
+
+   # 2. Phase quantization
+   weights = pa.quantize_phase(weights, n_bits=5)
+
+   # 3. Element failures
+   weights, _ = pa.simulate_element_failures(weights, failure_rate=0.03, mode='off')
+
+   # Compute final pattern
+   theta, phi, pattern_dB = pa.compute_full_pattern(geom.x, geom.y, weights, k)
+
 Best Practices
 --------------
 
@@ -330,3 +497,7 @@ Best Practices
 4. **Avoid element spacings** that place scan blindness in operational scan range.
 
 5. **Combine impairment models** for realistic performance prediction.
+
+6. **Check VSWR across the full scan range** to identify potential blind spots.
+
+7. **Account for edge effects** when specifying element matching requirements.

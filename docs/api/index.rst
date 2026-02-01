@@ -19,9 +19,13 @@ Modules
    * - :doc:`geometry`
      - Array geometry creation: rectangular, triangular, circular, conformal, sparse
    * - :doc:`beamforming`
-     - Beamforming techniques: amplitude tapers, null steering, multi-beam
+     - Beamforming techniques: amplitude tapers, null steering, multi-beam, beam spoiling, adaptive
    * - :doc:`impairments`
-     - Realistic impairments: mutual coupling, quantization, failures, scan blindness
+     - Realistic impairments: mutual coupling, quantization, failures, scan blindness, active impedance
+   * - :doc:`polarization`
+     - Polarization analysis: Jones vectors, Stokes parameters, Ludwig-3 decomposition
+   * - :doc:`coordinates`
+     - Coordinate transforms: antenna/radar, cone/clock, rotation matrices
    * - :doc:`visualization`
      - Plotting functions: 2D, 3D, UV-space, Plotly interactive
    * - :doc:`wideband`
@@ -67,6 +71,8 @@ Most Commonly Used Functions
    geometry
    beamforming
    impairments
+   polarization
+   coordinates
    visualization
    wideband
    utils

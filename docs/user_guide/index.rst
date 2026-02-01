@@ -11,6 +11,7 @@ best practices.
    geometry
    beamforming
    impairments
+   polarization
    wideband
    visualization
 

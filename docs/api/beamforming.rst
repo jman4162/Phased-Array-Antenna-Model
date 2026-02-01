@@ -72,3 +72,31 @@ Special Patterns
 ----------------
 
 .. autofunction:: phased_array.monopulse_weights
+
+Beam Spoiling
+-------------
+
+Functions for beam broadening using quadratic phase distributions,
+commonly used in search mode to cover larger areas.
+
+.. autofunction:: phased_array.quadratic_phase_spoil
+
+.. autofunction:: phased_array.compute_spoil_factor
+
+.. autofunction:: phased_array.spoiled_beam_gain
+
+.. autofunction:: phased_array.spoiled_beamwidth
+
+Adaptive Beamforming (SMI/GSC)
+------------------------------
+
+Adaptive beamforming techniques for interference rejection using
+Sample Matrix Inversion (SMI) and Generalized Sidelobe Canceller (GSC).
+
+.. autofunction:: phased_array.adaptive_weights_smi
+
+.. autofunction:: phased_array.adaptive_weights_gsc
+
+.. autofunction:: phased_array.compute_sinr_improvement
+
+.. autofunction:: phased_array.plot_adapted_pattern

@@ -47,3 +47,19 @@ Scan Blindness
 .. autofunction:: phased_array.apply_scan_blindness
 
 .. autofunction:: phased_array.compute_scan_loss
+
+Active Impedance and VSWR
+-------------------------
+
+Functions for computing active impedance and VSWR, which account for
+mutual coupling effects when the array is steered to different scan angles.
+
+.. autofunction:: phased_array.active_reflection_coefficient
+
+.. autofunction:: phased_array.active_impedance
+
+.. autofunction:: phased_array.vswr_vs_scan
+
+.. autofunction:: phased_array.mismatch_loss
+
+.. autofunction:: phased_array.active_scan_impedance_matrix

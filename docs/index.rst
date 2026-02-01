@@ -102,6 +102,8 @@ For interactive Plotly visualizations:
    api/geometry
    api/beamforming
    api/impairments
+   api/polarization
+   api/coordinates
    api/visualization
    api/wideband
    api/utils
