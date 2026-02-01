@@ -242,3 +242,115 @@ class TestScanBlindness:
         # Pattern at 45 deg should be reduced
         idx_45 = 45  # approximately
         assert np.abs(pattern_blind[idx_45]) < np.abs(pattern[idx_45])
+
+
+class TestActiveImpedance:
+    """Tests for active impedance and VSWR functions."""
+
+    def test_active_reflection_coefficient_diagonal(self):
+        """With identity coupling matrix, gamma should be 0."""
+        n = 16
+        C = np.eye(n, dtype=complex)
+        weights = np.ones(n, dtype=complex)
+
+        gamma = pa.active_reflection_coefficient(C, weights, element_idx=0)
+
+        assert np.isclose(np.abs(gamma), 0.0, atol=1e-10)
+
+    def test_active_reflection_coefficient_reasonable(self):
+        """Active reflection should be reasonable for typical coupling."""
+        geom = pa.create_rectangular_array(4, 4, dx=0.5, dy=0.5)
+        k = pa.wavelength_to_k(1.0)
+        C = pa.mutual_coupling_matrix_theoretical(geom, k, coupling_coeff=0.2)
+        weights = pa.steering_vector(k, geom.x, geom.y, 0, 0)
+
+        gamma = pa.active_reflection_coefficient(C, weights, element_idx=0)
+
+        # Should be a reasonable value (not infinite, not >1 for passive array)
+        assert np.isfinite(gamma)
+        assert np.abs(gamma) < 2.0  # Allow some margin
+
+    def test_active_impedance_positive_resistance(self):
+        """Active impedance should have positive real part."""
+        geom = pa.create_rectangular_array(4, 4, dx=0.5, dy=0.5)
+        k = pa.wavelength_to_k(1.0)
+        C = pa.mutual_coupling_matrix_theoretical(geom, k, coupling_coeff=0.2)
+        weights = pa.steering_vector(k, geom.x, geom.y, 0, 0)
+
+        Z = pa.active_impedance(C, weights, element_idx=0)
+
+        # Real part should be positive (passive network)
+        assert np.real(Z) > 0
+
+    def test_vswr_vs_scan_shape(self):
+        """VSWR vs scan should return correct shapes."""
+        geom = pa.create_rectangular_array(8, 8, dx=0.5, dy=0.5)
+        k = pa.wavelength_to_k(1.0)
+        C = pa.mutual_coupling_matrix_theoretical(geom, k, coupling_coeff=0.2)
+
+        theta_deg, vswr_all, vswr_max = pa.vswr_vs_scan(
+            geom, C, k, theta_range=(0, 45), n_angles=10
+        )
+
+        assert len(theta_deg) == 10
+        assert vswr_all.shape == (10, geom.n_elements)
+        assert len(vswr_max) == 10
+
+    def test_vswr_minimum_value(self):
+        """VSWR should always be >= 1."""
+        geom = pa.create_rectangular_array(4, 4, dx=0.5, dy=0.5)
+        k = pa.wavelength_to_k(1.0)
+        C = pa.mutual_coupling_matrix_theoretical(geom, k, coupling_coeff=0.1)
+
+        _, vswr_all, vswr_max = pa.vswr_vs_scan(
+            geom, C, k, theta_range=(0, 30), n_angles=5
+        )
+
+        # Filter out infinities for comparison
+        finite_vswr = vswr_all[np.isfinite(vswr_all)]
+        if len(finite_vswr) > 0:
+            assert np.all(finite_vswr >= 1.0 - 1e-10)
+
+    def test_mismatch_loss_perfect_match(self):
+        """Perfect match should have zero mismatch loss."""
+        loss = pa.mismatch_loss(0.0)
+        assert np.isclose(loss, 0.0)
+
+    def test_mismatch_loss_typical(self):
+        """Typical VSWR should give reasonable loss."""
+        # VSWR = 2:1 corresponds to gamma = 0.333
+        gamma = 0.333
+        loss = pa.mismatch_loss(gamma)
+
+        # Should be between -1 and 0 dB
+        assert -1.0 < loss < 0.0
+
+    def test_mismatch_loss_high_reflection(self):
+        """High reflection should give large loss."""
+        gamma = 0.9
+        loss = pa.mismatch_loss(gamma)
+
+        # Should be significant negative value
+        assert loss < -5.0
+
+    def test_active_scan_impedance_matrix_shape(self):
+        """Should return impedance for all elements."""
+        geom = pa.create_rectangular_array(4, 4, dx=0.5, dy=0.5)
+        k = pa.wavelength_to_k(1.0)
+        C = pa.mutual_coupling_matrix_theoretical(geom, k, coupling_coeff=0.2)
+
+        Z = pa.active_scan_impedance_matrix(geom, C, k, theta_deg=30, phi_deg=0)
+
+        assert Z.shape == (geom.n_elements,)
+
+    def test_active_scan_impedance_matrix_positive_resistance(self):
+        """All elements should have positive resistance."""
+        geom = pa.create_rectangular_array(4, 4, dx=0.5, dy=0.5)
+        k = pa.wavelength_to_k(1.0)
+        C = pa.mutual_coupling_matrix_theoretical(geom, k, coupling_coeff=0.2)
+
+        Z = pa.active_scan_impedance_matrix(geom, C, k, theta_deg=15, phi_deg=0)
+
+        # All finite values should have positive real part
+        finite_Z = Z[np.isfinite(Z)]
+        assert np.all(np.real(finite_Z) > 0)

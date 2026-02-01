@@ -773,3 +773,325 @@ def compute_scan_loss(
         return 10 * np.log10(gain_scan / gain_bs)
     else:
         return -100.0
+
+
+# ============== Active Impedance and VSWR ==============
+
+def active_reflection_coefficient(
+    C: np.ndarray,
+    weights: np.ndarray,
+    element_idx: int
+) -> complex:
+    """
+    Compute active reflection coefficient for an element.
+
+    The active reflection coefficient accounts for mutual coupling
+    from all other elements when the array is excited with given weights.
+
+    Parameters
+    ----------
+    C : ndarray
+        Mutual coupling matrix (N x N)
+    weights : ndarray
+        Complex excitation weights (N,)
+    element_idx : int
+        Index of the element to compute reflection for
+
+    Returns
+    -------
+    gamma : complex
+        Active reflection coefficient
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> geom = pa.create_rectangular_array(4, 4, dx=0.5, dy=0.5)
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> C = pa.mutual_coupling_matrix_theoretical(geom, k, coupling_coeff=0.2)
+    >>> weights = pa.steering_vector(k, geom.x, geom.y, 0, 0)
+    >>> gamma = pa.active_reflection_coefficient(C, weights, element_idx=0)
+    >>> np.abs(gamma) < 1  # Should be reasonable
+    True
+
+    Notes
+    -----
+    The active reflection coefficient is:
+        gamma_n = (sum_m(C_nm * w_m) / w_n) - 1
+
+    This differs from the isolated reflection coefficient because
+    power couples from neighboring elements.
+    """
+    n = len(weights)
+
+    if weights[element_idx] == 0:
+        return complex(0, 0)
+
+    # Compute coupled excitation at element_idx
+    coupled = np.sum(C[element_idx, :] * weights)
+
+    # Active reflection coefficient
+    gamma = coupled / weights[element_idx] - 1.0
+
+    return gamma
+
+
+def active_impedance(
+    C: np.ndarray,
+    weights: np.ndarray,
+    element_idx: int,
+    Z0: float = 50.0
+) -> complex:
+    """
+    Compute active impedance of an element.
+
+    Parameters
+    ----------
+    C : ndarray
+        Mutual coupling matrix (N x N)
+    weights : ndarray
+        Complex excitation weights (N,)
+    element_idx : int
+        Index of the element
+    Z0 : float
+        Reference impedance in ohms (default 50)
+
+    Returns
+    -------
+    Z_active : complex
+        Active impedance in ohms
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> geom = pa.create_rectangular_array(4, 4, dx=0.5, dy=0.5)
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> C = pa.mutual_coupling_matrix_theoretical(geom, k, coupling_coeff=0.2)
+    >>> weights = pa.steering_vector(k, geom.x, geom.y, 0, 0)
+    >>> Z = pa.active_impedance(C, weights, element_idx=0)
+    >>> np.real(Z) > 0  # Should have positive resistance
+    True
+
+    Notes
+    -----
+    Active impedance is computed from the active reflection coefficient:
+        Z_active = Z0 * (1 + gamma) / (1 - gamma)
+
+    This is the impedance seen looking into the element port when
+    all elements are excited with the given weights.
+    """
+    gamma = active_reflection_coefficient(C, weights, element_idx)
+
+    # Avoid division by zero
+    if np.abs(1 - gamma) < 1e-10:
+        return complex(np.inf, 0)
+
+    Z_active = Z0 * (1 + gamma) / (1 - gamma)
+
+    return Z_active
+
+
+def vswr_vs_scan(
+    geometry: ArrayGeometry,
+    C: np.ndarray,
+    k: float,
+    theta_range: Tuple[float, float] = (0, 60),
+    n_angles: int = 61,
+    phi_deg: float = 0.0
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Compute VSWR for all elements versus scan angle.
+
+    Parameters
+    ----------
+    geometry : ArrayGeometry
+        Array geometry
+    C : ndarray
+        Mutual coupling matrix
+    k : float
+        Wavenumber
+    theta_range : tuple
+        (min, max) scan angles in degrees
+    n_angles : int
+        Number of scan angles to compute
+    phi_deg : float
+        Phi scan plane in degrees
+
+    Returns
+    -------
+    theta_deg : ndarray
+        Scan angles in degrees (n_angles,)
+    vswr_per_element : ndarray
+        VSWR for each element at each angle (n_angles x n_elements)
+    vswr_max : ndarray
+        Maximum VSWR across all elements at each angle (n_angles,)
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> geom = pa.create_rectangular_array(8, 8, dx=0.5, dy=0.5)
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> C = pa.mutual_coupling_matrix_theoretical(geom, k, coupling_coeff=0.2)
+    >>> theta_deg, vswr_all, vswr_max = pa.vswr_vs_scan(
+    ...     geom, C, k, theta_range=(0, 45), n_angles=10
+    ... )
+    >>> len(vswr_max) == 10
+    True
+    >>> np.all(vswr_max >= 1.0)  # VSWR always >= 1
+    True
+
+    Notes
+    -----
+    VSWR is computed from reflection coefficient:
+        VSWR = (1 + |gamma|) / (1 - |gamma|)
+
+    High VSWR at certain scan angles indicates potential scan blindness
+    or poor matching conditions.
+    """
+    from .core import steering_vector
+
+    theta_deg = np.linspace(theta_range[0], theta_range[1], n_angles)
+    n_elements = geometry.n_elements
+
+    vswr_per_element = np.zeros((n_angles, n_elements))
+
+    for i, theta in enumerate(theta_deg):
+        # Compute steering weights
+        weights = steering_vector(
+            k, geometry.x, geometry.y,
+            theta, phi_deg, geometry.z
+        )
+
+        # Compute VSWR for each element
+        for elem_idx in range(n_elements):
+            gamma = active_reflection_coefficient(C, weights, elem_idx)
+            gamma_mag = np.abs(gamma)
+
+            # Clamp to avoid division by zero
+            if gamma_mag >= 1.0:
+                vswr_per_element[i, elem_idx] = np.inf
+            else:
+                vswr_per_element[i, elem_idx] = (1 + gamma_mag) / (1 - gamma_mag)
+
+    vswr_max = np.max(vswr_per_element, axis=1)
+
+    return theta_deg, vswr_per_element, vswr_max
+
+
+def mismatch_loss(gamma: np.ndarray) -> np.ndarray:
+    """
+    Compute mismatch loss from reflection coefficient.
+
+    Parameters
+    ----------
+    gamma : ndarray
+        Complex reflection coefficient(s)
+
+    Returns
+    -------
+    loss_dB : ndarray
+        Mismatch loss in dB (negative)
+
+    Examples
+    --------
+    Perfect match (gamma=0) has zero loss:
+
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> loss = pa.mismatch_loss(0.0)
+    >>> np.isclose(loss, 0.0)
+    True
+
+    Typical 2:1 VSWR (gamma=0.333):
+
+    >>> loss = pa.mismatch_loss(0.333)
+    >>> -0.6 < loss < -0.4  # About 0.5 dB
+    True
+
+    Notes
+    -----
+    Mismatch loss is:
+        Loss_dB = 10 * log10(1 - |gamma|^2)
+
+    This represents the power reflected back due to mismatch.
+    """
+    gamma = np.asarray(gamma)
+    gamma_mag_sq = np.abs(gamma)**2
+
+    # Handle |gamma| >= 1 case
+    with np.errstate(divide='ignore', invalid='ignore'):
+        transmission = 1 - gamma_mag_sq
+        loss_dB = np.where(transmission > 0,
+                          10 * np.log10(transmission),
+                          -100.0)
+
+    return loss_dB
+
+
+def active_scan_impedance_matrix(
+    geometry: ArrayGeometry,
+    C: np.ndarray,
+    k: float,
+    theta_deg: float,
+    phi_deg: float,
+    Z0: float = 50.0
+) -> np.ndarray:
+    """
+    Compute active impedance for all elements at a given scan angle.
+
+    Parameters
+    ----------
+    geometry : ArrayGeometry
+        Array geometry
+    C : ndarray
+        Mutual coupling matrix
+    k : float
+        Wavenumber
+    theta_deg : float
+        Scan angle theta in degrees
+    phi_deg : float
+        Scan angle phi in degrees
+    Z0 : float
+        Reference impedance
+
+    Returns
+    -------
+    Z_active : ndarray
+        Active impedance for each element (complex, n_elements)
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> geom = pa.create_rectangular_array(4, 4, dx=0.5, dy=0.5)
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> C = pa.mutual_coupling_matrix_theoretical(geom, k, coupling_coeff=0.2)
+    >>> Z = pa.active_scan_impedance_matrix(geom, C, k, theta_deg=30, phi_deg=0)
+    >>> Z.shape
+    (16,)
+    >>> np.all(np.real(Z) > 0)  # All should have positive resistance
+    True
+
+    Notes
+    -----
+    This function computes the active impedance seen by each element
+    when the array is steered to the specified direction. Elements
+    at different positions in the array may have different active
+    impedances due to edge effects and the scan angle.
+    """
+    from .core import steering_vector
+
+    weights = steering_vector(
+        k, geometry.x, geometry.y,
+        theta_deg, phi_deg, geometry.z
+    )
+
+    n_elements = geometry.n_elements
+    Z_active = np.zeros(n_elements, dtype=complex)
+
+    for elem_idx in range(n_elements):
+        Z_active[elem_idx] = active_impedance(C, weights, elem_idx, Z0)
+
+    return Z_active

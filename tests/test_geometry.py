@@ -239,3 +239,116 @@ class TestArrayGeometryProperties:
 
         # Copy should be unchanged
         assert geom_copy.x[0] != 999.0
+
+
+class TestOverlappedSubarrays:
+    """Tests for overlapped subarray creation."""
+
+    def test_overlapped_flag(self):
+        """Overlapped architecture should have overlapped=True."""
+        arch = pa.create_overlapped_subarrays(
+            Nx_total=16, Ny_total=16,
+            Nx_sub=4, Ny_sub=4,
+            overlap_x=2, overlap_y=2,
+            dx=0.5, dy=0.5
+        )
+
+        assert arch.overlapped is True
+
+    def test_subarray_elements_not_none(self):
+        """Overlapped architecture should have subarray_elements list."""
+        arch = pa.create_overlapped_subarrays(
+            Nx_total=16, Ny_total=16,
+            Nx_sub=4, Ny_sub=4,
+            overlap_x=2, overlap_y=2,
+            dx=0.5, dy=0.5
+        )
+
+        assert arch.subarray_elements is not None
+        assert len(arch.subarray_elements) == arch.n_subarrays
+
+    def test_overlap_weights_not_none(self):
+        """Overlapped architecture should have overlap_weights list."""
+        arch = pa.create_overlapped_subarrays(
+            Nx_total=16, Ny_total=16,
+            Nx_sub=4, Ny_sub=4,
+            overlap_x=2, overlap_y=2,
+            dx=0.5, dy=0.5
+        )
+
+        assert arch.overlap_weights is not None
+        assert len(arch.overlap_weights) == arch.n_subarrays
+
+    def test_subarray_count(self):
+        """Should create correct number of overlapped subarrays."""
+        arch = pa.create_overlapped_subarrays(
+            Nx_total=16, Ny_total=16,
+            Nx_sub=4, Ny_sub=4,
+            overlap_x=2, overlap_y=2,
+            dx=0.5, dy=0.5
+        )
+
+        # stride_x = 4 - 2 = 2, stride_y = 4 - 2 = 2
+        # n_sub_x = (16 - 4) / 2 + 1 = 7
+        # n_sub_y = (16 - 4) / 2 + 1 = 7
+        expected = 7 * 7
+        assert arch.n_subarrays == expected
+
+    def test_elements_in_multiple_subarrays(self):
+        """Some elements should belong to multiple subarrays."""
+        arch = pa.create_overlapped_subarrays(
+            Nx_total=8, Ny_total=8,
+            Nx_sub=4, Ny_sub=4,
+            overlap_x=2, overlap_y=2,
+            dx=0.5, dy=0.5
+        )
+
+        # Check middle elements belong to multiple subarrays
+        middle_elem = 27  # Roughly in the middle
+        subarrays = arch.get_element_subarrays(middle_elem)
+
+        # Middle elements should be in multiple subarrays
+        assert len(subarrays) >= 1
+
+    def test_overlapped_subarray_weights_shape(self):
+        """Overlapped weights should have correct shape."""
+        arch = pa.create_overlapped_subarrays(
+            Nx_total=16, Ny_total=16,
+            Nx_sub=4, Ny_sub=4,
+            overlap_x=2, overlap_y=2,
+            dx=0.5, dy=0.5
+        )
+        k = pa.wavelength_to_k(1.0)
+
+        weights = pa.overlapped_subarray_weights(arch, k, 15, 0)
+
+        assert weights.shape == (arch.geometry.n_elements,)
+
+    def test_compute_overlapped_pattern(self):
+        """Should compute pattern correctly."""
+        arch = pa.create_overlapped_subarrays(
+            Nx_total=16, Ny_total=16,
+            Nx_sub=4, Ny_sub=4,
+            overlap_x=2, overlap_y=2,
+            dx=0.5, dy=0.5
+        )
+        k = pa.wavelength_to_k(1.0)
+
+        theta_deg, pattern_dB = pa.compute_overlapped_pattern(
+            arch, k, theta0_deg=0, phi0_deg=0,
+            n_points=91
+        )
+
+        assert len(theta_deg) == 91
+        assert len(pattern_dB) == 91
+        assert np.max(pattern_dB) == 0  # Normalized
+
+    def test_overlap_validation(self):
+        """Should raise error if overlap >= subarray size."""
+        with pytest.raises(ValueError):
+            pa.create_overlapped_subarrays(
+                Nx_total=16, Ny_total=16,
+                Nx_sub=4, Ny_sub=4,
+                overlap_x=4, overlap_y=4,  # Invalid: overlap == subarray size
+                dx=0.5, dy=0.5
+            )

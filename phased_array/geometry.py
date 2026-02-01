@@ -83,27 +83,73 @@ class SubarrayArchitecture:
     """
     Defines subarray partitioning of a phased array.
 
+    Supports both non-overlapped and overlapped subarray architectures.
+    In overlapped architectures, elements can belong to multiple subarrays
+    with potentially different weights.
+
     Attributes
     ----------
     geometry : ArrayGeometry
         Full array geometry
-    subarray_assignments : ndarray
+    subarray_assignments : ndarray, optional
         Subarray index for each element (shape: n_elements,)
+        None for overlapped subarrays
     n_subarrays : int
         Number of subarrays
     subarray_centers : ndarray, optional
         Center positions of each subarray (n_subarrays, 2 or 3)
+    overlapped : bool
+        True if this is an overlapped subarray architecture
+    subarray_elements : list of ndarray, optional
+        For overlapped: list of element indices for each subarray
+    overlap_weights : list of ndarray, optional
+        For overlapped: amplitude weights for shared elements in each subarray
     """
     geometry: ArrayGeometry
-    subarray_assignments: np.ndarray
+    subarray_assignments: Optional[np.ndarray]
     n_subarrays: int
     subarray_centers: Optional[np.ndarray] = None
+    overlapped: bool = False
+    subarray_elements: Optional[List[np.ndarray]] = None
+    overlap_weights: Optional[List[np.ndarray]] = None
 
     def get_subarray_elements(self, subarray_idx: int) -> Tuple[np.ndarray, np.ndarray]:
         """Get element indices and mask for a specific subarray."""
-        mask = self.subarray_assignments == subarray_idx
-        indices = np.where(mask)[0]
-        return indices, mask
+        if self.overlapped and self.subarray_elements is not None:
+            indices = self.subarray_elements[subarray_idx]
+            mask = np.zeros(self.geometry.n_elements, dtype=bool)
+            mask[indices] = True
+            return indices, mask
+        else:
+            mask = self.subarray_assignments == subarray_idx
+            indices = np.where(mask)[0]
+            return indices, mask
+
+    def get_element_subarrays(self, element_idx: int) -> np.ndarray:
+        """
+        Get indices of all subarrays that contain a given element.
+
+        For non-overlapped architectures, returns single subarray index.
+        For overlapped, may return multiple indices.
+
+        Parameters
+        ----------
+        element_idx : int
+            Index of the element
+
+        Returns
+        -------
+        subarray_indices : ndarray
+            Array of subarray indices containing this element
+        """
+        if self.overlapped and self.subarray_elements is not None:
+            subarrays = []
+            for sub_idx, elements in enumerate(self.subarray_elements):
+                if element_idx in elements:
+                    subarrays.append(sub_idx)
+            return np.array(subarrays)
+        else:
+            return np.array([self.subarray_assignments[element_idx]])
 
 
 def create_rectangular_array(
@@ -983,3 +1029,324 @@ def array_factor_conformal(
         AF += weights[i] * element_gain * np.exp(1j * phase)
 
     return AF.reshape(original_shape)
+
+
+# ============== Overlapped Subarrays ==============
+
+def create_overlapped_subarrays(
+    Nx_total: int,
+    Ny_total: int,
+    Nx_sub: int,
+    Ny_sub: int,
+    overlap_x: int,
+    overlap_y: int,
+    dx: float,
+    dy: float,
+    wavelength: float = 1.0,
+    taper_overlap: bool = True
+) -> SubarrayArchitecture:
+    """
+    Create overlapped subarrays from a rectangular array.
+
+    Overlapped subarrays share elements between adjacent subarrays,
+    which can improve pattern characteristics and reduce grating lobes
+    while maintaining independent subarray beam control.
+
+    Parameters
+    ----------
+    Nx_total : int
+        Total elements in x
+    Ny_total : int
+        Total elements in y
+    Nx_sub : int
+        Elements per subarray in x
+    Ny_sub : int
+        Elements per subarray in y
+    overlap_x : int
+        Number of overlapping elements in x between adjacent subarrays
+    overlap_y : int
+        Number of overlapping elements in y between adjacent subarrays
+    dx, dy : float
+        Element spacing in wavelengths
+    wavelength : float
+        Wavelength in meters
+    taper_overlap : bool
+        If True, apply amplitude taper to overlapping elements
+
+    Returns
+    -------
+    architecture : SubarrayArchitecture
+        Overlapped subarray architecture
+
+    Examples
+    --------
+    Create 50% overlapped 4x4 subarrays:
+
+    >>> import phased_array as pa
+    >>> arch = pa.create_overlapped_subarrays(
+    ...     Nx_total=16, Ny_total=16,
+    ...     Nx_sub=4, Ny_sub=4,
+    ...     overlap_x=2, overlap_y=2,
+    ...     dx=0.5, dy=0.5
+    ... )
+    >>> arch.overlapped
+    True
+    >>> arch.n_subarrays > 0
+    True
+
+    Notes
+    -----
+    Subarray stride (non-overlapping portion):
+        stride_x = Nx_sub - overlap_x
+        stride_y = Ny_sub - overlap_y
+
+    Elements in the overlap region receive contributions from
+    multiple subarrays, typically with tapered weights.
+    """
+    # Create full array geometry
+    geometry = create_rectangular_array(Nx_total, Ny_total, dx, dy, wavelength)
+
+    # Compute strides
+    stride_x = Nx_sub - overlap_x
+    stride_y = Ny_sub - overlap_y
+
+    if stride_x <= 0 or stride_y <= 0:
+        raise ValueError("Overlap cannot be >= subarray size")
+
+    # Number of subarrays in each direction
+    n_sub_x = (Nx_total - Nx_sub) // stride_x + 1
+    n_sub_y = (Ny_total - Ny_sub) // stride_y + 1
+    n_subarrays = n_sub_x * n_sub_y
+
+    # Build subarray element lists and overlap weights
+    subarray_elements = []
+    overlap_weights = []
+    subarray_centers = []
+
+    for sub_iy in range(n_sub_y):
+        for sub_ix in range(n_sub_x):
+            # Starting indices for this subarray
+            start_x = sub_ix * stride_x
+            start_y = sub_iy * stride_y
+
+            elements = []
+            weights_list = []
+            center_x = 0.0
+            center_y = 0.0
+
+            for local_ix in range(Nx_sub):
+                for local_iy in range(Ny_sub):
+                    global_ix = start_x + local_ix
+                    global_iy = start_y + local_iy
+
+                    if global_ix < Nx_total and global_iy < Ny_total:
+                        elem_idx = global_ix * Ny_total + global_iy
+                        elements.append(elem_idx)
+                        center_x += geometry.x[elem_idx]
+                        center_y += geometry.y[elem_idx]
+
+                        # Compute overlap weight
+                        if taper_overlap:
+                            # Taper based on position within subarray
+                            # 1.0 in center, reduced at edges if overlapping
+                            wx = 1.0
+                            wy = 1.0
+
+                            # Left overlap region
+                            if local_ix < overlap_x and sub_ix > 0:
+                                wx = (local_ix + 0.5) / overlap_x
+
+                            # Right overlap region
+                            if local_ix >= Nx_sub - overlap_x and sub_ix < n_sub_x - 1:
+                                wx = (Nx_sub - local_ix - 0.5) / overlap_x
+
+                            # Bottom overlap region
+                            if local_iy < overlap_y and sub_iy > 0:
+                                wy = (local_iy + 0.5) / overlap_y
+
+                            # Top overlap region
+                            if local_iy >= Ny_sub - overlap_y and sub_iy < n_sub_y - 1:
+                                wy = (Ny_sub - local_iy - 0.5) / overlap_y
+
+                            weights_list.append(wx * wy)
+                        else:
+                            weights_list.append(1.0)
+
+            subarray_elements.append(np.array(elements, dtype=int))
+            overlap_weights.append(np.array(weights_list))
+
+            if len(elements) > 0:
+                subarray_centers.append([center_x / len(elements), center_y / len(elements)])
+            else:
+                subarray_centers.append([0.0, 0.0])
+
+    return SubarrayArchitecture(
+        geometry=geometry,
+        subarray_assignments=None,  # Not used for overlapped
+        n_subarrays=n_subarrays,
+        subarray_centers=np.array(subarray_centers),
+        overlapped=True,
+        subarray_elements=subarray_elements,
+        overlap_weights=overlap_weights
+    )
+
+
+def overlapped_subarray_weights(
+    architecture: SubarrayArchitecture,
+    k: float,
+    theta0_deg: float,
+    phi0_deg: float,
+    subarray_weights: Optional[np.ndarray] = None
+) -> np.ndarray:
+    """
+    Compute element weights for overlapped subarray beamforming.
+
+    Parameters
+    ----------
+    architecture : SubarrayArchitecture
+        Overlapped subarray architecture
+    k : float
+        Wavenumber
+    theta0_deg, phi0_deg : float
+        Steering direction in degrees
+    subarray_weights : ndarray, optional
+        Complex weights for each subarray (n_subarrays,).
+        If None, uses uniform amplitude with steering phase.
+
+    Returns
+    -------
+    weights : ndarray
+        Complex weights for all elements
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> arch = pa.create_overlapped_subarrays(
+    ...     Nx_total=16, Ny_total=16,
+    ...     Nx_sub=4, Ny_sub=4,
+    ...     overlap_x=2, overlap_y=2,
+    ...     dx=0.5, dy=0.5
+    ... )
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> weights = pa.overlapped_subarray_weights(arch, k, 15, 0)
+    >>> weights.shape
+    (256,)
+
+    Notes
+    -----
+    For overlapped architectures, each element's weight is the sum
+    of contributions from all subarrays it belongs to, weighted by
+    the overlap weight for that subarray.
+    """
+    if not architecture.overlapped:
+        # Fall back to standard subarray weights
+        from .beamforming import compute_subarray_weights
+        return compute_subarray_weights(architecture, k, theta0_deg, phi0_deg)
+
+    geom = architecture.geometry
+    element_weights = np.zeros(geom.n_elements, dtype=complex)
+
+    # Compute steering phases for subarray centers
+    theta0 = np.deg2rad(theta0_deg)
+    phi0 = np.deg2rad(phi0_deg)
+    u0 = np.sin(theta0) * np.cos(phi0)
+    v0 = np.sin(theta0) * np.sin(phi0)
+
+    for sub_idx in range(architecture.n_subarrays):
+        elements = architecture.subarray_elements[sub_idx]
+        overlap_w = architecture.overlap_weights[sub_idx]
+        center = architecture.subarray_centers[sub_idx]
+
+        # Subarray steering phase
+        phase = k * (center[0] * u0 + center[1] * v0)
+        subarray_phase = np.exp(-1j * phase)
+
+        # Apply subarray weight if provided
+        if subarray_weights is not None:
+            subarray_phase *= subarray_weights[sub_idx]
+
+        # Add contribution to each element
+        for local_idx, elem_idx in enumerate(elements):
+            element_weights[elem_idx] += overlap_w[local_idx] * subarray_phase
+
+    return element_weights
+
+
+def compute_overlapped_pattern(
+    architecture: SubarrayArchitecture,
+    k: float,
+    theta0_deg: float,
+    phi0_deg: float,
+    theta_range: Tuple[float, float] = (0, np.pi/2),
+    n_points: int = 361,
+    phi_cut_deg: float = 0.0
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Compute radiation pattern for overlapped subarray architecture.
+
+    Parameters
+    ----------
+    architecture : SubarrayArchitecture
+        Overlapped subarray architecture
+    k : float
+        Wavenumber
+    theta0_deg, phi0_deg : float
+        Steering direction in degrees
+    theta_range : tuple
+        (min, max) theta range in radians
+    n_points : int
+        Number of pattern points
+    phi_cut_deg : float
+        Phi angle for the pattern cut
+
+    Returns
+    -------
+    theta_deg : ndarray
+        Theta angles in degrees
+    pattern_dB : ndarray
+        Normalized pattern in dB
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> arch = pa.create_overlapped_subarrays(
+    ...     Nx_total=16, Ny_total=16,
+    ...     Nx_sub=4, Ny_sub=4,
+    ...     overlap_x=2, overlap_y=2,
+    ...     dx=0.5, dy=0.5
+    ... )
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> theta_deg, pattern_dB = pa.compute_overlapped_pattern(
+    ...     arch, k, theta0_deg=0, phi0_deg=0
+    ... )
+    >>> len(theta_deg) == 361
+    True
+    """
+    from .core import array_factor_vectorized
+    from .utils import linear_to_db
+
+    # Get element weights
+    weights = overlapped_subarray_weights(architecture, k, theta0_deg, phi0_deg)
+
+    # Compute pattern
+    theta = np.linspace(theta_range[0], theta_range[1], n_points)
+    phi = np.full_like(theta, np.deg2rad(phi_cut_deg))
+
+    theta_grid = theta.reshape(-1, 1)
+    phi_grid = phi.reshape(-1, 1)
+
+    geom = architecture.geometry
+    AF = array_factor_vectorized(
+        theta_grid, phi_grid,
+        geom.x, geom.y, weights, k
+    ).ravel()
+
+    # Convert to dB and normalize
+    pattern_dB = linear_to_db(np.abs(AF)**2)
+    pattern_dB -= np.max(pattern_dB)
+
+    theta_deg = np.rad2deg(theta)
+
+    return theta_deg, pattern_dB

@@ -32,18 +32,20 @@ Example
 >>> theta, phi, pattern_dB = pa.compute_full_pattern(geom.x, geom.y, weights, k)
 """
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 
 # Beamforming functions
-from .beamforming import (  # Amplitude tapers; Null steering; Multiple beams
-    apply_taper_to_geometry, chebyshev_taper_1d, chebyshev_taper_2d,
-    compute_beam_isolation, compute_null_depth, compute_taper_directivity_loss,
-    compute_taper_efficiency, cosine_on_pedestal_taper_1d,
-    cosine_on_pedestal_taper_2d, cosine_taper_1d, cosine_taper_2d,
-    gaussian_taper_1d, gaussian_taper_2d, hamming_taper_1d, hamming_taper_2d,
-    hanning_taper_1d, hanning_taper_2d, monopulse_weights,
+from .beamforming import (  # Amplitude tapers; Null steering; Multiple beams; Beam spoiling; Adaptive
+    adaptive_weights_gsc, adaptive_weights_smi, apply_taper_to_geometry,
+    chebyshev_taper_1d, chebyshev_taper_2d, compute_beam_isolation,
+    compute_null_depth, compute_sinr_improvement, compute_spoil_factor,
+    compute_taper_directivity_loss, compute_taper_efficiency,
+    cosine_on_pedestal_taper_1d, cosine_on_pedestal_taper_2d, cosine_taper_1d,
+    cosine_taper_2d, gaussian_taper_1d, gaussian_taper_2d, hamming_taper_1d,
+    hamming_taper_2d, hanning_taper_1d, hanning_taper_2d, monopulse_weights,
     multi_beam_weights_orthogonal, multi_beam_weights_superposition,
-    null_steering_lcmv, null_steering_projection, taylor_taper_1d,
+    null_steering_lcmv, null_steering_projection, plot_adapted_pattern,
+    quadratic_phase_spoil, spoiled_beam_gain, spoiled_beamwidth, taylor_taper_1d,
     taylor_taper_2d)
 # Core computation functions
 from .core import (array_factor_fft, array_factor_uv, array_factor_vectorized,
@@ -59,21 +61,23 @@ from .export import (export_array_config_json, export_coupling_matrix_csv,
                      export_weights_csv, load_pattern_npz)
 # Geometry classes and functions
 from .geometry import (ArrayGeometry, SubarrayArchitecture,
-                       array_factor_conformal, compute_subarray_weights,
-                       create_circular_array, create_concentric_rings_array,
-                       create_cylindrical_array, create_elliptical_array,
+                       array_factor_conformal, compute_overlapped_pattern,
+                       compute_subarray_weights, create_circular_array,
+                       create_concentric_rings_array, create_cylindrical_array,
+                       create_elliptical_array, create_overlapped_subarrays,
                        create_rectangular_array, create_rectangular_subarrays,
                        create_spherical_array, create_triangular_array,
-                       thin_array_density_tapered,
+                       overlapped_subarray_weights, thin_array_density_tapered,
                        thin_array_genetic_algorithm, thin_array_random)
 # Impairment models
-from .impairments import (  # Mutual coupling; Phase quantization; Element failures; Scan blindness
-    active_element_pattern, analyze_graceful_degradation,
+from .impairments import (  # Mutual coupling; Phase quantization; Element failures; Scan blindness; Active impedance
+    active_element_pattern, active_impedance, active_reflection_coefficient,
+    active_scan_impedance_matrix, analyze_graceful_degradation,
     analyze_quantization_effect, apply_mutual_coupling, apply_scan_blindness,
-    compute_scan_loss, mutual_coupling_matrix_measured,
+    compute_scan_loss, mismatch_loss, mutual_coupling_matrix_measured,
     mutual_coupling_matrix_theoretical, quantization_rms_error,
     quantization_sidelobe_increase, quantize_phase, scan_blindness_model,
-    simulate_element_failures, surface_wave_scan_angle)
+    simulate_element_failures, surface_wave_scan_angle, vswr_vs_scan)
 # Utility functions
 from .utils import (azel_to_thetaphi, create_theta_phi_grid, create_uv_grid,
                     db_to_linear, deg2rad, frequency_to_k,
@@ -89,6 +93,14 @@ from .visualization import (  # 2D matplotlib plots; UV-space; 3D Plotly plots; 
     plot_pattern_contour, plot_pattern_polar, plot_pattern_uv_plotly,
     plot_pattern_uv_space, plot_pattern_vs_frequency,
     plot_pattern_vs_frequency_plotly, plot_subarray_delays)
+# Polarization functions
+from .polarization import (axial_ratio, co_pol_pattern, cross_pol_discrimination,
+                           cross_pol_pattern, jones_vector, ludwig3_decomposition,
+                           polarization_loss_factor, stokes_parameters, tilt_angle)
+# Coordinate transformation functions
+from .coordinates import (antenna_to_cone, antenna_to_radar, cone_to_antenna,
+                          radar_to_antenna, rotate_pattern, rotation_matrix_pitch,
+                          rotation_matrix_roll, rotation_matrix_yaw)
 # Wideband / TTD functions
 from .wideband import (analyze_instantaneous_bandwidth, compare_steering_modes,
                        compute_beam_squint, compute_pattern_vs_frequency,
@@ -143,7 +155,11 @@ __all__ = [
     "create_rectangular_subarrays",
     "compute_subarray_weights",
     "array_factor_conformal",
-    # Beamforming
+    # Geometry - Overlapped subarrays
+    "create_overlapped_subarrays",
+    "overlapped_subarray_weights",
+    "compute_overlapped_pattern",
+    # Beamforming - Amplitude tapers
     "taylor_taper_1d",
     "taylor_taper_2d",
     "chebyshev_taper_1d",
@@ -161,13 +177,25 @@ __all__ = [
     "compute_taper_efficiency",
     "compute_taper_directivity_loss",
     "apply_taper_to_geometry",
+    # Beamforming - Null steering
     "null_steering_projection",
     "null_steering_lcmv",
     "compute_null_depth",
+    # Beamforming - Multi-beam
     "multi_beam_weights_superposition",
     "multi_beam_weights_orthogonal",
     "compute_beam_isolation",
     "monopulse_weights",
+    # Beamforming - Beam spoiling
+    "quadratic_phase_spoil",
+    "compute_spoil_factor",
+    "spoiled_beam_gain",
+    "spoiled_beamwidth",
+    # Beamforming - Adaptive (SMI/GSC)
+    "adaptive_weights_smi",
+    "adaptive_weights_gsc",
+    "compute_sinr_improvement",
+    "plot_adapted_pattern",
     # Impairments
     "mutual_coupling_matrix_theoretical",
     "mutual_coupling_matrix_measured",
@@ -183,6 +211,12 @@ __all__ = [
     "scan_blindness_model",
     "apply_scan_blindness",
     "compute_scan_loss",
+    # Impairments - Active impedance/VSWR
+    "active_reflection_coefficient",
+    "active_impedance",
+    "vswr_vs_scan",
+    "mismatch_loss",
+    "active_scan_impedance_matrix",
     # Visualization
     "plot_pattern_2d",
     "plot_pattern_polar",
@@ -222,4 +256,23 @@ __all__ = [
     "plot_pattern_vs_frequency",
     "plot_pattern_vs_frequency_plotly",
     "plot_subarray_delays",
+    # Polarization
+    "jones_vector",
+    "stokes_parameters",
+    "axial_ratio",
+    "tilt_angle",
+    "cross_pol_discrimination",
+    "polarization_loss_factor",
+    "co_pol_pattern",
+    "cross_pol_pattern",
+    "ludwig3_decomposition",
+    # Coordinates
+    "antenna_to_radar",
+    "radar_to_antenna",
+    "antenna_to_cone",
+    "cone_to_antenna",
+    "rotation_matrix_roll",
+    "rotation_matrix_pitch",
+    "rotation_matrix_yaw",
+    "rotate_pattern",
 ]

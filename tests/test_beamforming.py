@@ -212,3 +212,172 @@ class TestMultiBeam:
 
         # Should be near zero on axis
         assert np.abs(AF.item()) < 0.1 * geom.n_elements
+
+
+class TestBeamSpoiling:
+    """Tests for beam spoiling functions."""
+
+    def test_quadratic_phase_spoil_shape(self):
+        """Spoiled weights should have correct shape."""
+        geom = pa.create_rectangular_array(16, 16, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+
+        weights = pa.quadratic_phase_spoil(
+            geom, k, theta0_deg=0, phi0_deg=0, spoil_factor=2.0
+        )
+
+        assert weights.shape == (geom.n_elements,)
+
+    def test_spoil_broadens_beam(self):
+        """Spoiling should broaden the beam."""
+        geom = pa.create_rectangular_array(16, 16, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+
+        weights_normal = pa.steering_vector(k, geom.x, geom.y, 0, 0)
+        weights_spoiled = pa.quadratic_phase_spoil(
+            geom, k, theta0_deg=0, phi0_deg=0, spoil_factor=2.0
+        )
+
+        # Compute patterns
+        theta = np.linspace(0, np.pi/4, 91)
+        phi = np.zeros_like(theta)
+
+        AF_normal = pa.array_factor_vectorized(
+            theta.reshape(-1, 1), phi.reshape(-1, 1),
+            geom.x, geom.y, weights_normal, k
+        ).ravel()
+
+        AF_spoiled = pa.array_factor_vectorized(
+            theta.reshape(-1, 1), phi.reshape(-1, 1),
+            geom.x, geom.y, weights_spoiled, k
+        ).ravel()
+
+        # Find 3-dB beamwidth
+        pattern_normal = 20 * np.log10(np.abs(AF_normal) / np.max(np.abs(AF_normal)))
+        pattern_spoiled = 20 * np.log10(np.abs(AF_spoiled) / np.max(np.abs(AF_spoiled)))
+
+        bw_normal = np.sum(pattern_normal > -3)
+        bw_spoiled = np.sum(pattern_spoiled > -3)
+
+        assert bw_spoiled > bw_normal
+
+    def test_compute_spoil_factor(self):
+        """Spoil factor should be positive for beam broadening."""
+        geom = pa.create_rectangular_array(16, 16, 0.5, 0.5)
+        sf = pa.compute_spoil_factor(geom, desired_beamwidth_deg=12.0,
+                                     unspoiled_beamwidth_deg=6.0)
+        assert sf > 0
+
+    def test_compute_spoil_factor_no_broadening(self):
+        """Spoil factor should be zero if no broadening needed."""
+        geom = pa.create_rectangular_array(16, 16, 0.5, 0.5)
+        sf = pa.compute_spoil_factor(geom, desired_beamwidth_deg=6.0,
+                                     unspoiled_beamwidth_deg=6.0)
+        assert sf == 0.0
+
+    def test_spoiled_beamwidth_formula(self):
+        """Spoiled beamwidth should follow the formula."""
+        bw = pa.spoiled_beamwidth(6.0, spoil_factor=2.0)
+        expected = 6.0 * np.sqrt(1 + 2.0**2)
+        assert np.isclose(bw, expected)
+
+    def test_spoiled_beam_gain_reduced(self):
+        """Spoiling should reduce gain."""
+        gain_unspoiled = 10 * np.log10(256) + 5  # 256 elements, 5 dBi each
+        gain_spoiled = pa.spoiled_beam_gain(256, 5.0, spoil_factor=2.0)
+        assert gain_spoiled < gain_unspoiled
+
+    def test_axis_options(self):
+        """All axis options should work."""
+        geom = pa.create_rectangular_array(8, 8, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+
+        for axis in ['both', 'x', 'y']:
+            weights = pa.quadratic_phase_spoil(
+                geom, k, theta0_deg=0, phi0_deg=0,
+                spoil_factor=1.0, axis=axis
+            )
+            assert weights.shape == (geom.n_elements,)
+
+
+class TestAdaptiveBeamforming:
+    """Tests for adaptive beamforming functions."""
+
+    def test_smi_output_shape(self):
+        """SMI should return correct shape."""
+        geom = pa.create_rectangular_array(8, 8, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+
+        n_snapshots = 50
+        interference = np.random.randn(n_snapshots, geom.n_elements) + \
+                       1j * np.random.randn(n_snapshots, geom.n_elements)
+
+        weights = pa.adaptive_weights_smi(
+            geom, k, theta_desired_deg=0, phi_desired_deg=0,
+            interference_data=interference, diagonal_loading=0.01
+        )
+
+        assert weights.shape == (geom.n_elements,)
+
+    def test_smi_maintains_look_direction(self):
+        """SMI should maintain response in look direction."""
+        geom = pa.create_rectangular_array(8, 8, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+
+        # White noise only (no directional interference)
+        n_snapshots = 100
+        interference = 0.1 * (np.random.randn(n_snapshots, geom.n_elements) +
+                              1j * np.random.randn(n_snapshots, geom.n_elements))
+
+        weights = pa.adaptive_weights_smi(
+            geom, k, theta_desired_deg=0, phi_desired_deg=0,
+            interference_data=interference, diagonal_loading=0.1
+        )
+
+        # Check response at look direction
+        theta = np.array([[0.0]])
+        phi = np.array([[0.0]])
+        AF = pa.array_factor_vectorized(theta, phi, geom.x, geom.y, weights, k)
+
+        # Should have significant response (not nulled)
+        assert np.abs(AF.item()) > 0.5
+
+    def test_gsc_output_shape(self):
+        """GSC should return correct shapes."""
+        geom = pa.create_rectangular_array(8, 8, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+
+        n_snapshots = 50
+        interference = np.random.randn(n_snapshots, geom.n_elements) + \
+                       1j * np.random.randn(n_snapshots, geom.n_elements)
+
+        weights, B = pa.adaptive_weights_gsc(
+            geom, k, theta_desired_deg=0, phi_desired_deg=0,
+            interference_data=interference
+        )
+
+        assert weights.shape == (geom.n_elements,)
+        assert B.shape[0] == geom.n_elements
+
+    def test_sinr_improvement(self):
+        """SINR improvement should be non-negative for null steering."""
+        geom = pa.create_rectangular_array(12, 12, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+
+        # Quiescent weights
+        w_q = pa.steering_vector(k, geom.x, geom.y, 0, 0)
+
+        # Adapted weights with null at interference
+        w_adapted = pa.null_steering_projection(
+            geom, k, theta_main_deg=0, phi_main_deg=0,
+            null_directions=[(25, 0)]
+        )
+
+        sinr_b, sinr_a, imp = pa.compute_sinr_improvement(
+            w_q, w_adapted, geom, k,
+            signal_direction=(0, 0),
+            interference_directions=[(25, 0)],
+            signal_power=1.0, interference_powers=[10.0], noise_power=0.1
+        )
+
+        assert imp > 0  # Should improve SINR
