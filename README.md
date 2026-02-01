@@ -232,7 +232,7 @@ If you use this library in your research, please cite:
   author = {Hodge, John},
   title = {Phased Array Antenna Modeling},
   url = {https://github.com/jman4162/Phased-Array-Antenna-Model},
-  year = {2024}
+  year = {2026}
 }
 ```
 
