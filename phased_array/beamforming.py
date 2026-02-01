@@ -1381,6 +1381,7 @@ def plot_adapted_pattern(
     ... )  # doctest: +SKIP
     """
     import matplotlib.pyplot as plt
+
     from .core import array_factor_vectorized
     from .utils import linear_to_db
 

@@ -45,8 +45,13 @@ from .beamforming import (  # Amplitude tapers; Null steering; Multiple beams; B
     hamming_taper_2d, hanning_taper_1d, hanning_taper_2d, monopulse_weights,
     multi_beam_weights_orthogonal, multi_beam_weights_superposition,
     null_steering_lcmv, null_steering_projection, plot_adapted_pattern,
-    quadratic_phase_spoil, spoiled_beam_gain, spoiled_beamwidth, taylor_taper_1d,
-    taylor_taper_2d)
+    quadratic_phase_spoil, spoiled_beam_gain, spoiled_beamwidth,
+    taylor_taper_1d, taylor_taper_2d)
+# Coordinate transformation functions
+from .coordinates import (antenna_to_cone, antenna_to_radar, cone_to_antenna,
+                          radar_to_antenna, rotate_pattern,
+                          rotation_matrix_pitch, rotation_matrix_roll,
+                          rotation_matrix_yaw)
 # Core computation functions
 from .core import (array_factor_fft, array_factor_uv, array_factor_vectorized,
                    compute_directivity, compute_full_pattern,
@@ -78,6 +83,12 @@ from .impairments import (  # Mutual coupling; Phase quantization; Element failu
     mutual_coupling_matrix_theoretical, quantization_rms_error,
     quantization_sidelobe_increase, quantize_phase, scan_blindness_model,
     simulate_element_failures, surface_wave_scan_angle, vswr_vs_scan)
+# Polarization functions
+from .polarization import (axial_ratio, co_pol_pattern,
+                           cross_pol_discrimination, cross_pol_pattern,
+                           jones_vector, ludwig3_decomposition,
+                           polarization_loss_factor, stokes_parameters,
+                           tilt_angle)
 # Utility functions
 from .utils import (azel_to_thetaphi, create_theta_phi_grid, create_uv_grid,
                     db_to_linear, deg2rad, frequency_to_k,
@@ -93,14 +104,6 @@ from .visualization import (  # 2D matplotlib plots; UV-space; 3D Plotly plots; 
     plot_pattern_contour, plot_pattern_polar, plot_pattern_uv_plotly,
     plot_pattern_uv_space, plot_pattern_vs_frequency,
     plot_pattern_vs_frequency_plotly, plot_subarray_delays)
-# Polarization functions
-from .polarization import (axial_ratio, co_pol_pattern, cross_pol_discrimination,
-                           cross_pol_pattern, jones_vector, ludwig3_decomposition,
-                           polarization_loss_factor, stokes_parameters, tilt_angle)
-# Coordinate transformation functions
-from .coordinates import (antenna_to_cone, antenna_to_radar, cone_to_antenna,
-                          radar_to_antenna, rotate_pattern, rotation_matrix_pitch,
-                          rotation_matrix_roll, rotation_matrix_yaw)
 # Wideband / TTD functions
 from .wideband import (analyze_instantaneous_bandwidth, compare_steering_modes,
                        compute_beam_squint, compute_pattern_vs_frequency,
