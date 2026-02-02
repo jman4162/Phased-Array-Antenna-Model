@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Git Attribution
+
+All GitHub commits and contributions for this repository should be attributed to:
+
+- **Name:** John Hodge (jman4162)
+- **Email:** jah70@vt.edu
+
 ## Project Overview
 
 This repository contains a Python package and Jupyter notebooks for computing and visualizing phased array antenna radiation patterns. The project includes:
