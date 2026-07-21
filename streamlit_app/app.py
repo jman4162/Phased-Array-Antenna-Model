@@ -54,6 +54,21 @@ Use the sidebar to navigate between different tools:
    - Configure subarray architectures
    - Compute instantaneous bandwidth (IBW)
 
+7. **🎛️ Adaptive Nulling** - SMI/MVDR adaptive beamforming
+   - Place an interferer and watch the adaptive null form
+   - Quiescent vs adapted pattern comparison
+   - SINR improvement metrics
+
+8. **🧩 Subarrays & Spoiling** - Aperture-level techniques
+   - Overlapped vs contiguous subarray patterns
+   - Grating lobe suppression from overlap
+   - Quadratic-phase beam spoiling with beamwidth readout
+
+9. **🔌 Active Impedance** - Scan-dependent match
+   - Active VSWR vs scan angle
+   - Worst-element active reflection coefficient
+   - Per-element |Γ| map across the aperture
+
 ### Quick Start
 
 1. Go to **Array Design** to create your array (enable subarrays for wideband analysis)
@@ -62,6 +77,8 @@ Use the sidebar to navigate between different tools:
 4. Check **Impairments** for realistic effects
 5. View **UV-Space** for advanced analysis
 6. Use **Wideband/TTD** for true-time delay and hybrid beamforming
+7. Try **Adaptive Nulling**, **Subarrays & Spoiling**, and **Active Impedance**
+   (these pages are self-contained and define their own arrays)
 
 ---
 
