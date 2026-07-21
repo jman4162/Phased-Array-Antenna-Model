@@ -1,0 +1,48 @@
+{% set version = "1.4.0" %}
+
+package:
+  name: phased-array-modeling
+  version: {{ version }}
+
+source:
+  url: https://pypi.org/packages/source/p/phased-array-modeling/phased_array_modeling-{{ version }}.tar.gz
+  # After publishing v{{ version }} to PyPI, update with:
+  #   curl -sL https://pypi.org/pypi/phased-array-modeling/json | jq -r '.releases["{{ version }}"][] | select(.packagetype=="sdist") | .digests.sha256'
+  sha256: REPLACE_WITH_SDIST_SHA256_AFTER_PYPI_RELEASE
+
+build:
+  noarch: python
+  script: {{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
+  number: 0
+
+requirements:
+  host:
+    - python {{ python_min }}
+    - setuptools >=61.0
+    - pip
+  run:
+    - python >={{ python_min }}
+    - numpy >=1.20.0
+    - matplotlib-base >=3.5.0
+    - scipy >=1.7.0
+
+test:
+  imports:
+    - phased_array
+  commands:
+    - pip check
+  requires:
+    - pip
+    - python {{ python_min }}
+
+about:
+  home: https://github.com/jman4162/Phased-Array-Antenna-Model
+  summary: Comprehensive Python library for phased array antenna modeling and visualization
+  doc_url: https://phased-array-antenna-model.readthedocs.io/
+  dev_url: https://github.com/jman4162/Phased-Array-Antenna-Model
+  license: MIT
+  license_file: LICENSE
+
+extra:
+  recipe-maintainers:
+    - jman4162
