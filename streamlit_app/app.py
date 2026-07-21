@@ -69,6 +69,11 @@ Use the sidebar to navigate between different tools:
    - Worst-element active reflection coefficient
    - Per-element |Γ| map across the aperture
 
+10. **🌀 Polarization** - Vector polarized patterns (v1.4)
+    - Dipole, patch, and crossed-dipole (CP) element models
+    - Co/cross-polarization pattern cuts
+    - Axial ratio maps and boresight AR readout
+
 ### Quick Start
 
 1. Go to **Array Design** to create your array (enable subarrays for wideband analysis)
@@ -77,8 +82,8 @@ Use the sidebar to navigate between different tools:
 4. Check **Impairments** for realistic effects
 5. View **UV-Space** for advanced analysis
 6. Use **Wideband/TTD** for true-time delay and hybrid beamforming
-7. Try **Adaptive Nulling**, **Subarrays & Spoiling**, and **Active Impedance**
-   (these pages are self-contained and define their own arrays)
+7. Try **Adaptive Nulling**, **Subarrays & Spoiling**, **Active Impedance**, and
+   **Polarization** (these pages are self-contained and define their own arrays)
 
 ---
 
