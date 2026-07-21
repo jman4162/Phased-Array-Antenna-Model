@@ -5,6 +5,7 @@ Includes vectorized array factor, FFT-based computation, steering vectors,
 and element patterns.
 """
 
+import warnings
 from typing import Optional, Tuple, Union
 
 import numpy as np
@@ -307,11 +308,13 @@ def element_pattern(
     theta : ndarray
         Polar angle in radians
     phi : ndarray
-        Azimuthal angle in radians (not used in basic model)
+        Azimuthal angle in radians (not used; the model is phi-symmetric)
     cos_exp_theta : float
         Cosine exponent for theta dependence (1.0 = simple cosine)
     cos_exp_phi : float
-        Cosine exponent for additional roll-off
+        Deprecated and unused. The basic model has no phi dependence;
+        for polarized/phi-dependent element models see the v1.4 vector
+        pattern API.
     max_gain_dBi : float
         Peak element gain in dBi
 
@@ -320,6 +323,16 @@ def element_pattern(
     pattern : ndarray
         Element pattern (linear scale, same shape as theta)
     """
+    if cos_exp_phi != 1.0:
+        warnings.warn(
+            "cos_exp_phi is unused: element_pattern is phi-symmetric. "
+            "The parameter is deprecated and will be removed in a future "
+            "release; use the vector element models for phi-dependent "
+            "patterns.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
     # Convert max gain to linear
     max_gain_linear = 10 ** (max_gain_dBi / 10)
 
@@ -385,7 +398,7 @@ def total_pattern(
     z: Optional[np.ndarray] = None,
     **element_kwargs
 ) -> np.ndarray:
-    """
+    r"""
     Compute total radiation pattern (element pattern * array factor).
 
     Parameters
@@ -668,7 +681,18 @@ def compute_half_power_beamwidth(
     while right_idx < len(pattern_dB) - 1 and above_3dB[right_idx + 1]:
         right_idx += 1
 
-    # Interpolate for more accurate beamwidth
-    hpbw = angles_deg[right_idx] - angles_deg[left_idx]
+    # Linearly interpolate the -3 dB crossings; fall back to the sample
+    # position when the crossing lies outside the sampled range
+    left_angle = angles_deg[left_idx]
+    if left_idx > 0 and pattern_dB[left_idx - 1] < -3.0:
+        a0, a1 = angles_deg[left_idx - 1], angles_deg[left_idx]
+        p0, p1 = pattern_dB[left_idx - 1], pattern_dB[left_idx]
+        left_angle = a0 + (-3.0 - p0) * (a1 - a0) / (p1 - p0)
 
-    return abs(hpbw)
+    right_angle = angles_deg[right_idx]
+    if right_idx < len(pattern_dB) - 1 and pattern_dB[right_idx + 1] < -3.0:
+        a0, a1 = angles_deg[right_idx], angles_deg[right_idx + 1]
+        p0, p1 = pattern_dB[right_idx], pattern_dB[right_idx + 1]
+        right_angle = a0 + (-3.0 - p0) * (a1 - a0) / (p1 - p0)
+
+    return abs(right_angle - left_angle)

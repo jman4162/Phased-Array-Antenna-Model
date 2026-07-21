@@ -465,14 +465,10 @@ def create_concentric_rings_array(
     """
     x_list = []
     y_list = []
-    nx_list = []
-    ny_list = []
 
     if include_center:
         x_list.append(0.0)
         y_list.append(0.0)
-        nx_list.append(0.0)
-        ny_list.append(0.0)
 
     if isinstance(elements_per_ring, int):
         elements_per_ring = [elements_per_ring] * n_rings
@@ -484,18 +480,18 @@ def create_concentric_rings_array(
         for angle in angles:
             x_list.append(radius * np.cos(angle))
             y_list.append(radius * np.sin(angle))
-            nx_list.append(np.cos(angle))
-            ny_list.append(np.sin(angle))
 
     x = np.array(x_list)
     y = np.array(y_list)
 
+    # Planar array: all elements face broadside (+z), like the other
+    # planar factories
     return ArrayGeometry(
         x=x, y=y,
         z=np.zeros_like(x),
-        nx=np.array(nx_list),
-        ny=np.array(ny_list),
-        nz=np.zeros_like(x),
+        nx=np.zeros_like(x),
+        ny=np.zeros_like(x),
+        nz=np.ones_like(x),
         element_indices=np.arange(len(x))
     )
 
@@ -1241,7 +1237,6 @@ def overlapped_subarray_weights(
     """
     if not architecture.overlapped:
         # Fall back to standard subarray weights
-        from .beamforming import compute_subarray_weights
         return compute_subarray_weights(architecture, k, theta0_deg, phi0_deg)
 
     geom = architecture.geometry

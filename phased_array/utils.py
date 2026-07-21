@@ -38,12 +38,20 @@ def azel_to_thetaphi(az: ArrayLike, el: ArrayLike) -> Tuple[ArrayLike, ArrayLike
         Polar angle from z-axis in radians (0 = zenith)
     phi : array_like
         Azimuthal angle in radians
+
+    Notes
+    -----
+    Convention: boresight is +z, azimuth rotates toward +x ("right"),
+    elevation toward +y ("up"), with elevation applied over azimuth:
+    the direction vector is (sin(az)cos(el), sin(el), cos(az)cos(el)).
+    Inverse of `thetaphi_to_azel`. Before v1.3.2 the two functions used
+    inconsistent conventions and did not round-trip.
     """
     az = np.asarray(az)
     el = np.asarray(el)
 
     theta = np.arccos(np.cos(az) * np.cos(el))
-    phi = np.arctan2(np.sin(az), np.tan(el))
+    phi = np.arctan2(np.sin(el), np.sin(az) * np.cos(el))
 
     return theta, phi
 
@@ -62,15 +70,21 @@ def thetaphi_to_azel(theta: ArrayLike, phi: ArrayLike) -> Tuple[ArrayLike, Array
     Returns
     -------
     az : array_like
-        Azimuth angle in radians
+        Azimuth angle in radians (0 = boresight, positive = right)
     el : array_like
-        Elevation angle in radians
+        Elevation angle in radians (0 = boresight, positive = up)
+
+    Notes
+    -----
+    Inverse of `azel_to_thetaphi`; see its docstring for the convention.
+    Before v1.3.2 the two functions used inconsistent conventions and
+    did not round-trip.
     """
     theta = np.asarray(theta)
     phi = np.asarray(phi)
 
-    el = np.arcsin(np.cos(theta))
-    az = np.arctan2(np.sin(theta) * np.sin(phi), np.sin(theta) * np.cos(phi))
+    el = np.arcsin(np.sin(theta) * np.sin(phi))
+    az = np.arctan2(np.sin(theta) * np.cos(phi), np.cos(theta))
 
     return az, el
 

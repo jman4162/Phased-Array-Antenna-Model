@@ -391,7 +391,10 @@ def null_steering_projection(
 
     Verify null depth:
 
-    >>> null_depth = pa.compute_null_depth(geom, k, weights, null_dirs[0])
+    >>> null_depth = pa.compute_null_depth(
+    ...     weights, geom, k, theta_deg=45, phi_deg=0,
+    ...     theta_main_deg=30, phi_main_deg=0
+    ... )
     >>> null_depth < -30  # Deep null achieved
     True
     """
@@ -1275,15 +1278,15 @@ def compute_sinr_improvement(
     >>> geom = pa.create_rectangular_array(8, 8, dx=0.5, dy=0.5)
     >>> k = pa.wavelength_to_k(1.0)
     >>> w_q = pa.steering_vector(k, geom.x, geom.y, 0, 0)
-    >>> # Create adapted weights that null an interferer
+    >>> # Create adapted weights that null an interferer in a sidelobe
     >>> w_adapted = pa.null_steering_projection(
     ...     geom, k, theta_main_deg=0, phi_main_deg=0,
-    ...     null_directions=[(30, 0)]
+    ...     null_directions=[(20, 0)]
     ... )
     >>> sinr_b, sinr_a, imp = pa.compute_sinr_improvement(
     ...     w_q, w_adapted, geom, k,
     ...     signal_direction=(0, 0),
-    ...     interference_directions=[(30, 0)],
+    ...     interference_directions=[(20, 0)],
     ...     signal_power=1.0, interference_powers=[10.0], noise_power=0.1
     ... )
     >>> imp > 0  # Should show improvement

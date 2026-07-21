@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2026-07-20
+
+### Fixed
+- `overlapped_subarray_weights()` raised `ImportError` for non-overlapped
+  architectures (it imported `compute_subarray_weights` from the wrong
+  module)
+- `mutual_coupling_matrix_measured()` now implements the documented
+  impedance formulation C = (I + S)(I - S)^-1. Pass
+  `formulation='voltage'` to reproduce the previous C = I + S behavior
+- `azel_to_thetaphi()` and `thetaphi_to_azel()` used inconsistent az/el
+  conventions and were not mutual inverses. Both now use the documented
+  convention (boresight +z, azimuth toward +x, elevation toward +y) and
+  round-trip exactly
+- `create_concentric_rings_array()` produced in-plane element normals
+  (zero for the center element); all normals are now +z, consistent
+  with the other planar array factories
+- `compute_half_power_beamwidth()` now interpolates the -3 dB crossings
+  instead of snapping to grid samples
+- Docstring examples for `compute_null_depth`,
+  `analyze_graceful_degradation`, `compute_beam_squint`, and
+  `stokes_parameters` called functions with wrong arguments or asserted
+  wrong expected values; all module docstrings now run as doctests in CI
+- Importing the package no longer emits a `SyntaxWarning` from an
+  invalid escape sequence in a docstring
+
+### Deprecated
+- The unused `cos_exp_phi` parameter of `element_pattern()` now emits a
+  `DeprecationWarning` when set; the basic element model is
+  phi-symmetric
+
+### Added
+- Test coverage for `utils.py` and `visualization.py` (previously
+  untested): 48 new tests plus a doctest suite over all modules
+
 ## [1.3.1] - 2026-02-01
 
 ### Fixed
@@ -81,24 +115,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Wideband/TTD (True Time Delay) support
 - Subarray configuration in Array Design
-- Export functionality for patterns and configurations
 - Comprehensive Sphinx documentation
 
 ## [1.1.0] - Earlier Release
 
 ### Added
-- Interactive 3D visualization with Plotly
-- UV-space pattern representation
-- Conformal array support (cylindrical, spherical)
-- Sparse/thinned array generation
+- Export module: patterns, weights, geometry, and coupling matrices to
+  CSV, JSON, and NPZ formats
+- Summary report generation
+- Export buttons in the Streamlit app pages
 
 ## [1.0.0] - Initial Release
 
 ### Added
 - Core array factor computation (vectorized and FFT-based)
 - Rectangular, triangular, circular, elliptical array geometries
+- Conformal array support (cylindrical, spherical)
+- Sparse/thinned array generation
 - Beamforming with amplitude tapers (Taylor, Chebyshev, etc.)
 - Null steering (projection and LCMV methods)
 - Multi-beam pattern generation
 - Impairment models (mutual coupling, quantization, failures, scan blindness)
 - 2D and polar pattern visualization
+- Interactive 3D visualization with Plotly
+- UV-space pattern representation

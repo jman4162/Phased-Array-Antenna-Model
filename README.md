@@ -9,11 +9,11 @@
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://phased-array-antenna-model.streamlit.app/)
 [![Documentation](https://readthedocs.org/projects/phased-array-antenna-model/badge/?version=latest)](https://phased-array-antenna-model.readthedocs.io/en/latest/)
 
-A comprehensive Python library for computing and visualizing phased array antenna radiation patterns. Features **125x faster** vectorized computations, multiple array geometries, advanced beamforming, and interactive 3D visualization.
+A comprehensive Python library for computing and visualizing phased array antenna radiation patterns. Features vectorized computations (50-100x faster than naive loops), multiple array geometries, advanced beamforming, and interactive 3D visualization.
 
 ## Features
 
-- **High Performance**: Vectorized array factor computation (125x faster than naive loops)
+- **High Performance**: Vectorized array factor computation (50-100x faster than naive loops)
 - **Multiple Geometries**: Rectangular, triangular, circular, cylindrical, spherical, sparse/thinned arrays
 - **Beamforming**: Amplitude tapering (Taylor, Chebyshev, etc.), null steering, multi-beam
 - **Realistic Impairments**: Mutual coupling, phase quantization, element failures, scan blindness
@@ -35,7 +35,7 @@ The Streamlit app provides an interactive interface for:
 
 ## Installation
 
-### From GitHub (recommended)
+### From PyPI (recommended)
 
 ```bash
 pip install phased-array-modeling
@@ -189,8 +189,12 @@ For hands-on learning, see the [demo notebook](Phased_Array_Demo.ipynb) which co
 phased_array/
 ├── core.py          # Vectorized AF, FFT, steering, element patterns
 ├── geometry.py      # Array geometries and subarray architectures
-├── beamforming.py   # Tapering, null steering, multi-beam
+├── beamforming.py   # Tapering, null steering, multi-beam, adaptive
 ├── impairments.py   # Coupling, quantization, failures, scan blindness
+├── wideband.py      # True-time-delay steering, beam squint, bandwidth
+├── polarization.py  # Jones/Stokes, axial ratio, XPD, Ludwig-3
+├── coordinates.py   # Antenna/radar/cone frames, pattern rotation
+├── export.py        # CSV/JSON/NPZ export, summary reports
 ├── visualization.py # 2D, 3D Plotly, UV-space plotting
 └── utils.py         # Coordinate transforms, helpers
 ```

@@ -73,7 +73,8 @@ def mutual_coupling_matrix_theoretical(
 
 
 def mutual_coupling_matrix_measured(
-    s_parameters: np.ndarray
+    s_parameters: np.ndarray,
+    formulation: str = 'impedance'
 ) -> np.ndarray:
     """
     Convert measured S-parameters to coupling matrix.
@@ -85,16 +86,36 @@ def mutual_coupling_matrix_measured(
     ----------
     s_parameters : ndarray
         N x N S-parameter matrix (complex)
+    formulation : str
+        'impedance' (default): C = (I + S)(I - S)^(-1), the normalized
+        impedance matrix. 'voltage': C = I + S, the total-voltage
+        coupling used before v1.3.2.
 
     Returns
     -------
     C : ndarray
         Mutual coupling matrix
+
+    Notes
+    -----
+    Before v1.3.2 this function returned I + S while documenting the
+    impedance formulation; pass ``formulation='voltage'`` to reproduce
+    the old behavior.
     """
     n = s_parameters.shape[0]
-    # C = (I + S)(I - S)^(-1) for impedance normalization
-    # Or simply use S directly for voltage coupling
-    C = np.eye(n, dtype=complex) + s_parameters
+    identity = np.eye(n, dtype=complex)
+
+    if formulation == 'impedance':
+        try:
+            C = np.linalg.solve((identity - s_parameters).T, (identity + s_parameters).T).T
+        except np.linalg.LinAlgError:
+            C = (identity + s_parameters) @ np.linalg.pinv(identity - s_parameters)
+    elif formulation == 'voltage':
+        C = identity + s_parameters
+    else:
+        raise ValueError(
+            f"formulation must be 'impedance' or 'voltage', got {formulation!r}"
+        )
     return C
 
 
@@ -436,7 +457,7 @@ def simulate_element_failures(
     Analyze graceful degradation:
 
     >>> results = pa.analyze_graceful_degradation(
-    ...     geom, k, weights, failure_rates=[0.0, 0.05, 0.1]
+    ...     weights, geom, k, failure_rates=[0.0, 0.05, 0.1], n_trials=5
     ... )
     """
     if seed is not None:

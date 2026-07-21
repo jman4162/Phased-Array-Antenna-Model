@@ -83,9 +83,11 @@ def steering_vector_ttd(
 
     >>> # TTD maintains beam direction across bandwidth
     >>> # Phase steering causes beam squint at off-center frequencies
+    >>> import numpy as np
     >>> squint = pa.compute_beam_squint(
     ...     geom.x, geom.y, theta0_deg=30, phi0_deg=0,
-    ...     center_freq=10e9, bandwidth=2e9, n_freqs=11
+    ...     center_frequency=10e9,
+    ...     frequencies=np.linspace(9e9, 11e9, 5)
     ... )
     """
     theta0 = np.deg2rad(theta0_deg)

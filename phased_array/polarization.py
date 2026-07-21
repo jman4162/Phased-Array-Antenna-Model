@@ -104,7 +104,7 @@ def stokes_parameters(jones: np.ndarray) -> Tuple[float, float, float, float]:
 
     >>> j = pa.jones_vector(1.0, 1.0, phase_diff=-np.pi/2)  # RHCP
     >>> S0, S1, S2, S3 = pa.stokes_parameters(j)
-    >>> np.isclose(S3, -S0, atol=1e-10)
+    >>> np.isclose(S3, S0, atol=1e-10)  # right circular: S3 = +S0
     True
     """
     jones = np.asarray(jones, dtype=complex)
