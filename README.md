@@ -17,6 +17,7 @@ A comprehensive Python library for computing and visualizing phased array antenn
 - **Multiple Geometries**: Rectangular, triangular, circular, cylindrical, spherical, sparse/thinned arrays
 - **Beamforming**: Amplitude tapering (Taylor, Chebyshev, etc.), null steering, multi-beam
 - **Realistic Impairments**: Mutual coupling, phase quantization, element failures, scan blindness
+- **Polarized Patterns**: Vector (E-theta, E-phi) patterns with dipole/patch/CP element models, co/cross-pol cuts, axial ratio and XPD maps, measured element pattern import
 - **Visualization**: 2D matplotlib, interactive 3D Plotly, UV-space representation
 - **Subarray Support**: Subarray-level beamforming with quantized phase shifters
 - **Data Export**: CSV, JSON, and NumPy formats for patterns, weights, and geometry
@@ -193,6 +194,7 @@ phased_array/
 ├── impairments.py   # Coupling, quantization, failures, scan blindness
 ├── wideband.py      # True-time-delay steering, beam squint, bandwidth
 ├── polarization.py  # Jones/Stokes, axial ratio, XPD, Ludwig-3
+├── vector_patterns.py # Polarized elements, vector AF, co/cross patterns
 ├── coordinates.py   # Antenna/radar/cone frames, pattern rotation
 ├── export.py        # CSV/JSON/NPZ export, summary reports
 ├── visualization.py # 2D, 3D Plotly, UV-space plotting

@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-07-20
+
+### Added
+
+#### Vector (Polarized) Pattern Engine
+- New `phased_array/vector_patterns.py` module wiring the v1.3.0
+  polarization math into the pattern engine: polarized element models
+  produce complex (E_theta, E_phi) components that multiply the array
+  factor
+- `VectorPattern` dataclass with `power`, `power_dB()`, `co_cross()`
+  (Ludwig-3 x/y reference), `axial_ratio_map()`, and `xpd_map()`
+- Polarized element factories: `dipole_element()` (x/y/z Hertzian
+  dipole), `ideal_patch_element()` (cos^n co-pol, zero cross-pol),
+  `cos_q_polarized_element()` (arbitrary Jones state; successor to the
+  deprecated `cos_exp_phi`), `crossed_dipole_element()` (CP turnstile)
+- `GriddedElementPattern` for measured/simulated element patterns
+  (interpolated, usable anywhere an element function is accepted),
+  with `from_scalar()` constructor
+- `vector_total_pattern()`, `compute_full_vector_pattern()`,
+  `compute_co_cross_pattern_cuts()`, `dual_pol_weights()`
+- Conformal support: `element_rotation_matrices()`,
+  `global_to_local_angles()`, and `vector_array_factor_conformal()`
+  evaluate each element in its local frame and rotate fields back to
+  the global spherical basis; `ArrayGeometry` gains optional element
+  tangent fields (`tx`, `ty`, `tz`) to set the local polarization
+  reference
+- 36 new tests (`tests/test_vector_patterns.py`)
+
+### Changed
+- `array_factor_conformal()` now passes local (theta, phi) — both
+  derived from the element's rotation matrix — to the element pattern
+  function instead of local theta with global phi. Results are
+  unchanged for the bundled phi-independent element models; custom
+  phi-dependent callables now receive correct local angles
+- Dropped Python 3.8 support (EOL October 2024); `requires-python >= 3.9`
+
 ## [1.3.2] - 2026-07-20
 
 ### Fixed

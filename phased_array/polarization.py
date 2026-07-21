@@ -81,13 +81,13 @@ def stokes_parameters(jones: np.ndarray) -> Tuple[float, float, float, float]:
     Returns
     -------
     S0 : float or ndarray
-        Total intensity: |Ex|^2 + |Ey|^2
+        Total intensity: ``|Ex|^2 + |Ey|^2``
     S1 : float or ndarray
-        Linear horizontal-vertical: |Ex|^2 - |Ey|^2
+        Linear horizontal-vertical: ``|Ex|^2 - |Ey|^2``
     S2 : float or ndarray
-        Linear +45/-45: 2*Re(Ex*Ey*)
+        Linear +45/-45: ``2*Re(Ex*conj(Ey))``
     S3 : float or ndarray
-        Circular right-left: 2*Im(Ex*Ey*)
+        Circular right-left: ``2*Im(Ex*conj(Ey))``
 
     Examples
     --------

@@ -9,6 +9,7 @@ antenna radiation patterns, including:
 - Various array geometries (rectangular, circular, conformal, sparse)
 - Beamforming techniques (tapering, null steering, multi-beam)
 - Realistic impairments (mutual coupling, quantization, failures, scan blindness)
+- Vector (polarized) patterns: co/cross-pol, axial ratio, XPD, conformal
 - Interactive 3D visualization with Plotly
 - UV-space pattern representation
 
@@ -32,7 +33,7 @@ Example
 >>> theta, phi, pattern_dB = pa.compute_full_pattern(geom.x, geom.y, weights, k)
 """
 
-__version__ = "1.3.2"
+__version__ = "1.4.0"
 
 # Beamforming functions
 from .beamforming import (  # Amplitude tapers; Null steering; Multiple beams; Beam spoiling; Adaptive
@@ -95,6 +96,16 @@ from .utils import (azel_to_thetaphi, create_theta_phi_grid, create_uv_grid,
                     frequency_to_wavelength, is_visible_region, linear_to_db,
                     normalize_pattern, rad2deg, theta_phi_to_uv,
                     thetaphi_to_azel, uv_to_theta_phi, wavelength_to_k)
+# Vector (polarized) pattern functions
+from .vector_patterns import (GriddedElementPattern, VectorPattern,
+                              compute_co_cross_pattern_cuts,
+                              compute_full_vector_pattern,
+                              cos_q_polarized_element, crossed_dipole_element,
+                              dipole_element, dual_pol_weights,
+                              element_rotation_matrices,
+                              global_to_local_angles, ideal_patch_element,
+                              vector_array_factor_conformal,
+                              vector_total_pattern)
 # Visualization functions
 from .visualization import (  # 2D matplotlib plots; UV-space; 3D Plotly plots; Wideband
     compute_pattern_uv_space, create_pattern_animation_plotly,
@@ -278,4 +289,18 @@ __all__ = [
     "rotation_matrix_pitch",
     "rotation_matrix_yaw",
     "rotate_pattern",
+    # Vector (polarized) patterns
+    "VectorPattern",
+    "GriddedElementPattern",
+    "dipole_element",
+    "ideal_patch_element",
+    "cos_q_polarized_element",
+    "crossed_dipole_element",
+    "vector_total_pattern",
+    "compute_full_vector_pattern",
+    "compute_co_cross_pattern_cuts",
+    "dual_pol_weights",
+    "element_rotation_matrices",
+    "global_to_local_angles",
+    "vector_array_factor_conformal",
 ]

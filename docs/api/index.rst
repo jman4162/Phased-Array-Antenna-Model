@@ -72,6 +72,7 @@ Most Commonly Used Functions
    beamforming
    impairments
    polarization
+   vector_patterns
    coordinates
    visualization
    wideband

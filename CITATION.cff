@@ -9,7 +9,7 @@ authors:
 repository-code: "https://github.com/jman4162/Phased-Array-Antenna-Model"
 url: "https://phased-array-antenna-model.readthedocs.io"
 license: MIT
-version: 1.3.2
+version: 1.4.0
 date-released: "2026-07-20"
 keywords:
   - phased array

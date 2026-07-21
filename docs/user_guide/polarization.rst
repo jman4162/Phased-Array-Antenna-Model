@@ -292,6 +292,80 @@ Circular Polarization Verification
    ar_dB = 20 * np.log10(ar_values)
    print(f"Max AR: {max(ar_dB):.2f} dB")
 
+Full Array Vector Patterns
+--------------------------
+
+As of v1.4.0 the polarization math is wired into the pattern engine:
+polarized element models produce complex (E_theta, E_phi) components,
+so co/cross-polar patterns, XPD maps, and axial-ratio maps can be
+computed directly from an array definition.
+
+.. code-block:: python
+
+   import numpy as np
+   import phased_array as pa
+
+   geom = pa.create_rectangular_array(16, 16, dx=0.5, dy=0.5)
+   k = pa.wavelength_to_k(1.0)
+   weights = pa.steering_vector(k, geom.x, geom.y, 20, 0)
+
+   # x-polarized ideal patch elements, full vector pattern
+   element = pa.ideal_patch_element('x', cos_exp=1.3)
+   pattern = pa.compute_full_vector_pattern(
+       geom.x, geom.y, weights, k, element_func=element
+   )
+
+   # Total power in dB, co/cross decomposition, XPD map
+   power_dB = pattern.power_dB()
+   E_co, E_cross = pattern.co_cross()
+   xpd_dB = pattern.xpd_map()
+
+Co/cross-polar pattern cuts through any phi plane:
+
+.. code-block:: python
+
+   # Crossed dipoles radiate finite cross-pol away from boresight
+   theta_deg, co_dB, cross_dB = pa.compute_co_cross_pattern_cuts(
+       geom.x, geom.y, weights, k,
+       element_func=pa.dipole_element('x'),
+       phi_cut_deg=45.0,
+   )
+
+Circularly polarized arrays with crossed-dipole elements:
+
+.. code-block:: python
+
+   element = pa.crossed_dipole_element(phase_diff=-np.pi/2)  # RHCP
+   pattern = pa.compute_full_vector_pattern(
+       geom.x, geom.y, weights, k, element_func=element
+   )
+   ar_map = pattern.axial_ratio_map()   # 1.0 at boresight
+
+Conformal arrays evaluate each element in its own local frame (local z
+along the element normal) and rotate the fields back to the global
+basis, so polarization behavior versus scan is captured correctly:
+
+.. code-block:: python
+
+   cyl = pa.create_cylindrical_array(16, 8, radius=2.0, height=4.0)
+   w = np.ones(cyl.n_elements, dtype=complex)
+   E_theta, E_phi = pa.vector_array_factor_conformal(
+       np.deg2rad(45), np.deg2rad(10), cyl, w, k,
+       element_func=pa.ideal_patch_element('x'),
+   )
+
+Measured or simulated element patterns (e.g. exported from a full-wave
+solver) can be used anywhere an element function is accepted:
+
+.. code-block:: python
+
+   pattern_data = pa.GriddedElementPattern(
+       theta_grid, phi_grid, E_theta_data, E_phi_data
+   )
+   result = pa.compute_full_vector_pattern(
+       geom.x, geom.y, weights, k, element_func=pattern_data
+   )
+
 Best Practices
 --------------
 

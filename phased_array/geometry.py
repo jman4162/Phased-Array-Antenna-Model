@@ -32,6 +32,13 @@ class ArrayGeometry:
         Element normal z-components
     element_indices : ndarray, optional
         Original indices before any thinning (for tracking)
+    tx : ndarray, optional
+        Element tangent x-components (local x-axis / polarization
+        reference for conformal vector patterns)
+    ty : ndarray, optional
+        Element tangent y-components
+    tz : ndarray, optional
+        Element tangent z-components
     """
     x: np.ndarray
     y: np.ndarray
@@ -40,6 +47,9 @@ class ArrayGeometry:
     ny: Optional[np.ndarray] = None
     nz: Optional[np.ndarray] = None
     element_indices: Optional[np.ndarray] = None
+    tx: Optional[np.ndarray] = None
+    ty: Optional[np.ndarray] = None
+    tz: Optional[np.ndarray] = None
 
     @property
     def n_elements(self) -> int:
@@ -74,7 +84,10 @@ class ArrayGeometry:
             nx=self.nx.copy() if self.nx is not None else None,
             ny=self.ny.copy() if self.ny is not None else None,
             nz=self.nz.copy() if self.nz is not None else None,
-            element_indices=self.element_indices.copy() if self.element_indices is not None else None
+            element_indices=self.element_indices.copy() if self.element_indices is not None else None,
+            tx=self.tx.copy() if self.tx is not None else None,
+            ty=self.ty.copy() if self.ty is not None else None,
+            tz=self.tz.copy() if self.tz is not None else None
         )
 
 
@@ -997,6 +1010,13 @@ def array_factor_conformal(
     obs_y = np.sin(theta_flat) * np.sin(phi_flat)
     obs_z = np.cos(theta_flat)
 
+    has_normals = (geometry.nx is not None and geometry.ny is not None
+                   and geometry.nz is not None)
+    if has_normals and element_pattern_func is not None:
+        from .vector_patterns import (element_rotation_matrices,
+                                      global_to_local_angles)
+        R = element_rotation_matrices(geometry)
+
     AF = np.zeros(n_angles, dtype=complex)
 
     for i in range(geometry.n_elements):
@@ -1006,7 +1026,7 @@ def array_factor_conformal(
             phase += k * geometry.z[i] * obs_z
 
         # Element pattern correction for orientation
-        if geometry.nx is not None and geometry.ny is not None and geometry.nz is not None:
+        if has_normals:
             # Cosine of angle between observation direction and element normal
             cos_angle = (geometry.nx[i] * obs_x +
                         geometry.ny[i] * obs_y +
@@ -1014,9 +1034,11 @@ def array_factor_conformal(
             cos_angle = np.maximum(cos_angle, 0)  # Only forward hemisphere
 
             if element_pattern_func is not None:
-                # Local theta for this element (angle from its normal)
-                local_theta = np.arccos(np.clip(cos_angle, -1, 1))
-                element_gain = element_pattern_func(local_theta, phi_flat, **element_kwargs)
+                # Observation angles in the element's local frame
+                local_theta, local_phi = global_to_local_angles(
+                    R[i], theta_flat, phi_flat
+                )
+                element_gain = element_pattern_func(local_theta, local_phi, **element_kwargs)
             else:
                 element_gain = cos_angle  # Simple cosine pattern
         else:
