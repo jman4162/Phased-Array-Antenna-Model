@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://phased-array-antenna-model.readthedocs.io/
+    about: User guides, API reference, theory background, and cookbook recipes.

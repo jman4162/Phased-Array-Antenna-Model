@@ -1,0 +1,31 @@
+name: Bug report
+description: Report incorrect behavior or a crash
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: What happened, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproducible example
+      description: Smallest code snippet that reproduces the problem.
+      render: python
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      description: Output of `python -c "import phased_array; print(phased_array.__version__)"`
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Python and NumPy versions
+      placeholder: "Python 3.11, NumPy 1.26"

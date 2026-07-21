@@ -1,0 +1,20 @@
+name: Feature request
+description: Suggest new functionality
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the use case, e.g. the analysis you cannot currently do.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed API or behavior
+      description: Sketch the function signature or workflow you have in mind, if any.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
