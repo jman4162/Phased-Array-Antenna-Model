@@ -3,6 +3,7 @@
 import doctest
 import importlib
 
+import numpy as np
 import pytest
 
 MODULES = [
@@ -17,6 +18,18 @@ MODULES = [
     "export",
     "visualization",
 ]
+
+
+@pytest.fixture(autouse=True)
+def numpy_legacy_repr():
+    """NumPy 2 prints scalars as np.float64(16.0); the docstring examples
+    use the classic repr. legacy='1.25' restores it for the doctest run."""
+    try:
+        np.set_printoptions(legacy="1.25")
+    except (TypeError, ValueError):
+        pass  # NumPy < 2 already uses the classic repr
+    yield
+    np.set_printoptions(legacy=False)
 
 
 @pytest.mark.parametrize("module_name", MODULES)
