@@ -3,13 +3,18 @@
 [![CI](https://github.com/jman4162/Phased-Array-Antenna-Model/actions/workflows/ci.yml/badge.svg)](https://github.com/jman4162/Phased-Array-Antenna-Model/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/phased-array-modeling.svg)](https://pypi.org/project/phased-array-modeling/)
 [![PyPI downloads](https://img.shields.io/pypi/dm/phased-array-modeling.svg)](https://pypi.org/project/phased-array-modeling/)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jman4162/Phased-Array-Antenna-Model/blob/main/Phased_Array_Demo.ipynb)
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://phased-array-antenna-model.streamlit.app/)
 [![Documentation](https://readthedocs.org/projects/phased-array-antenna-model/badge/?version=latest)](https://phased-array-antenna-model.readthedocs.io/en/latest/)
 
 A comprehensive Python library for computing and visualizing phased array antenna radiation patterns. Features vectorized computations (50-100x faster than naive loops), multiple array geometries, advanced beamforming, and interactive 3D visualization.
+
+Full walkthrough of the physics and API:
+[Modeling phased arrays in Python, from physics to trade study](https://john-hodge.com/blog/modeling-phased-arrays-in-python/).
+What's new in v1.4.0:
+[polarized patterns for phased arrays](https://john-hodge.com/blog/phased-array-modeling-1-4-0/).
 
 ## Features
 
@@ -203,7 +208,7 @@ phased_array/
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.9+
 - NumPy >= 1.20.0
 - Matplotlib >= 3.5.0
 - SciPy >= 1.7.0
