@@ -6,9 +6,7 @@ package:
 
 source:
   url: https://pypi.org/packages/source/p/phased-array-modeling/phased_array_modeling-{{ version }}.tar.gz
-  # After publishing v{{ version }} to PyPI, update with:
-  #   curl -sL https://pypi.org/pypi/phased-array-modeling/json | jq -r '.releases["{{ version }}"][] | select(.packagetype=="sdist") | .digests.sha256'
-  sha256: REPLACE_WITH_SDIST_SHA256_AFTER_PYPI_RELEASE
+  sha256: 24929053e2803e34a685ab9218e9b8923c4873fada23f37b36f9ed335f4b55b2
 
 build:
   noarch: python
