@@ -23,13 +23,17 @@ MODULES = [
 @pytest.fixture(autouse=True)
 def numpy_legacy_repr():
     """NumPy 2 prints scalars as np.float64(16.0); the docstring examples
-    use the classic repr. legacy='1.25' restores it for the doctest run."""
-    try:
+    use the classic repr. legacy='1.25' restores it for the doctest run.
+
+    NumPy 1.x must not receive the option at all: it warns instead of
+    raising and stores the invalid value, corrupting later printing.
+    """
+    if int(np.__version__.split(".")[0]) >= 2:
         np.set_printoptions(legacy="1.25")
-    except (TypeError, ValueError):
-        pass  # NumPy < 2 already uses the classic repr
-    yield
-    np.set_printoptions(legacy=False)
+        yield
+        np.set_printoptions(legacy=False)
+    else:
+        yield
 
 
 @pytest.mark.parametrize("module_name", MODULES)
