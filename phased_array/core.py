@@ -634,8 +634,9 @@ def compute_directivity(
     d_theta = theta[1, 0] - theta[0, 0] if theta.shape[0] > 1 else np.pi
     d_phi = phi[0, 1] - phi[0, 0] if phi.shape[1] > 1 else 2*np.pi
 
-    integrand = power * np.sin(theta)
-    total_power = np.trapz(np.trapz(integrand, dx=d_phi, axis=1), dx=d_theta)
+    ds = np.array([1-np.cos(d_theta/2), *(2*np.sin(d_theta/2) * np.ones(theta.shape[0]-2))*np.sin(theta[1:-1,:]),1-np.cos(d_theta/2)])
+    integrand = power * ds[:,None]
+    total_power = np.sum(np.trapezoidz(integrand, dx=d_phi, axis=1))
 
     if total_power > 0:
         directivity = 4 * np.pi * peak_power / total_power
