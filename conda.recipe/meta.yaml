@@ -6,9 +6,8 @@ package:
 
 source:
   url: https://pypi.org/packages/source/p/phased-array-modeling/phased_array_modeling-{{ version }}.tar.gz
-  # Refresh after the v1.4.1 sdist is on PyPI:
-  #   curl -sL <url above> | shasum -a 256
-  sha256: 0000000000000000000000000000000000000000000000000000000000000000
+  # Refresh on each release: curl -sL <url above> | shasum -a 256
+  sha256: b4787db49df12481757e555e2dcc24c7a552a2ed30458612dce8cf247e977c29
 
 build:
   noarch: python
