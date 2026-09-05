@@ -43,6 +43,48 @@ jobs:
           files: ./coverage.xml
           fail_ci_if_error: false
 
+  deps:
+    # Exercise the declared minimums, NumPy 1.x, and modern NumPy 2.x
+    # explicitly instead of relying on the default dependency resolution.
+    name: deps (py${{ matrix.python-version }}, ${{ matrix.label }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python-version: "3.9"
+            label: "oldest supported"
+            numpy: "numpy==1.20.0"
+            scipy: "scipy==1.7.0"
+            matplotlib: "matplotlib==3.5.0"
+          - python-version: "3.11"
+            label: "numpy 1.x"
+            numpy: "numpy==1.26.4"
+            scipy: "scipy==1.11.4"
+            matplotlib: "matplotlib==3.8.4"
+          - python-version: "3.12"
+            label: "numpy 2.x"
+            numpy: "numpy>=2.4"
+            scipy: "scipy>=1.14"
+            matplotlib: "matplotlib>=3.9"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]" "${{ matrix.numpy }}" "${{ matrix.scipy }}" "${{ matrix.matplotlib }}"
+          python -m pip check
+      - name: Report resolved versions
+        run: |
+          python -c "import numpy, scipy, matplotlib; print('numpy', numpy.__version__); print('scipy', scipy.__version__); print('matplotlib', matplotlib.__version__)"
+      - name: Run tests
+        run: |
+          pytest tests/ -v --tb=short
+
   lint:
     runs-on: ubuntu-latest
     steps:

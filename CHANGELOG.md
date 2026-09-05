@@ -5,6 +5,57 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `compute_directivity` no longer calls `np.trapz`, which NumPy removed
+  in 2.4 (deprecated in 2.0). The function raised `AttributeError` on
+  any NumPy 2.4 or newer install. It now uses
+  `scipy.integrate.trapezoid`, which is available across the supported
+  NumPy 1.x and 2.x range; SciPy is already a required dependency
+- `compute_directivity` now weights each theta row by the exact solid
+  angle of its spherical cell. This exactly integrates isotropic
+  patterns and can reduce quadrature error for pole-peaked patterns;
+  it is not a general elimination of integration bias. Method
+  contributed by @bhicks-leolabs (#8)
+- Grid validation accepts uniformly sampled `float32` coordinates
+  within their storage precision while still rejecting materially
+  non-uniform grids. Integration uses float64 coordinates and shared
+  midpoint cell boundaries to avoid gaps from rounded spacing, with
+  a stable solid-angle formula for narrow polar caps
+
+### Changed
+
+- `compute_directivity` validates its grid and raises `ValueError` with
+  an actionable message for inputs it cannot integrate: non-2D or
+  mismatched arrays, non-finite values, a single-sample axis, an
+  `indexing='xy'` or transposed mesh, non-uniform or descending
+  spacing, or theta outside [0, pi]. Previously such inputs returned a
+  plausible-looking number
+- `compute_directivity` docstring now states the grid contract, the
+  piecewise-constant power approximation, and that exact isotropic
+  integration is an invariant rather than a general accuracy
+  guarantee: for smooth patterns that vanish at the poles the previous
+  `sin(theta)` rule can still be the more accurate of the two
+
+### Added
+
+- `tests/test_directivity.py`: acceptance tests against the public API
+  on `create_theta_phi_grid` output, and regression tests covering
+  analytic directivities (isotropic, short dipole, `cos(theta)**10`,
+  an azimuth-dependent pattern), convergence at 10, 5, 2.5 and 1.25
+  degree theta spacing, partial-sphere and partial-azimuth grids,
+  amplitude and phase invariance, float32 grids, narrow polar caps,
+  analytic half-wavelength linear arrays, and grid validation.
+  `compute_directivity` previously had no tests
+- CI `deps` job explicitly testing three dependency sets:
+  Python 3.9 with the oldest declared minimums
+  (NumPy 1.20.0, SciPy 1.7.0, Matplotlib 3.5.0), Python 3.11 with
+  NumPy 1.26.4, and Python 3.12 with NumPy 2.4 or newer. Requirements
+  are individually quoted and resolved together with the project;
+  `pip check` rejects inconsistent dependency environments
+
 ## [1.4.0] - 2026-07-20
 
 ### Added
