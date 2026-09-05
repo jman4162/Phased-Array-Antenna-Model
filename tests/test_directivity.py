@@ -11,7 +11,7 @@ function squares its input):
 
     amplitude 1              -> D = 1
     amplitude sin(theta)     -> D = 3/2      (short dipole)
-    amplitude cos(theta)**10 -> D = 21       (2n+1 for cos(theta)**n power)
+    amplitude cos(theta)**10 -> D = 21       (cos(theta)**20 power)
     amplitude sqrt(1 + 0.5 sin^2(theta) cos(2 phi)) -> D = 3/2
 """
 
@@ -73,6 +73,32 @@ class TestDirectivityAcceptance:
         directivity = pa.compute_directivity(theta, phi, _dipole(theta))
 
         assert abs(directivity - 1.5) < 1e-3
+
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+    @pytest.mark.parametrize("theta_max, expected", [(np.pi, 1.0), (np.pi / 2, 2.0)])
+    def test_isotropic_grid_storage_precision(self, dtype, theta_max, expected):
+        _, _, theta, phi = pa.create_theta_phi_grid(theta_range=(0, theta_max))
+        theta, phi = theta.astype(dtype), phi.astype(dtype)
+
+        directivity = pa.compute_directivity(theta, phi, np.ones_like(theta))
+
+        assert np.isclose(directivity, expected, rtol=1e-6)
+
+    @pytest.mark.parametrize("steering_angle", [0, 90])
+    def test_half_wavelength_linear_array(self, steering_angle):
+        n = 64
+        x = y = np.zeros(n)
+        z = np.arange(n) * 0.5
+        k = 2 * np.pi
+        weights = pa.steering_vector(k, x, y, steering_angle, 0, z=z)
+        _, _, theta, phi = pa.create_theta_phi_grid(n_theta=361, n_phi=3)
+        pattern = pa.array_factor_vectorized(theta, phi, x, y, weights, k, z=z)
+
+        directivity = pa.compute_directivity(theta, phi, pattern)
+
+        # Half-wavelength-separated cross terms integrate to zero, so the
+        # total power is 4*pi*n and exact directivity is n at either steering.
+        assert abs(10 * np.log10(directivity / n)) < 0.002
 
     def test_pole_peaked_on_default_grid(self):
         _, _, theta, phi = pa.create_theta_phi_grid()
@@ -171,10 +197,9 @@ class TestDirectivityRegression:
         assert all(b < a for a, b in zip(errors, errors[1:])), errors
         assert errors[-1] < 0.01, errors[-1]
 
-    def test_pole_power_is_not_discarded(self):
-        # Weighting samples by sin(theta) gives both poles zero weight, so a
-        # pole-peaked pattern loses its strongest contribution and directivity
-        # comes out high. Cell weighting must not reproduce that bias.
+    def test_pole_peaked_quadrature_improves_at_coarse_resolution(self):
+        # This particular coarse-grid pattern benefits from cell weighting;
+        # the improvement is not a universal property of the quadrature.
         _, _, theta, phi = _grid(10.0)
         pattern = _pole_peaked(theta)
 
@@ -209,6 +234,15 @@ class TestDirectivityRegression:
         cap = np.cos(theta_range[0]) - np.cos(theta_range[1])
         solid_angle = 2 * np.pi * cap
         assert abs(directivity - 4 * np.pi / solid_angle) < 1e-9
+
+    def test_narrow_polar_cap_avoids_cancellation(self):
+        theta_max = 1e-8
+        _, _, theta, phi = pa.create_theta_phi_grid(
+            theta_range=(0, theta_max), n_theta=19, n_phi=37
+        )
+        directivity = pa.compute_directivity(theta, phi, _isotropic(theta))
+        expected = 1 / np.sin(theta_max / 2) ** 2
+        assert np.isclose(directivity, expected, rtol=1e-12)
 
     def test_partial_azimuth_sector_is_supported(self):
         _, _, theta, phi = _grid(1.0, phi_range=(0, np.pi))
@@ -284,6 +318,18 @@ class TestDirectivityValidation:
         theta, phi = np.meshgrid(
             theta_1d, np.linspace(0, 2 * np.pi, 37), indexing="ij"
         )
+
+        with pytest.raises(ValueError, match="uniformly spaced"):
+            pa.compute_directivity(theta, phi, np.ones_like(theta))
+
+    @pytest.mark.parametrize("axis", ["theta", "phi"])
+    def test_float32_nonuniform_grid_is_still_rejected(self, axis):
+        _, _, theta, phi = pa.create_theta_phi_grid()
+        theta, phi = theta.astype(np.float32), phi.astype(np.float32)
+        if axis == "theta":
+            theta[90, :] += 1e-3
+        else:
+            phi[:, 180] += 1e-3
 
         with pytest.raises(ValueError, match="uniformly spaced"):
             pa.compute_directivity(theta, phi, np.ones_like(theta))

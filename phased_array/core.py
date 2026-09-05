@@ -670,31 +670,43 @@ def _angle_axes(
             "or built with indexing='xy'; use indexing='ij'."
         )
 
-    theta_1d = theta[:, 0]
-    phi_1d = phi[0, :]
-
-    for name, axis in (("theta", theta_1d), ("phi", phi_1d)):
+    axes = []
+    tolerances = []
+    for name, samples in (("theta", theta[:, 0]), ("phi", phi[0, :])):
+        # Casting alone cannot undo float32 coordinate rounding. Compare
+        # positions to a uniform axis using the original storage precision;
+        # comparing successive differences amplifies rounding error.
+        eps = (np.finfo(samples.dtype).eps
+               if np.issubdtype(samples.dtype, np.floating)
+               else np.finfo(np.float64).eps)
+        axis = samples.astype(np.float64)
+        tol = max(1e-12, 4 * eps * float(np.max(np.abs(axis))))
         step = np.diff(axis)
         if not np.all(step > 0):
             raise ValueError(
                 f"{name} must be strictly increasing, got samples from "
                 f"{axis[0]:.6g} to {axis[-1]:.6g} rad"
             )
-        if not np.allclose(step, step[0], rtol=1e-9, atol=1e-12):
+        uniform = np.linspace(axis[0], axis[-1], axis.size)
+        if not np.allclose(axis, uniform, rtol=0, atol=tol):
             raise ValueError(
                 f"{name} must be uniformly spaced; spacing ranges from "
-                f"{step.min():.6g} to {step.max():.6g} rad. The cell weights "
-                "assume a uniform grid."
+                f"{step.min():.6g} to {step.max():.6g} rad. Use a uniform "
+                "grid within the coordinate storage precision."
             )
+        axes.append(axis)
+        tolerances.append(tol)
 
-    tol = 1e-9
+    theta_1d, phi_1d = axes
+    tol = tolerances[0]
     if theta_1d[0] < -tol or theta_1d[-1] > np.pi + tol:
         raise ValueError(
             "theta must lie within [0, pi] radians, got samples from "
             f"{theta_1d[0]:.6g} to {theta_1d[-1]:.6g} rad"
         )
 
-    return theta_1d, phi_1d
+    # float32(pi) lies slightly above pi; clamp only permitted roundoff.
+    return np.clip(theta_1d, 0, np.pi), phi_1d
 
 
 def compute_directivity(
@@ -705,32 +717,33 @@ def compute_directivity(
     """
     Compute peak directivity by integrating a pattern over solid angle.
 
-    The pattern is treated as constant over each spherical cell, and each
-    cell is weighted by its exact solid angle. Writing the theta samples as
-    theta_i with uniform spacing d_theta, the weight of row i is
+    Power is treated as constant over each theta cell. Cell boundaries are
+    the midpoints of adjacent theta samples, clipped at the first and last
+    samples. The weight of row i is
 
-        w_i = cos(max(theta_min, theta_i - d_theta/2))
-              - cos(min(theta_max, theta_i + d_theta/2))
+        w_i = cos(theta_edge_i) - cos(theta_edge_{i+1})
 
     so that ``sum(w_i) * (phi span)`` reproduces the sampled solid angle
-    exactly. Azimuth is integrated with the trapezoidal rule.
+    within floating-point error. Azimuth is integrated with the trapezoidal
+    rule. Midpoint boundaries keep neighboring cells contiguous even when
+    single-precision coordinates have small rounding differences.
 
-    This differs from weighting the samples by ``sin(theta)``, which assigns
-    zero weight to the poles and therefore discards the power radiated there.
-    That omission biases directivity high, most visibly for high-gain
-    end-fire patterns. Cell weighting removes the bias and makes an isotropic
-    pattern integrate to 4*pi within floating-point error. That is an exact
-    invariant, not a general accuracy guarantee: for smooth patterns that
-    vanish at the poles the sin(theta) trapezoidal rule can be more accurate,
-    since both schemes converge as O(d_theta**2) with different constants.
-    A higher-order rule in cos(theta) is possible but needs an odd sample
-    count to keep the solid-angle invariant, so it is not the default.
+    The spherical Jacobian sin(theta) correctly vanishes at the poles,
+    which individually have zero solid angle. Numerical error arises from
+    approximating power over finite angular regions. Cell weighting can
+    reduce that error for pole-peaked patterns and exactly integrates an
+    isotropic pattern on a full sphere, but does not eliminate quadrature
+    bias generally. For smooth patterns that vanish at the poles, the
+    previous sin(theta) trapezoidal rule can be more accurate. Both rules
+    are generally second order, with higher-order convergence possible for
+    special patterns. Refine the angular grid to check convergence.
 
     Parameters
     ----------
     theta : ndarray
         2D theta grid in radians, shape (n_theta, n_phi). Must be uniformly
-        spaced, strictly increasing along axis 0, constant along axis 1, and
+        spaced within its storage precision, strictly increasing along
+        axis 0, constant along axis 1, and
         contained in [0, pi] - the ``theta_grid`` output of
         :func:`~phased_array.utils.create_theta_phi_grid`.
     phi : ndarray
@@ -784,12 +797,13 @@ def compute_directivity(
     power = np.abs(pattern)**2
     peak_power = np.max(power)
 
-    # Exact solid angle of each theta cell, clipped to the sampled span:
-    # integral of sin(t) dt from t_lower to t_upper.
-    d_theta = theta_1d[1] - theta_1d[0]
-    lower = np.maximum(theta_1d[0], theta_1d - d_theta / 2)
-    upper = np.minimum(theta_1d[-1], theta_1d + d_theta / 2)
-    theta_weights = np.cos(lower) - np.cos(upper)
+    # Shared midpoint boundaries avoid gaps/overlaps from rounded spacing.
+    edges = np.concatenate((theta_1d[:1],
+                            (theta_1d[:-1] + theta_1d[1:]) / 2,
+                            theta_1d[-1:]))
+    lower, upper = edges[:-1], edges[1:]
+    # Equivalent to cos(lower) - cos(upper), without polar cancellation.
+    theta_weights = 2 * np.sin((upper + lower) / 2) * np.sin((upper - lower) / 2)
 
     # trapezoid() rather than np.trapz(), which NumPy 2.4 removed, or
     # np.trapezoid(), which NumPy 1.x does not have.

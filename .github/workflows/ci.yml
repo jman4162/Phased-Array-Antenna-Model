@@ -44,9 +44,8 @@ jobs:
           fail_ci_if_error: false
 
   deps:
-    # The Python-version matrix above always resolves the newest compatible
-    # NumPy, so it never exercised NumPy 1.x or a release where np.trapz is
-    # gone. These pins do.
+    # Exercise the declared minimums, NumPy 1.x, and modern NumPy 2.x
+    # explicitly instead of relying on the default dependency resolution.
     name: deps (py${{ matrix.python-version }}, ${{ matrix.label }})
     runs-on: ubuntu-latest
     strategy:
@@ -55,13 +54,19 @@ jobs:
         include:
           - python-version: "3.9"
             label: "oldest supported"
-            pins: "numpy==1.20.0 scipy==1.7.0 matplotlib==3.5.0"
+            numpy: "numpy==1.20.0"
+            scipy: "scipy==1.7.0"
+            matplotlib: "matplotlib==3.5.0"
           - python-version: "3.11"
             label: "numpy 1.x"
-            pins: "numpy==1.26.4 scipy==1.11.4 matplotlib==3.8.4"
+            numpy: "numpy==1.26.4"
+            scipy: "scipy==1.11.4"
+            matplotlib: "matplotlib==3.8.4"
           - python-version: "3.12"
             label: "numpy 2.x"
-            pins: "numpy>=2.4 scipy>=1.14 matplotlib>=3.9"
+            numpy: "numpy>=2.4"
+            scipy: "scipy>=1.14"
+            matplotlib: "matplotlib>=3.9"
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
@@ -71,8 +76,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
-          pip install ${{ matrix.pins }}
+          python -m pip install -e ".[dev]" "${{ matrix.numpy }}" "${{ matrix.scipy }}" "${{ matrix.matplotlib }}"
+          python -m pip check
       - name: Report resolved versions
         run: |
           python -c "import numpy, scipy, matplotlib; print('numpy', numpy.__version__); print('scipy', scipy.__version__); print('matplotlib', matplotlib.__version__)"
