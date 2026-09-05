@@ -9,6 +9,7 @@ import warnings
 from typing import Optional, Tuple, Union
 
 import numpy as np
+from scipy.integrate import trapezoid
 
 from .utils import create_theta_phi_grid, linear_to_db, theta_phi_to_uv
 
@@ -602,48 +603,205 @@ def compute_full_pattern(
     return theta_1d, phi_1d, pattern_dB
 
 
+def _angle_axes(
+    theta: np.ndarray,
+    phi: np.ndarray,
+    pattern: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Validate a (theta, phi) meshgrid and return its 1D axes.
+
+    Parameters
+    ----------
+    theta, phi : ndarray
+        2D angle grids in radians, as produced by
+        :func:`~phased_array.utils.create_theta_phi_grid`
+        (``np.meshgrid(..., indexing='ij')``)
+    pattern : ndarray
+        Pattern sampled on the same grid
+
+    Returns
+    -------
+    theta_1d : ndarray
+        Theta samples, shape (n_theta,)
+    phi_1d : ndarray
+        Phi samples, shape (n_phi,)
+
+    Raises
+    ------
+    ValueError
+        If the arrays are not 2D and identically shaped, contain non-finite
+        values, have fewer than two samples on an axis, are not separable in
+        the ``indexing='ij'`` sense, are not strictly increasing with uniform
+        spacing, or sample theta outside [0, pi].
+    """
+    for name, arr in (("theta", theta), ("phi", phi), ("pattern", pattern)):
+        if np.ndim(arr) != 2:
+            raise ValueError(
+                f"{name} must be a 2D grid, got ndim={np.ndim(arr)}. Pass the "
+                "theta_grid/phi_grid outputs of create_theta_phi_grid(), not "
+                "the 1D axes."
+            )
+        if not np.all(np.isfinite(arr)):
+            raise ValueError(f"{name} contains non-finite values (NaN or inf)")
+
+    if theta.shape != phi.shape or theta.shape != pattern.shape:
+        raise ValueError(
+            "theta, phi and pattern must have the same shape, got "
+            f"{theta.shape}, {phi.shape} and {pattern.shape}"
+        )
+
+    n_theta, n_phi = theta.shape
+    if n_theta < 2 or n_phi < 2:
+        raise ValueError(
+            "at least two samples are required on each axis, got shape "
+            f"{theta.shape}. A single-sample axis carries no integration span."
+        )
+
+    # Separability: theta must vary along axis 0 only, phi along axis 1 only.
+    if not np.allclose(theta, theta[:, :1]):
+        raise ValueError(
+            "theta must be constant along axis 1. The grid looks transposed "
+            "or built with indexing='xy'; use indexing='ij'."
+        )
+    if not np.allclose(phi, phi[:1, :]):
+        raise ValueError(
+            "phi must be constant along axis 0. The grid looks transposed "
+            "or built with indexing='xy'; use indexing='ij'."
+        )
+
+    theta_1d = theta[:, 0]
+    phi_1d = phi[0, :]
+
+    for name, axis in (("theta", theta_1d), ("phi", phi_1d)):
+        step = np.diff(axis)
+        if not np.all(step > 0):
+            raise ValueError(
+                f"{name} must be strictly increasing, got samples from "
+                f"{axis[0]:.6g} to {axis[-1]:.6g} rad"
+            )
+        if not np.allclose(step, step[0], rtol=1e-9, atol=1e-12):
+            raise ValueError(
+                f"{name} must be uniformly spaced; spacing ranges from "
+                f"{step.min():.6g} to {step.max():.6g} rad. The cell weights "
+                "assume a uniform grid."
+            )
+
+    tol = 1e-9
+    if theta_1d[0] < -tol or theta_1d[-1] > np.pi + tol:
+        raise ValueError(
+            "theta must lie within [0, pi] radians, got samples from "
+            f"{theta_1d[0]:.6g} to {theta_1d[-1]:.6g} rad"
+        )
+
+    return theta_1d, phi_1d
+
+
 def compute_directivity(
     theta: np.ndarray,
     phi: np.ndarray,
     pattern: np.ndarray
 ) -> float:
     """
-    Compute directivity from a full-sphere pattern.
+    Compute peak directivity by integrating a pattern over solid angle.
+
+    The pattern is treated as constant over each spherical cell, and each
+    cell is weighted by its exact solid angle. Writing the theta samples as
+    theta_i with uniform spacing d_theta, the weight of row i is
+
+        w_i = cos(max(theta_min, theta_i - d_theta/2))
+              - cos(min(theta_max, theta_i + d_theta/2))
+
+    so that ``sum(w_i) * (phi span)`` reproduces the sampled solid angle
+    exactly. Azimuth is integrated with the trapezoidal rule.
+
+    This differs from weighting the samples by ``sin(theta)``, which assigns
+    zero weight to the poles and therefore discards the power radiated there.
+    That omission biases directivity high, most visibly for high-gain
+    end-fire patterns. Cell weighting removes the bias and makes an isotropic
+    pattern integrate to 4*pi within floating-point error. That is an exact
+    invariant, not a general accuracy guarantee: for smooth patterns that
+    vanish at the poles the sin(theta) trapezoidal rule can be more accurate,
+    since both schemes converge as O(d_theta**2) with different constants.
+    A higher-order rule in cos(theta) is possible but needs an odd sample
+    count to keep the solid-angle invariant, so it is not the default.
 
     Parameters
     ----------
     theta : ndarray
-        2D theta grid in radians
+        2D theta grid in radians, shape (n_theta, n_phi). Must be uniformly
+        spaced, strictly increasing along axis 0, constant along axis 1, and
+        contained in [0, pi] - the ``theta_grid`` output of
+        :func:`~phased_array.utils.create_theta_phi_grid`.
     phi : ndarray
-        2D phi grid in radians
+        2D phi grid in radians, same shape. Must be uniformly spaced,
+        strictly increasing along axis 1, and constant along axis 0.
     pattern : ndarray
-        Complex or magnitude pattern, same shape
+        Complex or magnitude (amplitude) pattern on the same grid. Power is
+        taken as ``|pattern|**2``; pass amplitude, not power.
 
     Returns
     -------
     directivity : float
-        Directivity in linear scale
-    """
-    power = np.abs(pattern)**2
+        Peak directivity in linear scale (not dB)
 
-    # Find peak
+    Raises
+    ------
+    ValueError
+        If theta, phi and pattern are not 2D arrays of matching shape, hold
+        non-finite values, have fewer than two samples on an axis, are not
+        separable in the ``indexing='ij'`` sense, are not strictly increasing
+        with uniform spacing, or sample theta outside [0, pi]
+
+    Notes
+    -----
+    The grid need not cover the full sphere. A partial grid integrates only
+    the solid angle it samples, which is equivalent to assuming the pattern
+    radiates no power outside that region - the convention that makes
+    hemisphere grids from :func:`compute_full_pattern` (whose default
+    ``theta_range`` is ``(0, pi/2)``) behave as expected for a ground-plane
+    backed array.
+
+    Examples
+    --------
+    An isotropic pattern has unit directivity:
+
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> _, _, theta, phi = pa.create_theta_phi_grid()
+    >>> d = pa.compute_directivity(theta, phi, np.ones_like(theta))
+    >>> f"{d:.9f}"
+    '1.000000000'
+
+    A short dipole, amplitude sin(theta), has directivity 3/2:
+
+    >>> d = pa.compute_directivity(theta, phi, np.sin(theta))
+    >>> f"{d:.4f}"
+    '1.5000'
+    """
+    theta_1d, phi_1d = _angle_axes(theta, phi, pattern)
+
+    power = np.abs(pattern)**2
     peak_power = np.max(power)
 
-    # Integrate over sphere: integral of P(theta,phi) * sin(theta) dtheta dphi
-    # Using trapezoidal integration
-    d_theta = theta[1, 0] - theta[0, 0] if theta.shape[0] > 1 else np.pi
-    d_phi = phi[0, 1] - phi[0, 0] if phi.shape[1] > 1 else 2*np.pi
+    # Exact solid angle of each theta cell, clipped to the sampled span:
+    # integral of sin(t) dt from t_lower to t_upper.
+    d_theta = theta_1d[1] - theta_1d[0]
+    lower = np.maximum(theta_1d[0], theta_1d - d_theta / 2)
+    upper = np.minimum(theta_1d[-1], theta_1d + d_theta / 2)
+    theta_weights = np.cos(lower) - np.cos(upper)
 
-    ds = np.array([1-np.cos(d_theta/2), *(2*np.sin(d_theta/2) * np.ones(theta.shape[0]-2))*np.sin(theta[1:-1,:]),1-np.cos(d_theta/2)])
-    integrand = power * ds[:,None]
-    total_power = np.sum(np.trapezoidz(integrand, dx=d_phi, axis=1))
+    # trapezoid() rather than np.trapz(), which NumPy 2.4 removed, or
+    # np.trapezoid(), which NumPy 1.x does not have.
+    azimuth_integral = trapezoid(power, x=phi_1d, axis=1)
+    total_power = float(np.sum(theta_weights * azimuth_integral))
 
     if total_power > 0:
         directivity = 4 * np.pi * peak_power / total_power
     else:
         directivity = 1.0
 
-    return directivity
+    return float(directivity)
 
 
 def compute_half_power_beamwidth(
