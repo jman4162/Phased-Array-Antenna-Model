@@ -635,6 +635,8 @@ def _angle_axes(
         the ``indexing='ij'`` sense, are not strictly increasing with uniform
         spacing, or sample theta outside [0, pi].
     """
+    theta, phi, pattern = (np.asarray(a) for a in (theta, phi, pattern))
+
     for name, arr in (("theta", theta), ("phi", phi), ("pattern", pattern)):
         if np.ndim(arr) != 2:
             raise ValueError(
@@ -673,36 +675,45 @@ def _angle_axes(
     axes = []
     tolerances = []
     for name, samples in (("theta", theta[:, 0]), ("phi", phi[0, :])):
-        # Casting alone cannot undo float32 coordinate rounding. Compare
-        # positions to a uniform axis using the original storage precision;
-        # comparing successive differences amplifies rounding error.
-        eps = (np.finfo(samples.dtype).eps
-               if np.issubdtype(samples.dtype, np.floating)
-               else np.finfo(np.float64).eps)
         axis = samples.astype(np.float64)
-        tol = max(1e-12, 4 * eps * float(np.max(np.abs(axis))))
-        step = np.diff(axis)
-        if not np.all(step > 0):
+        # Compare positions to a uniform axis rather than successive
+        # differences, which amplify rounding error. The tolerance scales
+        # with the axis span, not the array dtype, so a float32 grid and
+        # the same grid upcast to float64 are judged identically.
+        span = float(axis[-1] - axis[0])
+        tol = max(1e-12, 1e-6 * abs(span))
+        if not np.all(np.diff(axis) > 0):
             raise ValueError(
                 f"{name} must be strictly increasing, got samples from "
                 f"{axis[0]:.6g} to {axis[-1]:.6g} rad"
             )
         uniform = np.linspace(axis[0], axis[-1], axis.size)
-        if not np.allclose(axis, uniform, rtol=0, atol=tol):
+        deviation = float(np.max(np.abs(axis - uniform)))
+        if deviation > tol:
             raise ValueError(
-                f"{name} must be uniformly spaced; spacing ranges from "
-                f"{step.min():.6g} to {step.max():.6g} rad. Use a uniform "
-                "grid within the coordinate storage precision."
+                f"{name} must be uniformly spaced; samples deviate from a "
+                f"uniform axis by up to {deviation:.3g} rad, tolerance "
+                f"{tol:.3g} rad"
             )
         axes.append(axis)
         tolerances.append(tol)
 
     theta_1d, phi_1d = axes
-    tol = tolerances[0]
-    if theta_1d[0] < -tol or theta_1d[-1] > np.pi + tol:
+    theta_tol, phi_tol = tolerances
+    if theta_1d[0] < -theta_tol or theta_1d[-1] > np.pi + theta_tol:
         raise ValueError(
             "theta must lie within [0, pi] radians, got samples from "
-            f"{theta_1d[0]:.6g} to {theta_1d[-1]:.6g} rad"
+            f"{theta_1d[0]:.6g} to {theta_1d[-1]:.6g} rad. Angles in "
+            "degrees are a common cause."
+        )
+
+    # A span wider than a full turn counts some directions more than once.
+    phi_span = float(phi_1d[-1] - phi_1d[0])
+    if phi_span > 2 * np.pi + phi_tol:
+        raise ValueError(
+            f"phi must span at most 2*pi radians, got {phi_span:.6g} rad "
+            f"from {phi_1d[0]:.6g} to {phi_1d[-1]:.6g}. Angles in degrees "
+            "are a common cause."
         )
 
     # float32(pi) lies slightly above pi; clamp only permitted roundoff.
@@ -742,16 +753,17 @@ def compute_directivity(
     ----------
     theta : ndarray
         2D theta grid in radians, shape (n_theta, n_phi). Must be uniformly
-        spaced within its storage precision, strictly increasing along
-        axis 0, constant along axis 1, and
-        contained in [0, pi] - the ``theta_grid`` output of
+        spaced, strictly increasing along axis 0, constant along axis 1,
+        and contained in [0, pi] - the ``theta_grid`` output of
         :func:`~phased_array.utils.create_theta_phi_grid`.
     phi : ndarray
         2D phi grid in radians, same shape. Must be uniformly spaced,
-        strictly increasing along axis 1, and constant along axis 0.
+        strictly increasing along axis 1, constant along axis 0, and span
+        at most 2*pi.
     pattern : ndarray
         Complex or magnitude (amplitude) pattern on the same grid. Power is
-        taken as ``|pattern|**2``; pass amplitude, not power.
+        taken as ``|pattern|**2``, so pass amplitude - not power, and not
+        dB.
 
     Returns
     -------
@@ -764,16 +776,23 @@ def compute_directivity(
         If theta, phi and pattern are not 2D arrays of matching shape, hold
         non-finite values, have fewer than two samples on an axis, are not
         separable in the ``indexing='ij'`` sense, are not strictly increasing
-        with uniform spacing, or sample theta outside [0, pi]
+        with uniform spacing, sample theta outside [0, pi], or span more
+        than 2*pi in phi
 
     Notes
     -----
     The grid need not cover the full sphere. A partial grid integrates only
     the solid angle it samples, which is equivalent to assuming the pattern
-    radiates no power outside that region - the convention that makes
-    hemisphere grids from :func:`compute_full_pattern` (whose default
-    ``theta_range`` is ``(0, pi/2)``) behave as expected for a ground-plane
-    backed array.
+    radiates no power outside that region. A hemisphere grid
+    (``theta_range=(0, np.pi/2)``) therefore gives the expected answer for a
+    ground-plane backed array.
+
+    :func:`compute_full_pattern` output cannot be passed here directly: it
+    returns 1D theta and phi axes and a normalized dB pattern. Build the
+    grid with :func:`~phased_array.utils.create_theta_phi_grid` and evaluate
+    amplitude on it with :func:`total_pattern` or
+    :func:`array_factor_vectorized` instead. A dB-valued pattern is not
+    detectable here and integrates to a meaningless result.
 
     Examples
     --------

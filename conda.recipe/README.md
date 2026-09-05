@@ -1,6 +1,6 @@
 # conda-forge recipe
 
-Staging copy of the conda-forge recipe. To submit (after the v1.4.0 PyPI
+Staging copy of the conda-forge recipe. To submit (after the v1.4.1 PyPI
 release is live):
 
 1. Fill in the sdist `sha256` in `meta.yaml` (command in the file's comment).

@@ -20,10 +20,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it is not a general elimination of integration bias. Method
   contributed by @bhicks-leolabs (#8)
 - Grid validation accepts uniformly sampled `float32` coordinates
-  within their storage precision while still rejecting materially
-  non-uniform grids. Integration uses float64 coordinates and shared
-  midpoint cell boundaries to avoid gaps from rounded spacing, with
-  a stable solid-angle formula for narrow polar caps
+  while still rejecting materially non-uniform grids. Integration uses
+  float64 coordinates and shared midpoint cell boundaries to avoid gaps
+  from rounded spacing, with a stable solid-angle formula for narrow
+  polar caps
+- The uniformity tolerance scales with the axis span rather than the
+  array dtype. Upcasting an accepted `float32` grid to `float64`
+  changes no coordinate value and no longer turns the call into a
+  `ValueError`
+- `compute_directivity` rejects a phi axis spanning more than 2*pi.
+  A grid built in degrees previously returned a directivity below 1,
+  which is not physically reachable, with no error
+- `compute_directivity` converts its inputs with `np.asarray`, so
+  nested sequences raise the documented `ValueError` instead of
+  `AttributeError`
 
 ### Changed
 
@@ -31,13 +41,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   an actionable message for inputs it cannot integrate: non-2D or
   mismatched arrays, non-finite values, a single-sample axis, an
   `indexing='xy'` or transposed mesh, non-uniform or descending
-  spacing, or theta outside [0, pi]. Previously such inputs returned a
-  plausible-looking number
+  spacing, theta outside [0, pi], or phi spanning more than 2*pi.
+  Previously such inputs returned a plausible-looking number
 - `compute_directivity` docstring now states the grid contract, the
   piecewise-constant power approximation, and that exact isotropic
   integration is an invariant rather than a general accuracy
   guarantee: for smooth patterns that vanish at the poles the previous
-  `sin(theta)` rule can still be the more accurate of the two
+  `sin(theta)` rule can still be the more accurate of the two. It also
+  records that `compute_full_pattern` output cannot be passed in
+  directly, since that function returns 1D axes and a dB pattern
+- `conda.recipe/meta.yaml` tracks 1.4.1; its `sha256` is reset and must
+  be refilled from the published 1.4.1 sdist before submission
 
 ### Added
 

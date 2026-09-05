@@ -142,12 +142,40 @@ class TestDirectivityRegression:
     """Behavior corrected in this change."""
 
     def test_rectangular_grid_with_unequal_axis_counts(self):
-        # The original PR built the theta weights by multiplying a (n_theta-2,)
-        # vector with the (n_theta-2, n_phi) interior of the theta grid, which
-        # raises a broadcasting ValueError whenever n_theta != n_phi.
-        _, _, theta, phi = pa.create_theta_phi_grid(n_theta=181, n_phi=361)
+        # Theta weights must be a 1D vector of length n_theta. Building them
+        # from the 2D theta grid instead broadcasts against n_phi, which is
+        # only silent when n_theta == n_phi.
+        _, _, theta, phi = pa.create_theta_phi_grid(n_theta=37, n_phi=181)
+        assert theta.shape[0] != theta.shape[1]
 
         directivity = pa.compute_directivity(theta, phi, _isotropic(theta))
+
+        assert abs(directivity - 1.0) < 1e-12
+
+    def test_grid_dtype_does_not_change_acceptance(self):
+        # The uniformity tolerance must key off the axis span, not the array
+        # dtype: upcasting a valid float32 grid changes no coordinate value
+        # and must not turn an accepted grid into a ValueError.
+        _, _, theta, phi = pa.create_theta_phi_grid()
+        theta32, phi32 = theta.astype(np.float32), phi.astype(np.float32)
+        pattern = np.ones(theta.shape)
+
+        as_float32 = pa.compute_directivity(theta32, phi32, pattern)
+        upcast = pa.compute_directivity(
+            theta32.astype(np.float64), phi32.astype(np.float64), pattern
+        )
+
+        assert np.isclose(as_float32, 1.0, rtol=1e-6)
+        assert np.isclose(upcast, 1.0, rtol=1e-6)
+
+    def test_array_like_input_is_accepted(self):
+        theta_1d = np.linspace(0, np.pi, 19)
+        phi_1d = np.linspace(0, 2 * np.pi, 37)
+        theta, phi = np.meshgrid(theta_1d, phi_1d, indexing="ij")
+
+        directivity = pa.compute_directivity(
+            theta.tolist(), phi.tolist(), np.ones_like(theta).tolist()
+        )
 
         assert abs(directivity - 1.0) < 1e-12
 
@@ -333,6 +361,36 @@ class TestDirectivityValidation:
 
         with pytest.raises(ValueError, match="uniformly spaced"):
             pa.compute_directivity(theta, phi, np.ones_like(theta))
+
+    def test_ragged_nested_sequence(self):
+        with pytest.raises(ValueError):
+            pa.compute_directivity([[0.0, 1.0], [2.0]], [[0.0]], [[1.0]])
+
+    def test_degree_valued_phi_grid(self):
+        # A grid built in degrees spans 360 "radians" and would otherwise
+        # return D = 0.017, which is not physically reachable.
+        _, _, theta, phi = pa.create_theta_phi_grid(
+            phi_range=(0, 360.0), n_phi=361
+        )
+
+        with pytest.raises(ValueError, match="span at most"):
+            pa.compute_directivity(theta, phi, np.ones_like(theta))
+
+    def test_phi_spanning_more_than_one_turn(self):
+        _, _, theta, phi = pa.create_theta_phi_grid(
+            phi_range=(0, 4 * np.pi), n_phi=721
+        )
+
+        with pytest.raises(ValueError, match="span at most"):
+            pa.compute_directivity(theta, phi, np.ones_like(theta))
+
+    def test_full_turn_phi_is_accepted(self):
+        # The boundary case must not be caught by the span check.
+        _, _, theta, phi = pa.create_theta_phi_grid()
+
+        directivity = pa.compute_directivity(theta, phi, _isotropic(theta))
+
+        assert abs(directivity - 1.0) < 1e-12
 
     def test_descending_theta(self):
         theta, phi = np.meshgrid(

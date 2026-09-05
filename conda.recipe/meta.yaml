@@ -1,4 +1,4 @@
-{% set version = "1.4.0" %}
+{% set version = "1.4.1" %}
 
 package:
   name: phased-array-modeling
@@ -6,7 +6,9 @@ package:
 
 source:
   url: https://pypi.org/packages/source/p/phased-array-modeling/phased_array_modeling-{{ version }}.tar.gz
-  sha256: 24929053e2803e34a685ab9218e9b8923c4873fada23f37b36f9ed335f4b55b2
+  # Refresh after the v1.4.1 sdist is on PyPI:
+  #   curl -sL <url above> | shasum -a 256
+  sha256: 0000000000000000000000000000000000000000000000000000000000000000
 
 build:
   noarch: python
