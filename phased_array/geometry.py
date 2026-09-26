@@ -991,7 +991,11 @@ def array_factor_conformal(
     k : float
         Wavenumber
     element_pattern_func : callable, optional
-        Element pattern function
+        Element pattern function returning a field amplitude, evaluated
+        in each element's local frame. When omitted, elements with
+        normals use a cos(angle-to-normal) field pattern, which is a
+        cos^2 power pattern and matches
+        ``element_pattern_func=element_pattern, cos_exp_theta=2.0``.
     **element_kwargs
         Arguments for element pattern function
 

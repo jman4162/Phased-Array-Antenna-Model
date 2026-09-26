@@ -329,8 +329,9 @@ class TestConformalVector:
             )
 
     def test_scalar_conformal_regression(self):
-        # array_factor_conformal default cos-pattern and cos^1 element
-        # func agree after the local-frame fix
+        # array_factor_conformal's default cos(angle) field pattern is a
+        # cos^2 power pattern, so it matches element_pattern with the
+        # power exponent cos_exp_theta=2 (evaluated in the local frame)
         cyl = pa.create_cylindrical_array(8, 4, radius=1.0, height=2.0)
         k = pa.wavelength_to_k(1.0)
         w = np.ones(cyl.n_elements, dtype=complex)

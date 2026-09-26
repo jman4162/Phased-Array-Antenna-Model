@@ -2,6 +2,8 @@
 Unit tests for phased_array.core module.
 """
 
+import warnings
+
 import numpy as np
 import pytest
 import phased_array as pa
@@ -165,9 +167,46 @@ class TestElementPattern:
 
         pattern = pa.element_pattern(theta, phi, max_gain_dBi=6.0)
 
-        # 6 dBi = 10^0.6 ~ 3.98 linear
-        expected_gain = 10 ** (6.0 / 20)
-        assert np.isclose(pattern[0], expected_gain)
+        # 6 dBi power gain = 10^(6/20) ~ 2.00 field amplitude
+        expected_field = 10 ** (6.0 / 20)
+        assert np.isclose(pattern[0], expected_field)
+        assert np.isclose(10 * np.log10(pattern[0] ** 2), 6.0)
+
+    def test_element_pattern_power_rolloff(self):
+        """cos_exp_theta is the power exponent: cos^1 power is -3 dB at 60 deg."""
+        theta = np.deg2rad(np.array([0.0, 60.0]))
+        phi = np.zeros_like(theta)
+
+        pattern = pa.element_pattern(theta, phi, cos_exp_theta=1.0)
+
+        rel_dB = 10 * np.log10(pattern[1] ** 2 / pattern[0] ** 2)
+        assert np.isclose(rel_dB, 10 * np.log10(0.5))
+
+    def test_element_pattern_rear_hemisphere_no_warning(self):
+        """Rear hemisphere is zero and emits no NaN RuntimeWarning."""
+        theta = np.linspace(0, np.pi, 181)
+        phi = np.zeros_like(theta)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            pattern = pa.element_pattern(theta, phi, cos_exp_theta=1.3)
+
+        assert np.all(np.isfinite(pattern))
+        assert np.all(pattern[theta > np.pi / 2] == 0.0)
+        # cos(pi/2) is ~6e-17 in floating point, so endfire is ~0, not exact
+        assert np.isclose(pattern[90], 0.0, atol=1e-6)  # theta[90] = 90 deg
+
+    def test_cosine_tapered_half_power_beamwidth(self):
+        """element_pattern_cosine_tapered is -3 dB (power) at theta_3dB."""
+        theta = np.deg2rad(np.array([0.0, 65.0]))
+        phi = np.zeros_like(theta)
+
+        pattern = pa.element_pattern_cosine_tapered(
+            theta, phi, theta_3dB_deg=65.0
+        )
+
+        rel_dB = 10 * np.log10(pattern[1] ** 2 / pattern[0] ** 2)
+        assert np.isclose(rel_dB, 10 * np.log10(0.5))
 
 
 class TestPatternComputation:
