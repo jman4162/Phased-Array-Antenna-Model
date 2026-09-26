@@ -96,7 +96,7 @@ class TestElementFactories:
         phi = np.deg2rad(np.linspace(0, 340, 20))
         E_theta, E_phi = f(theta, phi)
         power = np.abs(E_theta) ** 2 + np.abs(E_phi) ** 2
-        scalar = pa.element_pattern(theta, phi, cos_exp_theta=2 * q)
+        scalar = np.abs(pa.element_pattern(theta, phi, cos_exp_theta=2 * q))**2
         assert np.allclose(power, scalar, atol=1e-12)
 
     def test_cos_q_gain_scale(self):
@@ -329,8 +329,9 @@ class TestConformalVector:
             )
 
     def test_scalar_conformal_regression(self):
-        # array_factor_conformal default cos-pattern and cos^1 element
-        # func agree after the local-frame fix
+        # array_factor_conformal's default cos(angle) field pattern is a
+        # cos^2 power pattern, so it matches element_pattern with the
+        # power exponent cos_exp_theta=2 (evaluated in the local frame)
         cyl = pa.create_cylindrical_array(8, 4, radius=1.0, height=2.0)
         k = pa.wavelength_to_k(1.0)
         w = np.ones(cyl.n_elements, dtype=complex)
@@ -339,7 +340,7 @@ class TestConformalVector:
         )
         af_cos = pa.array_factor_conformal(
             np.array([0.3]), np.array([0.1]), cyl, w, k,
-            element_pattern_func=pa.element_pattern, cos_exp_theta=1.0,
+            element_pattern_func=pa.element_pattern, cos_exp_theta=2.0,
         )
         assert np.allclose(af_default, af_cos, atol=1e-9)
 

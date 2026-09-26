@@ -304,6 +304,12 @@ def element_pattern(
     """
     Compute element pattern using raised cosine model.
 
+    The model is specified as a power pattern,
+    ``G(theta) = G0 * cos(theta)**cos_exp_theta``, but returned as the
+    corresponding field amplitude ``sqrt(G(theta))`` so it can be
+    multiplied directly into the (field) array factor. Pattern utilities
+    then form power as ``|EP * AF|**2``, which recovers ``G(theta)``.
+
     Parameters
     ----------
     theta : ndarray
@@ -311,18 +317,31 @@ def element_pattern(
     phi : ndarray
         Azimuthal angle in radians (not used; the model is phi-symmetric)
     cos_exp_theta : float
-        Cosine exponent for theta dependence (1.0 = simple cosine)
+        Cosine exponent of the power pattern (1.0 = cos(theta) power
+        roll-off). The returned field uses half this exponent.
     cos_exp_phi : float
         Deprecated and unused. The basic model has no phi dependence;
         for polarized/phi-dependent element models see the v1.4 vector
         pattern API.
     max_gain_dBi : float
-        Peak element gain in dBi
+        Peak element gain in dBi, applied as the field scale factor
+        ``10**(max_gain_dBi / 20)``.
 
     Returns
     -------
     pattern : ndarray
-        Element pattern (linear scale, same shape as theta)
+        Element field amplitude (linear scale, same shape as theta). Zero
+        behind the element (theta > 90 degrees). Square it to get the
+        power pattern.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> ep = pa.element_pattern(np.array([0.0]), np.array([0.0]),
+    ...                         max_gain_dBi=6.0)
+    >>> round(float(10 * np.log10(ep[0] ** 2)), 6)
+    6.0
     """
     if cos_exp_phi != 1.0:
         warnings.warn(
@@ -334,14 +353,17 @@ def element_pattern(
             stacklevel=2,
         )
 
-    # Convert max gain to linear
-    max_gain_linear = 10 ** (max_gain_dBi / 10)
+    # Peak gain (power) -> peak field amplitude
+    max_field_linear = 10 ** (max_gain_dBi / 20)
 
-    # Raised cosine pattern (only valid for forward hemisphere)
+    # Raised cosine pattern (only valid for forward hemisphere). Clip the
+    # base before exponentiating: np.where evaluates both branches, and a
+    # negative base with a fractional exponent would emit a NaN warning.
     cos_theta = np.cos(theta)
+    cos_forward = np.clip(cos_theta, 0.0, None)
     pattern = np.where(
         cos_theta > 0,
-        max_gain_linear * (cos_theta ** cos_exp_theta),
+        max_field_linear * cos_forward ** (cos_exp_theta / 2.0),
         0.0
     )
 
@@ -376,7 +398,8 @@ def element_pattern_cosine_tapered(
         Element pattern (linear scale)
     """
     # Compute cosine exponent for desired beamwidth
-    # At theta_3dB, pattern = 0.5 * max
+    # At theta_3dB, power pattern = 0.5 * max (element_pattern takes the
+    # power exponent and returns the field, so |EP|^2 is -3 dB here)
     # cos(theta_3dB)^n = 0.5
     # n = log(0.5) / log(cos(theta_3dB))
     theta_3dB = np.deg2rad(theta_3dB_deg)

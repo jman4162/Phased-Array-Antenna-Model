@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Behavior change:** `element_pattern()` now returns a field amplitude
+  instead of a power quantity. Every pattern utility multiplies the
+  element pattern into the (field) array factor and then takes
+  `|EP * AF|**2`, so the old power-valued return was squared a second
+  time. Previously a `max_gain_dBi=6` element added 12 dB, and the
+  default `cos_exp_theta=1.0` rolled off as cos^2 in power (-6 dB at
+  60 degrees) instead of cos^1 (-3 dB). Now `max_gain_dBi` is applied as
+  `10**(dBi/20)` and `cos_exp_theta` is the power-pattern exponent, with
+  the field using half of it. Absolute pattern levels and off-broadside
+  roll-off from `total_pattern`, `compute_full_pattern`,
+  `compute_pattern_cuts` and `array_factor_conformal` change for anyone
+  passing `element_pattern` or `element_pattern_cosine_tapered`
+  (thanks @bhicks-leolabs, #10)
+
+### Fixed
+
+- `element_pattern_cosine_tapered()` now yields the requested half-power
+  beamwidth; before the fix its pattern was -6 dB (not -3 dB) at
+  `theta_3dB_deg`
+- `element_pattern()` no longer emits a NaN `RuntimeWarning` for rear
+  hemisphere angles with a fractional exponent (including the default
+  after the change above, and rear-facing elements in
+  `array_factor_conformal`)
+
 ## [1.4.1] - 2026-09-05
 
 ### Fixed
