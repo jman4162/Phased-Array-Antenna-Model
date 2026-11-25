@@ -244,4 +244,8 @@ are ``20*log10|E|``, so a gain or directivity column in dBi also works;
 When header names contain spaces in a whitespace-separated file, map the
 roles to column indices instead (``{"theta": 0, "phi": 1, ...}``).
 ``skip_rows`` skips preamble lines before the header, and lines starting
-with ``comments`` (default ``'#'``) are ignored.
+with ``comments`` (default ``'#'``) are ignored, with one exception: if the
+first uncommented line holds only numbers, the comment line just above it
+is the header. That is the layout ``np.savetxt(..., header=...)`` writes.
+A table with no header at all needs column indices; its first row is read
+as data.

@@ -160,8 +160,8 @@ def read_touchstone(
     Raises
     ------
     ValueError
-        If the port count cannot be determined or contradicts the
-        extension; the file holds Y, Z, H or G parameters; it uses
+        If ``n_ports`` is not an integer; the port count cannot be
+        determined or contradicts the extension; the file holds Y, Z, H or G parameters; it uses
         Touchstone 2.0 keywords (``[Version] 2.0`` or any other ``[...]``
         line); the option line has an unknown token, more than one
         reference impedance, or a second option line that differs from
@@ -190,10 +190,10 @@ def read_touchstone(
 
     The reader accumulates numbers across line breaks within a record, so
     files that wrap rows differently but keep this order also load. In a
-    2-port file, a line of five numbers whose frequency is not above the
-    last S-parameter frequency starts the noise-parameter block. In that
-    block the reflection coefficient is always magnitude and angle,
-    whatever the data format.
+    2-port file, the noise-parameter block is the run of five-number lines
+    that ends the file, starting at a frequency not above the last
+    S-parameter frequency. In that block the reflection coefficient is
+    always magnitude and angle, whatever the data format.
 
     Examples
     --------
@@ -239,6 +239,8 @@ def read_touchstone(
             )
         n_ports = from_extension
     else:
+        if isinstance(n_ports, bool) or int(n_ports) != n_ports:
+            raise ValueError(f"n_ports must be an integer, got {n_ports!r}")
         n_ports = int(n_ports)
         if from_extension is not None and from_extension != n_ports:
             raise ValueError(
@@ -296,17 +298,19 @@ def read_touchstone(
     noise_rows: List[List[float]] = []
     current: List[float] = []
     first_line = 0
-    for lineno, values in data_lines:
-        starts_noise = bool(
-            n_ports == 2 and not current and records and len(values) == 5
-            and values[0] <= records[-1][0]
-        )
-        if noise_rows or starts_noise:
-            if len(values) != 5:
-                raise ValueError(
-                    f"{path_str}, line {lineno}: expected 5 noise-parameter "
-                    f"values, got {len(values)}"
-                )
+    # Two-port noise data can only be the run of 5-value lines that ends
+    # the file; a 5-value line elsewhere is part of a wrapped record.
+    noise_candidates = len(data_lines)
+    if n_ports == 2:
+        while (noise_candidates > 0
+               and len(data_lines[noise_candidates - 1][1]) == 5):
+            noise_candidates -= 1
+    hint = "check the port count"
+    if n_ports == 2:
+        hint += "; noise parameters (5 values per line) must come last"
+    for k, (lineno, values) in enumerate(data_lines):
+        if noise_rows or (k >= noise_candidates and not current and records
+                          and values[0] <= records[-1][0]):
             noise_rows.append(values)
             continue
         if not current:
@@ -320,12 +324,12 @@ def read_touchstone(
                 f"{path_str}, lines {first_line}-{lineno}: {len(current)} "
                 f"values where a {n_ports}-port record has {n_values} "
                 f"(frequency plus {n_ports ** 2} pairs, each frequency on a "
-                "new line); check the port count"
+                f"new line); {hint}"
             )
     if current:
         raise ValueError(
             f"{path_str}, line {first_line}: incomplete record at end of "
-            f"file ({len(current)} of {n_values} values); check the port count"
+            f"file ({len(current)} of {n_values} values); {hint}"
         )
     if not records:
         raise ValueError(f"{path_str}: no network data found")
@@ -545,10 +549,10 @@ def load_element_pattern_csv(
     """
     Load a tabulated polarized element pattern from a delimited text file.
 
-    The file holds a header line followed by one row per (theta, phi)
-    sample, in any row order, as exported by full-wave solvers and
-    measurement ranges. The samples must cover a complete theta/phi grid;
-    see :meth:`~phased_array.GriddedElementPattern.from_table`.
+    The file holds one row per (theta, phi) sample, in any row order, as
+    exported by full-wave solvers and measurement ranges, usually below a
+    header line. The samples must cover a complete theta/phi grid; see
+    :meth:`~phased_array.GriddedElementPattern.from_table`.
 
     Parameters
     ----------
@@ -577,11 +581,12 @@ def load_element_pattern_csv(
         field.
     comments : str or None
         Lines starting with this prefix (after leading whitespace) are
-        skipped, default ``'#'``. Pass None if the header line itself
-        starts with ``#``.
+        skipped, default ``'#'``, except that the comment line directly
+        above a numeric first row supplies the header (see Notes). None
+        disables comment handling.
     skip_rows : int
-        Number of lines to skip at the top of the file before looking for
-        the header.
+        Number of lines (nonnegative) to skip at the top of the file before
+        looking for the header.
     method : str
         Interpolation method passed to
         :class:`~phased_array.GriddedElementPattern`.
@@ -596,15 +601,26 @@ def load_element_pattern_csv(
     ------
     ValueError
         If ``columns`` has unknown or missing roles, a header name is not
-        found or appears twice, ``field_format`` or ``angle_unit`` is
-        unknown, a data row is too short or holds a non-number, or the
-        samples do not form a complete grid.
+        found or appears twice, a column is given by name but the file has
+        no header, ``field_format`` or ``angle_unit`` is unknown,
+        ``skip_rows`` is negative, a data row is too short or holds a
+        non-number, or the samples do not form a complete grid.
+    TypeError
+        If a ``columns`` value is neither a str nor an int.
 
     Notes
     -----
-    The first line after ``skip_rows`` that is neither blank nor a comment
-    is the header. After it, blank lines, comment lines and lines without
-    any digit (such as a ``-----`` rule under the header) are skipped.
+    The header is found as follows. Take the first line after
+    ``skip_rows`` that is neither blank nor a comment. If it holds anything
+    other than numbers, it is the header. If it holds only numbers, it is
+    the first data row, and the comment line just above it (if any)
+    supplies the header; this reads files written by
+    ``np.savetxt(..., header=...)``, which prefix the header with ``#``.
+    A leading comment prefix is removed from the header before the names
+    are matched. A file with neither has no header, and its columns must be
+    given by index. After the header, blank lines, comment lines and lines
+    without any digit (such as a ``-----`` rule under the header) are
+    skipped.
     Theta is measured from +z and phi from +x; E_theta and E_phi are the
     components along the spherical unit vectors, as everywhere in the
     package (see :doc:`/user_guide/conventions`).
@@ -636,7 +652,7 @@ def load_element_pattern_csv(
     ...                         Ep.imag.ravel()])
     >>> with tempfile.TemporaryDirectory() as tmp:
     ...     path = os.path.join(tmp, 'element.csv')
-    ...     np.savetxt(path, rows, delimiter=',', header=header, comments='')
+    ...     np.savetxt(path, rows, delimiter=',', header=header)  # '# Theta...'
     ...     pattern = pa.load_element_pattern_csv(path, columns)
     >>> E_theta, E_phi = pattern(np.array([0.4]), np.array([1.0]))
     >>> E_ref, _ = f(np.array([0.4]), np.array([1.0]))
@@ -663,29 +679,53 @@ def load_element_pattern_csv(
             f"field_format={field_format!r}"
         )
 
+    if (isinstance(skip_rows, bool) or not isinstance(skip_rows, (int, np.integer))
+            or skip_rows < 0):
+        raise ValueError(f"skip_rows must be a nonnegative integer, got {skip_rows!r}")
+
     path_str = os.fspath(path)
     with open(path_str, encoding="utf-8-sig", errors="replace") as f:
         lines = f.read().splitlines()
 
+    prefix = comments or "#"
+
+    def header_names(text: str) -> List[str]:
+        text = text.strip()
+        if text.startswith(prefix):
+            text = text[len(prefix):]
+        return [field.strip().strip("\"'").strip()
+                for field in _split_rows([text], delimiter)[0]]
+
     header: Optional[List[str]] = None
+    header_line = 0
+    last_comment: Optional[Tuple[int, str]] = None
+    first_row_seen = False
     data_text: List[str] = []
     data_lineno: List[int] = []
     for lineno, line in enumerate(lines[skip_rows:], start=skip_rows + 1):
         stripped = line.strip()
-        if not stripped or (comments and stripped.startswith(comments)):
+        if not stripped:
             continue
-        if header is None:
-            header = [field.strip().strip("\"'").strip()
-                      for field in _split_rows([line], delimiter)[0]]
+        if comments and stripped.startswith(comments):
+            if not first_row_seen:
+                last_comment = (lineno, stripped)
             continue
+        if not first_row_seen:
+            first_row_seen = True
+            fields = _split_rows([line], delimiter)[0]
+            if not (fields and all(_is_number(x) for x in fields)):
+                header, header_line = header_names(line), lineno
+                continue
+            # Numeric first row: the comment just above it, if any, is the
+            # header (np.savetxt writes "# name,name,...").
+            if last_comment is not None:
+                header, header_line = header_names(last_comment[1]), last_comment[0]
         if not any(ch.isdigit() for ch in stripped):
             continue
         data_text.append(line)
         data_lineno.append(lineno)
-    if header is None:
-        raise ValueError(f"{path_str}: no header line found")
     if not data_text:
-        raise ValueError(f"{path_str}: no data rows after the header")
+        raise ValueError(f"{path_str}: no data rows found")
 
     indices = []
     for role in roles:
@@ -695,6 +735,12 @@ def load_element_pattern_csv(
                 raise ValueError(f"column index for {role!r} must be >= 0, got {spec}")
             indices.append(int(spec))
         elif isinstance(spec, str):
+            if header is None:
+                raise ValueError(
+                    f"{path_str}: column {spec!r} (for {role!r}) is given by "
+                    f"name, but the file has no header (line {data_lineno[0]}, "
+                    "the first row, holds only numbers); use column indices"
+                )
             name = spec.strip().strip("\"'").strip()
             matches = [i for i, field in enumerate(header) if field == name]
             if not matches:
@@ -744,4 +790,6 @@ def load_element_pattern_csv(
             theta, phi, e_theta, e_phi, angle_unit=angle_unit, method=method
         )
     except ValueError as exc:
-        raise ValueError(f"{path_str}: {exc}") from None
+        source = (f" (header read from line {header_line})"
+                  if header is not None else "")
+        raise ValueError(f"{path_str}: {exc}{source}") from None

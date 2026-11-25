@@ -265,8 +265,39 @@ class TestReadTouchstoneRejects:
             "# GHz S RI\n1 0.1 0 0.2 0 0.3 0 0.4 0\n2 0.1 0 0.2 0 0.3 0 0.4 0\n"
             "1 0.8 0.6 45 0.2\n2 0.1 0 0.2 0 0.3 0 0.4 0\n"
         ))
-        with pytest.raises(ValueError, match="expected 5 noise-parameter values"):
+        with pytest.raises(ValueError, match="noise parameters .* must come last"):
             pa.read_touchstone(path)
+
+    def test_wrapped_two_port_repeated_frequency(self, tmp_path):
+        # Records wrapped 5 + 4 values; the repeated frequency must be
+        # reported as such, not mistaken for the start of noise data
+        record = "1.0  0.1 0  0.2 0\n     0.3 0  0.4 0\n"
+        path = write_text(tmp_path, "x.s2p", "# GHz S RI\n" + record + record)
+        with pytest.raises(ValueError, match="strictly increasing"):
+            pa.read_touchstone(path)
+
+    def test_wrapped_two_port_with_noise(self, tmp_path):
+        path = write_text(tmp_path, "x.s2p", (
+            "# GHz S RI\n"
+            "1.0  0.1 0  0.2 0\n     0.3 0  0.4 0\n"
+            "2.0  0.1 0  0.2 0\n     0.3 0  0.4 0\n"
+            "1.0  0.8 0.6 45 0.2\n"
+            "2.0  1.0 0.5 90 0.25\n"
+        ))
+        data = pa.read_touchstone(path)
+        assert data["s"].shape == (2, 2, 2)
+        assert data["s"][1, 1, 0] == 0.2
+        np.testing.assert_allclose(data["noise"]["nf_min_db"], [0.8, 1.0])
+
+    @pytest.mark.parametrize("n_ports", [2.7, True, "2"])
+    def test_non_integral_n_ports(self, tmp_path, n_ports):
+        path = write_text(tmp_path, "data.txt", "# GHz S RI\n1 0.1 0 0.2 0 0.3 0 0.4 0\n")
+        with pytest.raises(ValueError, match="n_ports must be an integer"):
+            pa.read_touchstone(path, n_ports=n_ports)
+
+    def test_integral_float_n_ports(self, tmp_path):
+        path = write_text(tmp_path, "data.txt", "# GHz S RI\n1 0.1 0 0.2 0 0.3 0 0.4 0\n")
+        assert pa.read_touchstone(path, n_ports=2.0)["n_ports"] == 2
 
 
 # ============== write_touchstone ==============
@@ -636,6 +667,78 @@ class TestLoadElementPatternCSV:
             f.write("1.0,2.0\n")
         with pytest.raises(ValueError, match="2 fields"):
             pa.load_element_pattern_csv(path, RE_IM_COLUMNS)
+
+    def grid_table(self):
+        theta_deg, phi_deg = np.arange(0, 91, 10.0), np.arange(0, 360, 30.0)
+        t, p, et, ep = patch_samples(theta_deg, phi_deg)
+        table = np.column_stack([t, p, et.real, et.imag, ep.real, ep.imag])
+        T, P = np.meshgrid(np.deg2rad(theta_deg), np.deg2rad(phi_deg), indexing="ij")
+        return table, T, P, et.reshape(T.shape)
+
+    def test_savetxt_hash_header_default_comments(self, tmp_path):
+        # np.savetxt writes "# <header>"; a metadata line comes first
+        table, T, P, et = self.grid_table()
+        path = tmp_path / "x.csv"
+        names = ",".join(RE_IM_COLUMNS.values())
+        np.savetxt(path, table, delimiter=",", header="exported pattern\n" + names)
+        assert path.read_text().startswith("# exported pattern\n# Theta[deg],")
+        pattern = pa.load_element_pattern_csv(path, RE_IM_COLUMNS)
+        np.testing.assert_allclose(pattern(T, P)[0], et, atol=1e-12)
+
+    def test_hash_header_with_comments_none(self, tmp_path):
+        table, T, P, et = self.grid_table()
+        path = tmp_path / "x.csv"
+        np.savetxt(path, table, delimiter=",", header=",".join(RE_IM_COLUMNS.values()))
+        pattern = pa.load_element_pattern_csv(path, RE_IM_COLUMNS, comments=None)
+        np.testing.assert_allclose(pattern(T, P)[0], et, atol=1e-12)
+
+    def test_hash_header_whitespace(self, tmp_path):
+        table, T, P, et = self.grid_table()
+        path = tmp_path / "x.txt"
+        np.savetxt(path, table, header="th ph etr eti epr epi")
+        columns = dict(theta="th", phi="ph", e_theta_re="etr", e_theta_im="eti",
+                       e_phi_re="epr", e_phi_im="epi")
+        pattern = pa.load_element_pattern_csv(path, columns, delimiter=None)
+        np.testing.assert_allclose(pattern(T, P)[0], et, atol=1e-12)
+
+    def test_headerless_table_with_indices(self, tmp_path):
+        # No header at all: the first row must be kept as data
+        table, T, P, et = self.grid_table()
+        path = tmp_path / "x.csv"
+        np.savetxt(path, table, delimiter=",")
+        columns = dict(theta=0, phi=1, e_theta_re=2, e_theta_im=3, e_phi_re=4, e_phi_im=5)
+        pattern = pa.load_element_pattern_csv(path, columns)
+        np.testing.assert_allclose(pattern(T, P)[0], et, atol=1e-12)
+
+    def test_headerless_table_with_names(self, tmp_path):
+        table, *_ = self.grid_table()
+        path = tmp_path / "x.csv"
+        np.savetxt(path, table, delimiter=",")
+        with pytest.raises(ValueError, match="no header"):
+            pa.load_element_pattern_csv(path, RE_IM_COLUMNS)
+
+    def test_first_row_taken_as_header_is_reported(self, tmp_path):
+        # Headerless rows with a text label column: the first row looks like
+        # a header, and the incomplete-grid error says so
+        table, *_ = self.grid_table()
+        path = tmp_path / "x.csv"
+        path.write_text("\n".join(",".join(repr(float(v)) for v in row) + ",pt"
+                                  for row in table) + "\n")
+        columns = dict(theta=0, phi=1, e_theta_re=2, e_theta_im=3, e_phi_re=4, e_phi_im=5)
+        with pytest.raises(ValueError, match=r"incomplete grid.*header read from line 1"):
+            pa.load_element_pattern_csv(path, columns)
+
+    def test_negative_skip_rows(self, tmp_path):
+        path = write_pattern_csv(tmp_path / "x.csv", np.arange(0, 91, 30.0),
+                                 np.arange(0, 360, 90.0))
+        with pytest.raises(ValueError, match="skip_rows must be a nonnegative integer"):
+            pa.load_element_pattern_csv(path, RE_IM_COLUMNS, skip_rows=-1)
+
+    def test_wrong_column_type(self, tmp_path):
+        path = write_pattern_csv(tmp_path / "x.csv", np.arange(0, 91, 30.0),
+                                 np.arange(0, 360, 90.0))
+        with pytest.raises(TypeError, match="header name or column index"):
+            pa.load_element_pattern_csv(path, dict(RE_IM_COLUMNS, theta=1.5))
 
     def test_usable_as_array_element(self, tmp_path):
         path = write_pattern_csv(tmp_path / "x.csv", np.arange(0, 91, 2.0),
