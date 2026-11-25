@@ -11,6 +11,7 @@ best practices.
    conventions
    geometry
    beamforming
+   synthesis
    impairments
    polarization
    wideband

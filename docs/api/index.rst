@@ -20,6 +20,8 @@ Modules
      - Array geometry creation: rectangular, triangular, circular, conformal, sparse
    * - :doc:`beamforming`
      - Beamforming techniques: amplitude tapers, null steering, multi-beam, beam spoiling, adaptive
+   * - :doc:`synthesis`
+     - Array factor synthesis: binomial taper, Woodward-Lawson, least squares
    * - :doc:`impairments`
      - Realistic impairments: mutual coupling, quantization, failures, scan blindness, active impedance
    * - :doc:`polarization`
@@ -70,6 +72,7 @@ Most Commonly Used Functions
    core
    geometry
    beamforming
+   synthesis
    impairments
    polarization
    vector_patterns

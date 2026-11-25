@@ -130,6 +130,10 @@ Example comparing tapers:
    plt.grid(True)
    plt.ylim(-60, 0)
 
+To compute weights from a desired pattern instead of choosing a window
+(binomial, Woodward-Lawson and least-squares synthesis), see
+:doc:`synthesis`.
+
 Null Steering
 -------------
 
