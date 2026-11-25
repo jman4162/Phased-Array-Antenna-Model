@@ -81,6 +81,9 @@ phased_array = ["py.typed"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-v --tb=short"
+markers = [
+    "docs: execute the code blocks in the Sphinx docs (tests/test_docs_snippets.py)",
+]
 
 [tool.ruff]
 target-version = "py310"

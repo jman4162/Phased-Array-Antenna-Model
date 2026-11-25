@@ -29,12 +29,12 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest tests/ -v --tb=short
+          pytest tests/ -v --tb=short -m "not docs"
 
       - name: Run tests with coverage
         if: matrix.python-version == '3.11'
         run: |
-          pytest tests/ --cov=phased_array --cov-report=xml --cov-report=term
+          pytest tests/ -m "not docs" --cov=phased_array --cov-report=xml --cov-report=term
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.11'
@@ -83,7 +83,27 @@ jobs:
           python -c "import numpy, scipy, matplotlib; print('numpy', numpy.__version__); print('scipy', scipy.__version__); print('matplotlib', matplotlib.__version__)"
       - name: Run tests
         run: |
-          pytest tests/ -v --tb=short
+          pytest tests/ -v --tb=short -m "not docs"
+
+  docs:
+    # Execute every docs code block and the demo notebook, then build the
+    # Sphinx site with warnings as errors
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,docs]" nbclient nbformat ipykernel
+      - name: Run docs code blocks and the demo notebook
+        run: |
+          pytest tests/ -m docs -v --tb=short
+      - name: Build docs (warnings are errors)
+        run: |
+          sphinx-build -b html -W --keep-going docs docs/_build/html
 
   lint:
     runs-on: ubuntu-latest

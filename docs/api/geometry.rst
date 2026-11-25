@@ -12,12 +12,13 @@ Classes
 
 .. autoclass:: phased_array.ArrayGeometry
    :members: n_elements, is_planar, is_conformal, copy
-   :exclude-members: x, y, z, nx, ny, nz, element_indices
+   :exclude-members: x, y, z, nx, ny, nz, element_indices, tx, ty, tz
    :show-inheritance:
 
 .. autoclass:: phased_array.SubarrayArchitecture
    :members: get_subarray_elements
-   :exclude-members: geometry, subarray_assignments, n_subarrays, subarray_centers
+   :exclude-members: geometry, subarray_assignments, n_subarrays, subarray_centers,
+                     subarray_elements, overlapped, overlap_weights
    :show-inheritance:
 
 Planar Arrays

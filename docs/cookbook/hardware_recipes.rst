@@ -21,8 +21,11 @@ sidelobe requirements.
    # Target sidelobe level
    target_sll_dB = -30
 
-   # Design weights with taper
-   weights = pa.steering_vector(k, geom.x, geom.y, theta0_deg=30, phi0_deg=0)
+   # Design weights with taper. At 30 deg the element-to-element phase step
+   # is exactly 90 deg, which even 2 bits represent without error, so test
+   # a scan angle whose phase step falls between quantization levels.
+   theta0 = 13
+   weights = pa.steering_vector(k, geom.x, geom.y, theta0_deg=theta0, phi0_deg=0)
    weights *= pa.taylor_taper_2d(16, 16, sidelobe_dB=target_sll_dB)
 
    # Test different bit depths
@@ -31,18 +34,38 @@ sidelobe requirements.
 
    for bits in range(3, 8):
        weights_q = pa.quantize_phase(weights, n_bits=bits)
-       _, E_plane, _ = pa.compute_pattern_cuts(geom.x, geom.y, weights_q, k)
-
-       # Find peak sidelobe (exclude main beam region)
-       peak_idx = np.argmax(E_plane)
-       sidelobes = np.concatenate([E_plane[:peak_idx-10], E_plane[peak_idx+10:]])
-       achieved_sll = np.max(sidelobes) if len(sidelobes) > 0 else -99
+       angles, E_plane, _ = pa.compute_pattern_cuts(
+           geom.x, geom.y, weights_q, k, theta0_deg=theta0, phi0_deg=0, n_points=3601
+       )
+       # Peak sidelobe outside the first nulls of the main beam
+       achieved_sll = pa.compute_peak_sidelobe_level(angles, E_plane)
 
        rms = pa.quantization_rms_error(bits)
        print(f"  {bits}  |  {rms:5.1f} deg | {achieved_sll:6.1f} dB")
 
-**Rule of thumb**: For -30 dB sidelobes, use at least 5-bit phase shifters.
-For -40 dB, use 6-bit.
+   # Uncorrelated-error estimate of the average sidelobe floor (Haupt eq. 2.119)
+   eta = pa.compute_taper_efficiency(pa.taylor_taper_2d(16, 16, sidelobe_dB=target_sll_dB))
+   for bits in (3, 4, 5):
+       floor = pa.quantization_sidelobe_level(bits, geom.n_elements, eta)
+       print(f"{bits}-bit average sidelobe floor: {floor:.1f} dB")
+
+   # Correlated error at small scan: quantization lobes (Haupt eq. 2.132),
+   # folded into visible space by the half-wavelength element spacing
+   u_scan = np.sin(np.deg2rad(theta0))
+   for bits in (3, 5, 7):
+       u_lobes, levels = pa.quantization_lobes(bits, u_scan, element_spacing=0.5)
+       print(f"{bits}-bit quantization lobes: {np.round(levels, 1)} dB "
+             f"at u = {np.round(u_lobes, 2)}")
+
+For this 16 x 16 array at 13 degrees the achieved sidelobe level goes from
+about -15 dB with 3 bits to -29 dB with 7 bits. At small scan angles
+neighboring elements share a quantized phase, the error repeats across the
+aperture, and the resulting quantization lobes (level about
+``1 / |1 + m * 2**bits|``, approximate here because the phase step of 40
+degrees per element is close to the 45 degree 3-bit step) dominate the much
+lower average floor from the uncorrelated model. Meeting -30 dB here takes 7 bits, or fewer bits with
+phase dithering. At larger scan angles the error decorrelates and the floor
+estimate applies.
 
 Element Spacing vs Scan Range
 -----------------------------
@@ -75,8 +98,8 @@ Element Spacing vs Scan Range
 **Key values**:
 
 - λ/2 spacing: scan to ±90° (full hemisphere)
-- 0.6λ spacing: scan to ±56°
-- 0.7λ spacing: scan to ±46°
+- 0.6λ spacing: scan to ±41.8°
+- 0.7λ spacing: scan to ±25.4°
 
 Verifying Grating Lobe Locations
 --------------------------------
@@ -95,12 +118,13 @@ Verifying Grating Lobe Locations
 
    # Compute UV-space pattern
    u, v, pattern_uv = pa.compute_pattern_uv_space(
-       geom.x, geom.y, weights, k,
+       geom, weights, k,
        u_range=(-1.5, 1.5), v_range=(-1.5, 1.5)  # Include invisible region
    )
 
-   # Plot with visible region marked
-   pa.plot_pattern_uv_space(u, v, pattern_uv, show_visible_region=True)
+   # Plot with the visible region and grating-lobe circles marked
+   pa.plot_pattern_uv_space(u, v, pattern_uv, show_visible_region=True,
+                            show_grating_circles=True, dx_wavelengths=dx)
 
    # Grating lobe locations (for 1D):
    # u_gl = u_0 + n*λ/d where n = ±1, ±2, ...
@@ -158,15 +182,20 @@ Thermal Effects on Beam Pointing
    phase_error = np.deg2rad(temp_coeff * temp_gradient * x_norm)
    weights_thermal = weights * np.exp(1j * phase_error)
 
-   # Compare beam directions
-   _, E_ideal, _ = pa.compute_pattern_cuts(geom.x, geom.y, weights, k)
-   _, E_thermal, _ = pa.compute_pattern_cuts(geom.x, geom.y, weights_thermal, k)
+   # Compare beam directions on a fine cut (the shift is a small fraction
+   # of a degree, so a 0.5 deg grid would round it to zero)
+   theta_deg, E_ideal, _ = pa.compute_pattern_cuts(
+       geom.x, geom.y, weights, k, theta0_deg=20, n_points=36001)
+   _, E_thermal, _ = pa.compute_pattern_cuts(
+       geom.x, geom.y, weights_thermal, k, theta0_deg=20, n_points=36001)
 
-   # Find peak locations
-   theta_deg = np.linspace(-90, 90, 361)
    peak_ideal = theta_deg[np.argmax(E_ideal)]
    peak_thermal = theta_deg[np.argmax(E_thermal)]
    print(f"Beam pointing error: {peak_thermal - peak_ideal:.3f} deg")
+
+A linear phase error of 1 degree across a 7.5 wavelength aperture tilts the
+beam by about 0.02 degrees; the shift grows with the gradient and shrinks
+with aperture size.
 
 Power Amplifier Saturation Effects
 ----------------------------------
@@ -205,7 +234,10 @@ Power Amplifier Saturation Effects
 
    weights_compressed = apply_pa_compression(weights, p1dB_backoff=2.0)
 
-   # Compression reduces taper effectiveness (higher sidelobes)
+   # Compression flattens the taper, which raises the sidelobes
+   for label, w in (("linear", weights), ("compressed", weights_compressed)):
+       angles, cut, _ = pa.compute_pattern_cuts(geom.x, geom.y, w, k, n_points=3601)
+       print(f"{label:>10}: peak sidelobe {pa.compute_peak_sidelobe_level(angles, cut):.1f} dB")
 
 Calibration Error Budget
 ------------------------
@@ -214,33 +246,30 @@ Calibration Error Budget
 
 .. code-block:: python
 
-   def add_calibration_errors(weights, amp_error_dB, phase_error_deg, seed=None):
+   def add_calibration_errors(weights, amp_error_dB, phase_error_deg, rng):
        """Add random amplitude and phase calibration errors."""
-       if seed is not None:
-           np.random.seed(seed)
-
        n = len(weights)
 
        # Random errors (Gaussian)
-       amp_error = 10 ** (amp_error_dB * np.random.randn(n) / 20)
-       phase_error = np.deg2rad(phase_error_deg * np.random.randn(n))
+       amp_error = 10 ** (amp_error_dB * rng.standard_normal(n) / 20)
+       phase_error = np.deg2rad(phase_error_deg * rng.standard_normal(n))
 
        return weights * amp_error * np.exp(1j * phase_error)
 
-   # Monte Carlo analysis
+   # Monte Carlo analysis on the -30 dB Taylor weights from above
+   rng = np.random.default_rng(0)
    n_trials = 100
    sll_results = []
 
    for _ in range(n_trials):
        w_err = add_calibration_errors(
            weights,
-           amp_error_dB=0.5,   # ±0.5 dB amplitude (1-sigma)
-           phase_error_deg=3.0  # ±3 deg phase (1-sigma)
+           amp_error_dB=0.5,   # 0.5 dB amplitude (1-sigma)
+           phase_error_deg=3.0,  # 3 deg phase (1-sigma)
+           rng=rng
        )
-       _, E_plane, _ = pa.compute_pattern_cuts(geom.x, geom.y, w_err, k)
-       peak_idx = np.argmax(E_plane)
-       sll = np.max(E_plane[peak_idx+10:])
-       sll_results.append(sll)
+       angles, E_plane, _ = pa.compute_pattern_cuts(geom.x, geom.y, w_err, k, n_points=3601)
+       sll_results.append(pa.compute_peak_sidelobe_level(angles, E_plane))
 
-   print(f"Mean SLL: {np.mean(sll_results):.1f} dB")
-   print(f"Worst SLL (95%): {np.percentile(sll_results, 95):.1f} dB")
+   print(f"Mean peak sidelobe: {np.mean(sll_results):.1f} dB")
+   print(f"Worst 5% of trials: {np.percentile(sll_results, 95):.1f} dB or higher")
