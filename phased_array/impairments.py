@@ -369,10 +369,13 @@ def quantization_sidelobe_level(
     When the quantization error varies randomly from element to element
     (large scan angles, or phase dithering), it acts like a random phase
     error with standard deviation ``sigma = 2*pi / (2**n_bits * sqrt(12))``.
-    The average sidelobe level relative to the main-beam peak is
-    (Haupt, *Antenna Arrays*, eqs. 2.119 and 2.129)
+    The average sidelobe level relative to the main-beam peak is, for
+    large N (Haupt, *Antenna Arrays*, eqs. 2.119 and 2.129),
 
         SLL = (1 - exp(-sigma**2)) / (N * eta * exp(-sigma**2))
+
+    This function evaluates the exact form through
+    :func:`random_error_sidelobe_level` with phase errors only.
 
     Parameters
     ----------
@@ -395,9 +398,9 @@ def quantization_sidelobe_level(
     >>> round(pa.quantization_sidelobe_level(4, 100), 1)
     -38.9
     """
-    sigma = np.deg2rad(quantization_rms_error(n_bits))
-    sll = np.expm1(sigma**2) / (n_elements * taper_efficiency)
-    return float(10 * np.log10(sll))
+    return random_error_sidelobe_level(
+        n_elements, phase_std_deg=quantization_rms_error(n_bits),
+        taper_efficiency=taper_efficiency)
 
 
 def quantization_lobes(
@@ -474,7 +477,8 @@ def random_error_sidelobe_level(
     failure_rate: float = 0.0,
     taper_efficiency: float = 1.0,
     position_std: float = 0.0,
-    u: float = 0.0
+    u: float = 0.0,
+    u0: float = 0.0
 ) -> float:
     """
     Average sidelobe level set by random element errors.
@@ -482,18 +486,21 @@ def random_error_sidelobe_level(
     Independent random errors on each element scatter power evenly into
     the sidelobe region. With elements working with probability
     ``P = 1 - failure_rate``, relative amplitude errors of standard
-    deviation ``sigma_a`` and phase errors ``sigma_p`` (radians), the
-    expected sidelobe power relative to the expected main-beam power is
+    deviation ``sigma_a``, phase errors ``sigma_p`` (radians) and position
+    errors ``sigma_x`` (wavelengths), let
+    ``g(v) = exp(-sigma_p**2 - (2 pi v sigma_x)**2)`` and
+    ``s(v) = P (1 + sigma_a**2) - P**2 g(v)``. The expected sidelobe power
+    at direction cosine ``u`` relative to the expected peak power of a
+    beam steered to ``u0`` is
 
-        SLL = [P (1 + sigma_a**2) - P**2 exp(-sigma_p**2)]
-              / [P**2 exp(-sigma_p**2) * eta * N]
+        SLL = s(u) / (P**2 g(u0) * eta * N + s(u0))
 
-    For small errors this is Haupt, *Antenna Arrays*, eqs. 2.118-2.122:
-    ``(sigma_a**2 + sigma_p**2) / ((1 - sigma_p**2) eta N)`` without
-    failures and ``(1 - P) / (P eta N)`` with failures alone. Position
-    errors of standard deviation ``sigma_x`` (wavelengths) add the phase
-    error ``(2 pi u sigma_x)**2`` at direction cosine ``u`` (eq. 2.120),
-    so they grow toward endfire.
+    For large N and small errors this is Haupt, *Antenna Arrays*,
+    eqs. 2.118-2.122: ``(sigma_a**2 + sigma_p**2) / ((1 - sigma_p**2) eta N)``
+    without failures and ``(1 - P) / (P eta N)`` with failures alone.
+    Position errors (eq. 2.120) grow toward endfire: they scatter
+    ``(2 pi u sigma_x)**2`` at the sidelobe direction but reduce the beam
+    only through ``(2 pi u0 sigma_x)**2`` at the beam direction.
 
     Parameters
     ----------
@@ -514,7 +521,11 @@ def random_error_sidelobe_level(
         Element position error (1-sigma) in wavelengths, along the scan
         plane
     u : float
-        Direction cosine at which position errors are evaluated
+        Direction cosine of the sidelobe region of interest (matters only
+        with position errors), in [-1, 1]
+    u0 : float
+        Direction cosine of the beam (matters only with position errors),
+        in [-1, 1]
 
     Returns
     -------
@@ -525,8 +536,10 @@ def random_error_sidelobe_level(
     Notes
     -----
     The result is the average of the error pattern over the sidelobe
-    region; individual sidelobe peaks exceed it. It matches Monte Carlo
-    simulation of 200-400 element arrays to within 0.1 dB.
+    region; individual sidelobe peaks exceed it. In the tests it matches
+    Monte Carlo simulation of 16-400 element arrays to within 0.3 dB,
+    including position errors of 0.1 wavelength near endfire and 90%
+    failure rates.
     :func:`quantization_sidelobe_level` is the special case of phase
     errors alone.
 
@@ -539,15 +552,32 @@ def random_error_sidelobe_level(
     """
     if not 0.0 <= failure_rate < 1.0:
         raise ValueError(f"failure_rate must be in [0, 1), got {failure_rate}")
-    if n_elements < 1 or taper_efficiency <= 0:
-        raise ValueError("n_elements must be >= 1 and taper_efficiency > 0")
+    if n_elements < 1:
+        raise ValueError(f"n_elements must be at least 1, got {n_elements}")
+    if not 0.0 < taper_efficiency <= 1.0:
+        raise ValueError(
+            f"taper_efficiency must be in (0, 1], got {taper_efficiency} "
+            "(pass a fraction, not a percentage)"
+        )
+    if min(amplitude_std, phase_std_deg, position_std) < 0:
+        raise ValueError("standard deviations must be non-negative")
+    if abs(u) > 1 or abs(u0) > 1:
+        raise ValueError(f"u and u0 must lie in [-1, 1], got {u} and {u0}")
+
     P = 1.0 - failure_rate
-    phase_var = np.deg2rad(phase_std_deg) ** 2 + (2 * np.pi * u * position_std) ** 2
-    beam = P**2 * np.exp(-phase_var)
-    scattered = P * (1 + amplitude_std**2) - beam
-    if scattered <= 0:
+    phase_var = np.deg2rad(phase_std_deg) ** 2
+
+    def coherent(v):
+        return P**2 * np.exp(-phase_var - (2 * np.pi * v * position_std) ** 2)
+
+    def scattered(v):
+        return P * (1 + amplitude_std**2) - coherent(v)
+
+    s_u = scattered(u)
+    if s_u <= 0:
         return -np.inf
-    return float(10 * np.log10(scattered / (beam * taper_efficiency * n_elements)))
+    peak = coherent(u0) * taper_efficiency * n_elements + scattered(u0)
+    return float(10 * np.log10(s_u / peak))
 
 
 def analyze_quantization_effect(

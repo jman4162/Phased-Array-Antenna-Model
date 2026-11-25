@@ -734,8 +734,9 @@ class TestRandomErrorSidelobeLevel:
         n, eta = 256, 0.85
         # eq. 2.121: failures alone
         P = 0.9
+        # (large-N limit; the exact form adds the incoherent part to the peak)
         assert pa.random_error_sidelobe_level(n, failure_rate=0.1, taper_efficiency=eta) == \
-            pytest.approx(10 * np.log10((1 - P) / (P * eta * n)), abs=1e-9)
+            pytest.approx(10 * np.log10((1 - P) / (P * eta * n)), abs=0.01)
         # eqs. 2.118 + 2.119 for small errors
         sa, sp = 0.02, np.deg2rad(1.0)
         approx = 10 * np.log10((sa ** 2 + sp ** 2) / ((1 - sp ** 2) * eta * n))
@@ -762,6 +763,35 @@ class TestRandomErrorSidelobeLevel:
             n, position_std=pos, u=uu, taper_efficiency=eta) / 10) for uu in u]))
         assert expected == pytest.approx(mc, abs=0.5)
 
-    def test_invalid(self):
+    def test_large_position_errors_near_endfire(self):
+        # The beam is not degraded by the sidelobe-direction position phase
+        n, pos = 400, 0.1
+        mc, eta = self._monte_carlo(n, 0, 0, 0, pos=pos, u_region=0.85, trials=150, seed=3)
+        u = np.linspace(0.85, 1.0, 151)
+        expected = 10 * np.log10(np.mean([10 ** (pa.random_error_sidelobe_level(
+            n, position_std=pos, u=uu, taper_efficiency=eta) / 10) for uu in u]))
+        assert expected == pytest.approx(mc, abs=0.3)
+
+    def test_small_array_high_failure_rate(self):
+        # Expected peak power includes the incoherent part for small N
+        rng = np.random.default_rng(4)
+        n, fail = 16, 0.9
+        u = np.linspace(0.3, 1.0, 141)
+        x = (np.arange(n) - (n - 1) / 2) * 0.5
+        side, peak = [], []
+        for _ in range(4000):
+            w = (rng.random(n) >= fail).astype(float)
+            side.append(np.mean(np.abs(np.exp(2j * np.pi * np.outer(u, x)) @ w) ** 2))
+            peak.append(np.sum(w) ** 2)
+        mc = 10 * np.log10(np.mean(side) / np.mean(peak))
+        assert pa.random_error_sidelobe_level(n, failure_rate=fail) == pytest.approx(mc, abs=0.3)
+        assert pa.random_error_sidelobe_level(1, 0.5, 30, 0.5) < 0
+
+    @pytest.mark.parametrize("kwargs", [
+        dict(failure_rate=1.0), dict(taper_efficiency=60), dict(taper_efficiency=0),
+        dict(u=1.5, position_std=0.1), dict(u0=-2), dict(amplitude_std=-0.1),
+        dict(position_std=-0.01),
+    ])
+    def test_invalid(self, kwargs):
         with pytest.raises(ValueError):
-            pa.random_error_sidelobe_level(100, failure_rate=1.0)
+            pa.random_error_sidelobe_level(100, **kwargs)
