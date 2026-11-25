@@ -47,34 +47,26 @@ def mutual_coupling_matrix_theoretical(
             f"{coupling_model!r}"
         )
 
-    n = geometry.n_elements
-    C = np.eye(n, dtype=complex)
+    x = np.asarray(geometry.x, dtype=float)
+    y = np.asarray(geometry.y, dtype=float)
+    z = (np.zeros_like(x) if geometry.z is None
+         else np.asarray(geometry.z, dtype=float))
 
-    for i in range(n):
-        for j in range(n):
-            if i != j:
-                # Distance between elements
-                dx = geometry.x[i] - geometry.x[j]
-                dy = geometry.y[i] - geometry.y[j]
-                dz = 0
-                if geometry.z is not None:
-                    dz = geometry.z[i] - geometry.z[j]
+    # Pairwise separations, built one coordinate at a time to limit memory
+    r2 = (x[:, None] - x[None, :]) ** 2
+    r2 += (y[:, None] - y[None, :]) ** 2
+    r2 += (z[:, None] - z[None, :]) ** 2
+    kr = k * np.sqrt(r2)
 
-                r = np.sqrt(dx**2 + dy**2 + dz**2)
-                kr = k * r
+    if coupling_model == 'sinc':
+        # sin(kr)/kr, equal to 1 for coincident elements
+        coupling = coupling_coeff * np.sinc(kr / np.pi)
+    else:
+        coupling = coupling_coeff * np.exp(-kr / 2)
 
-                if coupling_model == 'sinc':
-                    # Sinc model: approximates dipole coupling
-                    if kr > 1e-10:
-                        coupling = coupling_coeff * np.sin(kr) / kr
-                    else:
-                        coupling = coupling_coeff
-                else:
-                    # Exponential decay
-                    coupling = coupling_coeff * np.exp(-kr / 2)
-
-                # Add phase based on distance
-                C[i, j] = coupling * np.exp(-1j * kr)
+    # Add phase based on distance; unit self-coupling on the diagonal
+    C = coupling * np.exp(-1j * kr)
+    np.fill_diagonal(C, 1.0)
 
     return C
 

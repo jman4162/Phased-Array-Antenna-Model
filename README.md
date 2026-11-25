@@ -9,7 +9,7 @@
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://phased-array-antenna-model.streamlit.app/)
 [![Documentation](https://readthedocs.org/projects/phased-array-antenna-model/badge/?version=latest)](https://phased-array-antenna-model.readthedocs.io/en/latest/)
 
-A comprehensive Python library for computing and visualizing phased array antenna radiation patterns. Features vectorized computations (50-100x faster than naive loops), multiple array geometries, advanced beamforming, and interactive 3D visualization.
+A comprehensive Python library for computing and visualizing phased array antenna radiation patterns. Features vectorized array-factor computation with bounded memory, multiple array geometries, advanced beamforming, and interactive 3D visualization.
 
 Full walkthrough of the physics and API:
 [Modeling phased arrays in Python, from physics to trade study](https://john-hodge.com/blog/modeling-phased-arrays-in-python/).
@@ -18,7 +18,7 @@ What's new in v1.4.0:
 
 ## Features
 
-- **High Performance**: Vectorized array factor computation (50-100x faster than naive loops)
+- **High Performance**: Vectorized array factor with bounded memory; on rectangular, triangular and thinned grids the sum factors over x and y (32x32 array on a 181x361 grid: 15x faster than a NumPy loop over elements, 320x faster than pure Python; see `benchmarks/bench_array_factor.py`)
 - **Multiple Geometries**: Rectangular, triangular, circular, cylindrical, spherical, sparse/thinned arrays
 - **Beamforming**: Amplitude tapering (Taylor, Chebyshev, etc.), null steering, multi-beam
 - **Realistic Impairments**: Mutual coupling, phase quantization, element failures, scan blindness

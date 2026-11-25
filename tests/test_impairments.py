@@ -568,3 +568,38 @@ class TestGracefulDegradationOffPlaneBeam:
         theta, phi, _ = _beam_direction(geom.x, geom.y, geom.z, w, k)
         assert np.rad2deg(theta) == pytest.approx(37.3, abs=0.01)
         assert np.rad2deg(phi) == pytest.approx(51.7, abs=0.01)
+
+
+class TestCouplingMatrixVectorized:
+
+    @staticmethod
+    def _loop_reference(geometry, k, model, coeff):
+        n = geometry.n_elements
+        C = np.eye(n, dtype=complex)
+        z = geometry.z if geometry.z is not None else np.zeros(n)
+        for i in range(n):
+            for j in range(n):
+                if i == j:
+                    continue
+                r = np.sqrt((geometry.x[i] - geometry.x[j]) ** 2
+                            + (geometry.y[i] - geometry.y[j]) ** 2
+                            + (z[i] - z[j]) ** 2)
+                kr = k * r
+                if model == 'sinc':
+                    c = coeff * np.sin(kr) / kr if kr > 1e-10 else coeff
+                else:
+                    c = coeff * np.exp(-kr / 2)
+                C[i, j] = c * np.exp(-1j * kr)
+        return C
+
+    @pytest.mark.parametrize("model", ["sinc", "exponential"])
+    def test_matches_loop_implementation(self, model):
+        geom = pa.create_cylindrical_array(6, 3, 1.0, 0.5)
+        geom.x = geom.x.copy(); geom.x[1] = geom.x[0]  # coincident pair
+        geom.y = geom.y.copy(); geom.y[1] = geom.y[0]
+        geom.z = geom.z.copy(); geom.z[1] = geom.z[0]
+        k = pa.wavelength_to_k(1.0)
+        C = pa.mutual_coupling_matrix_theoretical(geom, k, coupling_model=model,
+                                                  coupling_coeff=0.27)
+        np.testing.assert_allclose(C, self._loop_reference(geom, k, model, 0.27),
+                                   rtol=1e-12, atol=1e-14)

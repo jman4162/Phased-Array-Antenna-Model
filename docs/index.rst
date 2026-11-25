@@ -22,7 +22,9 @@ radiation patterns.
 Features
 --------
 
-- **Vectorized computation** - 50-100x faster than loop-based implementations
+- **Vectorized computation** - bounded memory, and a lattice-factorized sum for rectangular,
+  triangular and thinned grids (15x faster than a NumPy element loop for a 32x32 array;
+  see ``benchmarks/bench_array_factor.py``)
 - **Multiple geometries** - Rectangular, triangular, circular, cylindrical, spherical, and sparse arrays
 - **Beamforming** - Amplitude tapering, null steering, multi-beam synthesis
 - **Realistic impairments** - Mutual coupling, phase quantization, element failures, scan blindness
