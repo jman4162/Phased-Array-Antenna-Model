@@ -1,4 +1,5 @@
-{% set version = "1.6.0" %}
+{% set version = "1.7.0" %}
+{% set python_min = "3.10" %}
 
 package:
   name: phased-array-modeling
@@ -7,7 +8,7 @@ package:
 source:
   url: https://pypi.org/packages/source/p/phased-array-modeling/phased_array_modeling-{{ version }}.tar.gz
   # Refresh on each release: curl -sL <url above> | shasum -a 256
-  sha256: 070a92294a9f5fe519e62eee1e387ec628c32d9d71c4191cedddac195bfe2810
+  sha256: 336b5dd716ccac46065ecd8754b2bd47588c0d23656ce0a22b25ea03ce19e227
 
 build:
   noarch: python
@@ -17,13 +18,13 @@ build:
 requirements:
   host:
     - python {{ python_min }}
-    - setuptools >=61.0
+    - setuptools >=77.0
     - pip
   run:
     - python >={{ python_min }}
-    - numpy >=1.20.0
+    - numpy >=1.21.3
     - matplotlib-base >=3.5.0
-    - scipy >=1.7.0
+    - scipy >=1.7.2
 
 test:
   imports:

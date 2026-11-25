@@ -7,10 +7,12 @@ import numpy as np
 import pytest
 
 MODULES = [
+    "analysis",
     "core",
     "utils",
     "geometry",
     "beamforming",
+    "doa",
     "impairments",
     "wideband",
     "polarization",

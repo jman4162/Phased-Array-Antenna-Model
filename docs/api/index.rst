@@ -20,6 +20,8 @@ Modules
      - Array geometry creation: rectangular, triangular, circular, conformal, sparse
    * - :doc:`beamforming`
      - Beamforming techniques: amplitude tapers, null steering, multi-beam, beam spoiling, adaptive
+   * - :doc:`doa`
+     - Direction-of-arrival estimation: Bartlett, Capon, MUSIC, root-MUSIC, ESPRIT, MDL/AIC, CRB
    * - :doc:`impairments`
      - Realistic impairments: mutual coupling, quantization, failures, scan blindness, active impedance
    * - :doc:`polarization`
@@ -72,6 +74,7 @@ Most Commonly Used Functions
    core
    geometry
    beamforming
+   doa
    impairments
    polarization
    vector_patterns
