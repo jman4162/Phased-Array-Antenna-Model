@@ -124,7 +124,7 @@ package to textbook values.
 - `export_pattern_2d_csv(angle_unit=...)`, with a warning when
   degree-labelled values look like radians
 - `tests/test_textbook_benchmarks.py` and regression tests for each fix
-  (308 -> 440 tests)
+  (308 -> 458 tests)
 - Docs: new Conventions page (units, sign convention, snapshot rule,
   field vs power, hemisphere vs full-sphere directivity, coupling forms)
 
