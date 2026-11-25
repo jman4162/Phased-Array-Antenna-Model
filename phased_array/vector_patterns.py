@@ -312,6 +312,11 @@ def patch_design(
     """
     from .utils import C
 
+    if not (frequency > 0 and height > 0 and eps_r >= 1):
+        raise ValueError(
+            "need frequency > 0, height > 0 and eps_r >= 1, got "
+            f"{frequency}, {height}, {eps_r}"
+        )
     c = C if c is None else c
     width = c / (2 * frequency) * np.sqrt(2 / (eps_r + 1))
     eps_eff = (eps_r + 1) / 2 + (eps_r - 1) / 2 / np.sqrt(1 + 12 * height / width)
@@ -332,7 +337,7 @@ def rectangular_patch_element(
     width: float,
     effective_length: float,
     height: float,
-    wavelength: float = 1.0,
+    wavelength: float,
     pol: str = 'x'
 ) -> Callable:
     """
@@ -359,9 +364,16 @@ def rectangular_patch_element(
     height : float
         Substrate height h
     wavelength : float
-        Free-space wavelength
+        Free-space wavelength, in the unit of the dimensions (required:
+        :func:`patch_design` returns meters)
     pol : str
         'x' (resonant length along x) or 'y'
+
+    Raises
+    ------
+    ValueError
+        For non-positive dimensions, or a substrate of half a wavelength
+        or more, outside the thin-substrate cavity model
 
     Returns
     -------
@@ -390,6 +402,13 @@ def rectangular_patch_element(
     """
     if pol not in ('x', 'y'):
         raise ValueError(f"pol must be 'x' or 'y', got {pol!r}")
+    if not min(width, effective_length, height, wavelength) > 0:
+        raise ValueError("width, effective_length, height and wavelength must be positive")
+    if height >= wavelength / 2:
+        raise ValueError(
+            f"substrate height {height} is half a wavelength or more; the "
+            "cavity model assumes a thin substrate"
+        )
     k = 2 * np.pi / wavelength
 
     def sinc(a):

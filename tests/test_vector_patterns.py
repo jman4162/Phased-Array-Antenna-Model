@@ -475,9 +475,23 @@ class TestRectangularPatch:
         theta = np.linspace(0, np.pi / 2, 50)
         phi = np.linspace(0, 2 * np.pi, 50)
         T, P = np.meshgrid(theta, phi)
-        ex = np.hypot(*(np.abs(c) for c in px(T, P)))
-        ey = np.hypot(*(np.abs(c) for c in py(T, P + np.pi / 2)))
-        np.testing.assert_allclose(ey, ex, atol=1e-12)
+        # A 90 deg rotation about z maps theta/phi unit vectors onto each
+        # other, so the complex components must match, not only |E|
+        ex_t, ex_p = px(T, P)
+        ey_t, ey_p = py(T, P + np.pi / 2)
+        np.testing.assert_allclose(ey_t, ex_t, atol=1e-12)
+        np.testing.assert_allclose(ey_p, ex_p, atol=1e-12)
+
+    def test_input_checks(self):
+        with pytest.raises(TypeError):
+            pa.rectangular_patch_element(1e-2, 1e-2, 1e-3)  # wavelength is required
+        with pytest.raises(ValueError, match="thin substrate"):
+            pa.rectangular_patch_element(0.4, 0.4, 0.5, wavelength=1.0)
+        with pytest.raises(ValueError, match="positive"):
+            pa.rectangular_patch_element(-1e-2, 1e-2, 1e-3, wavelength=0.03)
+        for args in [(0, 2.2, 1e-3), (10e9, 0.5, 1e-3), (10e9, 2.2, 0.0)]:
+            with pytest.raises(ValueError):
+                pa.patch_design(*args)
 
     def test_zero_behind_ground_plane_and_boresight_unity(self):
         _, patch = self._patch()
