@@ -518,3 +518,93 @@ class TestMonopulseNoDifferencePlane:
             pa.monopulse_weights(geom, k, 0, 0, 'delta_el')
         w = pa.monopulse_weights(geom, k, 0, 0, 'delta_az')
         assert np.max(np.abs(w)) == pytest.approx(1.0)
+
+
+def _difference_psl_and_peak(n, w):
+    """Peak sidelobe (dB) beyond the right difference lobe, and the lobe's u."""
+    geom = pa.create_rectangular_array(n, 1, 0.5, 0.5)
+    k = pa.wavelength_to_k(1.0)
+    angles, cut, _ = pa.compute_pattern_cuts(geom.x, geom.y, w, k, n_points=40001)
+    right = angles >= 0
+    a, c = angles[right], cut[right]
+    i = int(np.argmax(c))
+    j = i
+    while j < c.size - 1 and c[j + 1] <= c[j]:
+        j += 1
+    return c[j + 1:].max() - c.max(), np.sin(np.deg2rad(a[i]))
+
+
+class TestBaylissTaper:
+
+    @pytest.mark.parametrize("n", [16, 33, 64])
+    def test_antisymmetric_with_exact_boresight_null(self, n):
+        w = pa.bayliss_taper_1d(n, -30)
+        np.testing.assert_allclose(w[::-1], -w, atol=1e-14)
+        assert np.max(np.abs(w)) == pytest.approx(1.0)
+        geom = pa.create_rectangular_array(n, 1, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        af = pa.array_factor_vectorized(np.array([0.0]), np.array([0.0]), geom.x, geom.y, w, k)
+        assert abs(af[0]) < 1e-12 * np.sum(np.abs(w))
+
+    @pytest.mark.parametrize("n, sll, nbar", [
+        (32, -20, 5), (32, -25, 5), (32, -30, 5),
+        (64, -20, 5), (64, -30, 5), (64, -35, 6),
+        (128, -25, 5), (128, -30, 5), (128, -35, 6),
+    ])
+    def test_sidelobes_at_design_level(self, n, sll, nbar):
+        psl, _ = _difference_psl_and_peak(n, pa.bayliss_taper_1d(n, sll, nbar))
+        assert abs(psl - sll) < 0.5
+
+    def test_small_nbar_falls_short(self):
+        psl, _ = _difference_psl_and_peak(64, pa.bayliss_taper_1d(64, -35, nbar=4))
+        assert psl > -34.0  # documented: deep designs need nbar >= 6
+
+    @pytest.mark.parametrize("sll", [-20, -30])
+    def test_peak_position_near_haupt_3_35(self, sll):
+        from phased_array.beamforming import _bayliss_parameters
+        n = 128
+        _, u_peak = _difference_psl_and_peak(n, pa.bayliss_taper_1d(n, sll))
+        z_pred = _bayliss_parameters(sll)[2]
+        # sampled designs sit 2-6% beyond the polynomial fit (largest at -20 dB)
+        assert u_peak * n * 0.5 == pytest.approx(z_pred, rel=0.07)
+
+    def test_2d_difference_has_null_plane(self):
+        geom = pa.create_rectangular_array(16, 12, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        w = pa.bayliss_taper_2d(16, 12, -30, axis='x', sum_sidelobe_dB=-25)
+        theta = np.deg2rad(np.linspace(0, 80, 41))
+        af_null = pa.array_factor_vectorized(theta, np.full(41, np.pi / 2), geom.x, geom.y, w, k)
+        af_diff = pa.array_factor_vectorized(theta, np.zeros(41), geom.x, geom.y, w, k)
+        assert np.max(np.abs(af_null)) < 1e-10 * np.max(np.abs(af_diff))
+        w_el = pa.bayliss_taper_2d(16, 12, -30, axis='y')
+        assert w_el.shape == (192,)
+        np.testing.assert_allclose(w_el.reshape(16, 12)[:, ::-1], -w_el.reshape(16, 12), atol=1e-14)
+
+    def test_invalid_inputs(self):
+        with pytest.raises(ValueError, match="nbar"):
+            pa.bayliss_taper_1d(16, -30, nbar=1)
+        with pytest.raises(ValueError, match="axis"):
+            pa.bayliss_taper_2d(4, 4, axis='z')
+
+
+class TestBaylissInputs:
+
+    def test_single_element_axis_raises(self):
+        with pytest.raises(ValueError, match="at least 2 elements"):
+            pa.bayliss_taper_1d(1)
+        with pytest.raises(ValueError, match="at least 2 elements"):
+            pa.bayliss_taper_2d(16, 1, axis='y')
+
+    def test_non_integer_nbar_raises(self):
+        with pytest.raises(ValueError, match="integer"):
+            pa.bayliss_taper_1d(32, -30, nbar=5.5)
+
+    @pytest.mark.parametrize("sll", [-5, -50])
+    def test_outside_fit_range_warns(self, sll):
+        with pytest.warns(UserWarning, match="15-40 dB"):
+            pa.bayliss_taper_1d(64, sll, nbar=8)
+
+    def test_sum_axis_matches_taylor_default(self):
+        w = pa.bayliss_taper_2d(8, 6, -30, axis='x', sum_sidelobe_dB=-25).reshape(8, 6)
+        ty = pa.taylor_taper_1d(6, -25)
+        np.testing.assert_allclose(w / w[:, :1], np.tile(ty / ty[0], (8, 1)), atol=1e-12)
