@@ -16,6 +16,8 @@ MODULES = [
     "polarization",
     "coordinates",
     "export",
+    "io",
+    "vector_patterns",
     "visualization",
 ]
 

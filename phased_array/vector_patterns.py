@@ -299,7 +299,9 @@ class GriddedElementPattern:
     (e.g. a full-wave simulation or measurement export).
 
     Satisfies the element protocol: instances are callables
-    f(theta, phi) -> (E_theta, E_phi).
+    f(theta, phi) -> (E_theta, E_phi). To build one from flat
+    (theta, phi, E_theta, E_phi) columns in any row order, use
+    :meth:`from_table` or :func:`~phased_array.load_element_pattern_csv`.
 
     Parameters
     ----------
@@ -392,6 +394,164 @@ class GriddedElementPattern:
         E_theta = magnitude * (jones[0] * cos_phi + jones[1] * sin_phi)
         E_phi = magnitude * (-jones[0] * sin_phi + jones[1] * cos_phi)
         return cls(theta_grid, phi_grid, E_theta, E_phi, method=method)
+
+    @classmethod
+    def from_table(
+        cls,
+        theta: np.ndarray,
+        phi: np.ndarray,
+        e_theta: np.ndarray,
+        e_phi: np.ndarray,
+        angle_unit: str = 'deg',
+        method: str = 'linear'
+    ) -> 'GriddedElementPattern':
+        """
+        Build a gridded pattern from flat sample columns in any row order.
+
+        Far-field exports from EM solvers and measurement ranges list one
+        row per (theta, phi) sample. This method finds the distinct theta
+        and phi values, checks that every combination of them appears
+        exactly once, sorts the samples onto that grid and builds the
+        interpolating pattern.
+
+        Parameters
+        ----------
+        theta, phi : array_like
+            Sample directions, one entry per row, in ``angle_unit``. Theta
+            must lie in [0, 180] deg; phi may use any range up to one full
+            turn, for example [-180, 180] or [0, 360).
+        e_theta, e_phi : array_like
+            Complex field components at each sample, same length as
+            ``theta``.
+        angle_unit : str
+            ``'deg'`` (default) or ``'rad'``.
+        method : str
+            Interpolation method for
+            `scipy.interpolate.RegularGridInterpolator`.
+
+        Returns
+        -------
+        pattern : GriddedElementPattern
+
+        Raises
+        ------
+        ValueError
+            If the columns differ in length, any value is not finite,
+            theta is outside [0, 180] deg, phi spans more than 360 deg,
+            either axis has fewer than two distinct values, a (theta, phi)
+            pair appears more than once, or the grid is incomplete.
+
+        Notes
+        -----
+        Angles closer than 1e-8 rad are treated as the same grid value. The
+        grid must be rectilinear (the full product of its theta and phi
+        values); the spacing need not be uniform. Tables that use negative
+        theta (theta in [-180, 180] with phi in [0, 180)) must be folded
+        first: the sample at ``(-theta, phi)`` is the direction
+        ``(theta, phi + 180 deg)`` with both field components negated.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import phased_array as pa
+        >>> f = pa.ideal_patch_element('x')
+        >>> T, P = np.meshgrid(np.arange(0, 91, 2.0), np.arange(-180, 181, 5.0),
+        ...                    indexing='ij')
+        >>> rows = np.random.default_rng(0).permutation(T.size)  # any order
+        >>> theta, phi = T.ravel()[rows], P.ravel()[rows]
+        >>> e_theta, e_phi = f(np.deg2rad(theta), np.deg2rad(phi))
+        >>> pattern = pa.GriddedElementPattern.from_table(theta, phi, e_theta, e_phi)
+        >>> Et, Ep = pattern(np.array([0.3]), np.array([0.2]))
+        >>> Et_ref, Ep_ref = f(np.array([0.3]), np.array([0.2]))
+        >>> bool(abs(Et[0] - Et_ref[0]) < 2e-3 and abs(Ep[0] - Ep_ref[0]) < 2e-3)
+        True
+        """
+        if angle_unit not in ('deg', 'rad'):
+            raise ValueError(f"angle_unit must be 'deg' or 'rad', got {angle_unit!r}")
+        theta = np.asarray(theta, dtype=float).ravel()
+        phi = np.asarray(phi, dtype=float).ravel()
+        e_theta = np.asarray(e_theta, dtype=complex).ravel()
+        e_phi = np.asarray(e_phi, dtype=complex).ravel()
+        n = theta.size
+        if not (phi.size == e_theta.size == e_phi.size == n):
+            raise ValueError(
+                f"theta, phi, e_theta and e_phi must have the same length, got "
+                f"{n}, {phi.size}, {e_theta.size} and {e_phi.size}"
+            )
+        for name, values in (('theta', theta), ('phi', phi),
+                             ('e_theta', e_theta), ('e_phi', e_phi)):
+            if not np.all(np.isfinite(values)):
+                raise ValueError(f"{name} contains non-finite values")
+
+        to_unit = np.rad2deg if angle_unit == 'deg' else (lambda a: a)
+        if angle_unit == 'deg':
+            theta = np.deg2rad(theta)
+            phi = np.deg2rad(phi)
+
+        tol = 1e-8
+        if n and (theta.min() < -tol or theta.max() > np.pi + tol):
+            raise ValueError(
+                f"theta must lie in [0, 180] deg, got values from "
+                f"{to_unit(theta.min()):g} to {to_unit(theta.max()):g} "
+                f"{angle_unit}; fold negative theta to (|theta|, phi + 180 deg) "
+                "and negate both field components"
+            )
+        if n and phi.max() - phi.min() > 2 * np.pi + tol:
+            raise ValueError(
+                f"phi samples span more than 360 deg "
+                f"({to_unit(phi.min()):g} to {to_unit(phi.max()):g} {angle_unit})"
+            )
+
+        theta_grid, theta_idx = _grid_axis(theta, tol)
+        phi_grid, phi_idx = _grid_axis(phi, tol)
+        if theta_grid.size < 2 or phi_grid.size < 2:
+            raise ValueError(
+                f"need at least two distinct theta and phi values, got "
+                f"{theta_grid.size} and {phi_grid.size}"
+            )
+
+        n_theta, n_phi = theta_grid.size, phi_grid.size
+        flat = theta_idx * n_phi + phi_idx
+        counts = np.bincount(flat, minlength=n_theta * n_phi)
+        if np.any(counts > 1):
+            i, j = divmod(int(np.argmax(counts > 1)), n_phi)
+            raise ValueError(
+                f"{int(np.sum(counts > 1))} (theta, phi) pair(s) appear more "
+                f"than once, e.g. theta={to_unit(theta_grid[i]):g}, "
+                f"phi={to_unit(phi_grid[j]):g} {angle_unit}"
+            )
+        if np.any(counts == 0):
+            i, j = divmod(int(np.argmax(counts == 0)), n_phi)
+            raise ValueError(
+                f"incomplete grid: {int(np.sum(counts == 0))} of "
+                f"{n_theta * n_phi} (theta, phi) combinations are missing "
+                f"({n_theta} theta x {n_phi} phi values), e.g. "
+                f"theta={to_unit(theta_grid[i]):g}, "
+                f"phi={to_unit(phi_grid[j]):g} {angle_unit}"
+            )
+
+        E_theta = np.empty(n_theta * n_phi, dtype=complex)
+        E_phi = np.empty(n_theta * n_phi, dtype=complex)
+        E_theta[flat] = e_theta
+        E_phi[flat] = e_phi
+        return cls(theta_grid, phi_grid,
+                   E_theta.reshape(n_theta, n_phi),
+                   E_phi.reshape(n_theta, n_phi), method=method)
+
+
+def _grid_axis(values: np.ndarray, tol: float) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Distinct sorted values of a flat column (merging values closer than
+    ``tol``) and each entry's index into them.
+    """
+    order = np.argsort(values, kind='stable')
+    sorted_values = values[order]
+    new_value = np.ones(values.size, dtype=bool)
+    new_value[1:] = np.diff(sorted_values) > tol
+    axis = sorted_values[new_value]
+    index = np.empty(values.size, dtype=int)
+    index[order] = np.cumsum(new_value) - 1
+    return axis, index
 
 
 # ============== Vector pattern computation ==============
