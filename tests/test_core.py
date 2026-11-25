@@ -262,3 +262,120 @@ class TestPatternComputation:
         # Expected HPBW ~ 0.886 * 180/pi / (N * d) ~ 6.3 degrees for 16 elements
         # Allow reasonable tolerance
         assert 4 < hpbw < 10
+
+
+class TestArrayFactorFFT:
+    """array_factor_fft must agree with the direct AF (exp(+j k r.u))."""
+
+    def test_steered_beam_on_correct_side(self):
+        geom = pa.create_rectangular_array(16, 16, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        w = pa.steering_vector(k, geom.x, geom.y, 30, 0)
+        u, v, AF = pa.array_factor_fft(w.reshape(16, 16), 0.5, 0.5, 64, 64)
+        iu, iv = np.unravel_index(np.argmax(np.abs(AF)), AF.shape)
+        assert u[iu] == pytest.approx(0.5)
+        assert v[iv] == pytest.approx(0.0)
+
+    def test_axis_is_fft_bin_centres(self):
+        u, v, _ = pa.array_factor_fft(np.ones((16, 8)), 0.5, 0.7, 64, 32)
+        np.testing.assert_allclose(u, (np.arange(64) - 32) / (64 * 0.5))
+        np.testing.assert_allclose(v, (np.arange(32) - 16) / (32 * 0.7))
+        assert u[32] == 0.0 and v[16] == 0.0
+
+    @pytest.mark.parametrize("nx,ny", [(16, 16), (5, 7)])
+    def test_matches_direct_array_factor(self, nx, ny):
+        geom = pa.create_rectangular_array(nx, ny, 0.5, 0.6)
+        k = pa.wavelength_to_k(1.0)
+        rng = np.random.default_rng(3)
+        w = rng.standard_normal(geom.n_elements) + 1j * rng.standard_normal(geom.n_elements)
+        u, v, AF = pa.array_factor_fft(w.reshape(nx, ny), 0.5, 0.6, 32, 40)
+        uu, vv = np.meshgrid(u, v, indexing='ij')
+        AF_direct = pa.array_factor_uv(uu, vv, geom.x, geom.y, w, k)
+        np.testing.assert_allclose(AF, AF_direct, atol=1e-9 * np.abs(AF_direct).max())
+
+    def test_too_few_output_points_raises(self):
+        with pytest.raises(ValueError, match="n_u"):
+            pa.array_factor_fft(np.ones((16, 16)), 0.5, 0.5, 8, 64)
+
+
+class TestPatternCutsThroughBeam:
+    """Second cut passes through the scanned beam; cuts share one reference."""
+
+    def test_orthogonal_cut_contains_scanned_beam(self):
+        geom = pa.create_rectangular_array(10, 10, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        w = pa.steering_vector(k, geom.x, geom.y, 30, 0)
+        angles, e_cut, h_cut = pa.compute_pattern_cuts(
+            geom.x, geom.y, w, k, theta0_deg=30, phi0_deg=0, n_points=721)
+        assert e_cut.max() == pytest.approx(0.0, abs=1e-9)
+        assert h_cut.max() == pytest.approx(0.0, abs=1e-6)
+        assert angles[np.argmax(e_cut)] == pytest.approx(30.0, abs=0.25)
+        assert angles[np.argmax(h_cut)] == pytest.approx(0.0, abs=0.25)
+
+    def test_broadside_cut_shares_reference_with_beam_cut(self):
+        """A cut that misses the beam is shown at its true level, not 0 dB."""
+        geom = pa.create_rectangular_array(10, 10, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        w = pa.steering_vector(k, geom.x, geom.y, 30, 0)
+        _, e_cut, h_cut = pa.compute_pattern_cuts(geom.x, geom.y, w, k)
+        assert e_cut.max() == pytest.approx(0.0, abs=1e-9)
+        assert h_cut.max() < -10.0
+
+    def test_default_cuts_unchanged_at_broadside(self):
+        geom = pa.create_rectangular_array(8, 4, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        w = np.ones(geom.n_elements)
+        angles, e_cut, h_cut = pa.compute_pattern_cuts(geom.x, geom.y, w, k, n_points=181)
+        th = np.deg2rad(angles)
+        for cut, phi_pos in ((e_cut, 0.0), (h_cut, np.pi / 2)):
+            phi = np.where(th >= 0, phi_pos, phi_pos + np.pi)
+            af = pa.array_factor_vectorized(np.abs(th), phi, geom.x, geom.y, w, k)
+            power = np.abs(af) ** 2
+            ref = pa.linear_to_db(power / power.max())
+            np.testing.assert_allclose(cut, ref, atol=1e-9)
+
+    def test_z_positions_are_used(self):
+        geom = pa.create_rectangular_array(8, 1, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        w = np.ones(geom.n_elements)
+        z = np.linspace(0, 2, geom.n_elements)
+        _, e_flat, _ = pa.compute_pattern_cuts(geom.x, geom.y, w, k)
+        _, e_z, _ = pa.compute_pattern_cuts(geom.x, geom.y, w, k, z=z)
+        assert not np.allclose(e_flat, e_z)
+
+
+class TestPeakSidelobeLevel:
+
+    def test_uniform_linear_array_matches_closed_form(self):
+        N = 16
+        geom = pa.create_rectangular_array(N, 1, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        angles, e_cut, _ = pa.compute_pattern_cuts(
+            geom.x, geom.y, np.ones(N), k, n_points=20001)
+        psl = pa.compute_peak_sidelobe_level(angles, e_cut)
+        # Closed form: |sin(N psi/2) / (N sin(psi/2))| beyond the first null
+        psi = np.linspace(2 * np.pi / N, np.pi, 200001)
+        af = np.abs(np.sin(N * psi / 2) / (N * np.sin(psi / 2)))
+        assert psl == pytest.approx(20 * np.log10(af.max()), abs=0.01)
+
+    def test_taylor_design_level(self):
+        N = 32
+        geom = pa.create_rectangular_array(N, 1, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        w = pa.taylor_taper_1d(N, -30, nbar=5)
+        angles, e_cut, _ = pa.compute_pattern_cuts(geom.x, geom.y, w, k, n_points=8001)
+        level, angle = pa.compute_peak_sidelobe_level(angles, e_cut, return_angle=True)
+        assert -30.6 < level < -29.8
+        assert abs(angle) > 3.0
+
+    def test_no_sidelobes_returns_minus_inf(self):
+        angles = np.linspace(-10, 10, 101)
+        assert pa.compute_peak_sidelobe_level(angles, -angles ** 2) == -np.inf
+
+    def test_unnormalized_input(self):
+        angles = np.linspace(-90, 90, 2001)
+        geom = pa.create_rectangular_array(8, 1, 0.5, 0.5)
+        _, e_cut, _ = pa.compute_pattern_cuts(
+            geom.x, geom.y, np.ones(8), pa.wavelength_to_k(1.0), n_points=2001)
+        assert pa.compute_peak_sidelobe_level(angles, e_cut + 17.0) == pytest.approx(
+            pa.compute_peak_sidelobe_level(angles, e_cut))
