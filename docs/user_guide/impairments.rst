@@ -40,6 +40,35 @@ quantitative work.
    print(f"Self-coupling: {coupling_matrix[0, 0].real:.2f}")  # 1.0
    print(f"Neighbor coupling: {np.abs(coupling_matrix[0, 1]):.2f}")
 
+Dipole Arrays (Induced EMF)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For arrays of thin parallel dipoles,
+:func:`~phased_array.dipole_impedance_matrix` computes the impedance matrix
+from the induced-EMF integral of Balanis, *Antenna Theory*, eq. 8-68. It
+reproduces Balanis's closed forms side by side (8-71) and collinear (8-72),
+for example 73.1 + j42.5 ohm self-impedance and -12.5 - j29.9 ohm mutual
+impedance at half a wavelength for half-wave dipoles. Divide by a reference
+impedance to use it with the active-impedance functions:
+
+.. code-block:: python
+
+   # 8 x 8 array of x-directed dipoles, 0.47 lambda long, in free space
+   dip_geom = pa.create_rectangular_array(8, 8, dx=0.5, dy=0.5)
+   Z = pa.dipole_impedance_matrix(dip_geom, length=0.47, radius=1e-3, orientation='x')
+   print(f"Isolated element: {Z[0, 0].real:.1f} {Z[0, 0].imag:+.1f}j ohm")
+
+   Z0 = 50.0
+   C_dipole = Z / Z0                      # impedance form
+   center = 27                            # an interior element
+   for scan in (0, 30, 60):
+       w = pa.steering_vector(k, dip_geom.x, dip_geom.y, scan, 90)  # H-plane scan
+       za = pa.active_impedance(C_dipole, w, center, Z0=Z0)
+       print(f"H-plane scan {scan:2d} deg: active impedance {za.real:.1f} {za.imag:+.1f}j ohm")
+
+The dipoles are in free space; a ground plane or substrate changes the
+coupling and is outside this model.
+
 Measured Coupling
 ^^^^^^^^^^^^^^^^^
 
