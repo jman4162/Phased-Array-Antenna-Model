@@ -155,7 +155,8 @@ def steering_vector_hybrid(
     theta0_deg: float,
     phi0_deg: float,
     frequency: float,
-    c: float = C
+    c: float = C,
+    center_frequency: Optional[float] = None
 ) -> np.ndarray:
     """
     Compute hybrid TTD + phase steering vector.
@@ -175,9 +176,14 @@ def steering_vector_hybrid(
     phi0_deg : float
         Steering azimuth angle in degrees
     frequency : float
-        Operating frequency in Hz
+        Operating frequency in Hz, at which the weights are evaluated
     c : float, optional
         Speed of light in m/s
+    center_frequency : float, optional
+        Frequency in Hz at which the element phase shifters are set.
+        Defaults to ``frequency``. When ``frequency`` differs from it, the
+        subarray time delays still steer correctly, while the fixed phase
+        shifts leave the residual squint of a hybrid architecture.
 
     Returns
     -------
@@ -187,8 +193,10 @@ def steering_vector_hybrid(
     Notes
     -----
     For each element:
-    1. TTD is computed based on subarray center position
-    2. Phase shift compensates for element offset from subarray center
+    1. TTD is computed based on subarray center position and evaluated at
+       ``frequency`` (phase ``2*pi*frequency*tau``)
+    2. Phase shift compensates for element offset from subarray center;
+       it is a phase, fixed at ``center_frequency``
 
     This reduces beam squint compared to phase-only steering,
     with squint now determined by subarray size rather than array size.
@@ -199,14 +207,16 @@ def steering_vector_hybrid(
     u0 = np.sin(theta0) * np.cos(phi0)
     v0 = np.sin(theta0) * np.sin(phi0)
 
-    k = 2 * np.pi * frequency / c
+    if center_frequency is None:
+        center_frequency = frequency
+    # Phase shifters hold the phase they were set to at center_frequency
+    k_set = 2 * np.pi * center_frequency / c
 
     weights = np.zeros(geometry.n_elements, dtype=complex)
 
     for sub_idx in range(architecture.n_subarrays):
         # Get elements in this subarray
-        mask = architecture.subarray_assignments == sub_idx
-        elem_indices = np.where(mask)[0]
+        elem_indices = np.where(architecture.subarray_assignments == sub_idx)[0]
 
         # Subarray center position
         center_x = architecture.subarray_centers[sub_idx, 0]
@@ -216,15 +226,13 @@ def steering_vector_hybrid(
         tau_subarray = -(center_x * u0 + center_y * v0) / c
         ttd_phase = 2 * np.pi * frequency * tau_subarray
 
-        # Phase shifter compensation for element offset from center
-        for idx in elem_indices:
-            dx = geometry.x[idx] - center_x
-            dy = geometry.y[idx] - center_y
+        # Phase shifter compensation for element offset from center (fixed
+        # phase, so it causes the residual squint away from center_frequency)
+        dx = geometry.x[elem_indices] - center_x
+        dy = geometry.y[elem_indices] - center_y
+        phase_offset = -k_set * (dx * u0 + dy * v0)
 
-            # Phase shift for offset (this causes residual squint)
-            phase_offset = -k * (dx * u0 + dy * v0)
-
-            weights[idx] = np.exp(1j * (ttd_phase + phase_offset))
+        weights[elem_indices] = np.exp(1j * (ttd_phase + phase_offset))
 
     return weights
 
@@ -388,7 +396,10 @@ def compute_beam_squint(
             weights_freq = steering_vector_ttd(x, y, theta0_deg, phi0_deg, freq)
         elif steering_mode == 'hybrid' and architecture is not None:
             geom = ArrayGeometry(x=x, y=y)
-            weights_freq = steering_vector_hybrid(geom, architecture, theta0_deg, phi0_deg, freq)
+            weights_freq = steering_vector_hybrid(
+                geom, architecture, theta0_deg, phi0_deg, freq,
+                center_frequency=center_frequency
+            )
         else:
             # Phase-only: weights are fixed, but k changes
             weights_freq = weights
@@ -505,10 +516,11 @@ def analyze_instantaneous_bandwidth(
             }
 
     # If we get here, bandwidth exceeds our search range
+    half_bw = max_bw_percent / 200
     return {
         'ibw_hz': center_frequency * max_bw_percent / 100,
         'ibw_percent': max_bw_percent,
-        'ibw_ratio': 1.5,
+        'ibw_ratio': (1 + half_bw) / (1 - half_bw),
         'note': f'Exceeds {max_bw_percent}% bandwidth'
     }
 
@@ -595,7 +607,10 @@ def compute_pattern_vs_frequency(
             weights = steering_vector_ttd(x, y, theta0_deg, phi0_deg, freq)
         elif steering_mode == 'hybrid':
             geom = ArrayGeometry(x=x, y=y)
-            weights = steering_vector_hybrid(geom, architecture, theta0_deg, phi0_deg, freq)
+            weights = steering_vector_hybrid(
+                geom, architecture, theta0_deg, phi0_deg, freq,
+                center_frequency=center_frequency
+            )
         else:
             weights = weights_base
 
