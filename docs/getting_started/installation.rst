@@ -4,9 +4,9 @@ Installation
 Requirements
 ------------
 
-- Python 3.9 or later
-- NumPy >= 1.20.0
-- SciPy >= 1.7.0
+- Python 3.10 or later
+- NumPy >= 1.21.3
+- SciPy >= 1.7.2
 - Matplotlib >= 3.5.0
 
 Optional dependencies:
