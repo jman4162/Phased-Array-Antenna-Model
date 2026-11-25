@@ -43,7 +43,7 @@ Properties:
 
 **Advantages of UV-space:**
 
-- Array factor is a Fourier transform of element positions
+- Array factor is a Fourier transform of the element weights
 - Grating lobes appear at regular intervals in (u, v)
 - Beam steering is a simple translation
 
@@ -73,19 +73,28 @@ Engineering convention often uses azimuth (Az) and elevation (El):
 - **Azimuth (Az)**: Angle in horizontal plane, typically from north or boresight
 - **Elevation (El)**: Angle above the horizon
 
-The relationship depends on the mounting convention. For an array facing
-the +x direction:
+The relationship depends on the mounting convention, and the library has
+two. :func:`~phased_array.azel_to_thetaphi` and
+:func:`~phased_array.thetaphi_to_azel` put boresight (+z) at Az = El = 0,
+with azimuth toward +x and elevation toward +y:
 
 .. math::
 
-   \text{Az} &= \phi \\
-   \text{El} &= 90° - \theta
+   (\sin\text{Az}\cos\text{El},\ \sin\text{El},\ \cos\text{Az}\cos\text{El})
+   = (\sin\theta\cos\phi,\ \sin\theta\sin\phi,\ \cos\theta)
+
+:func:`~phased_array.antenna_to_radar` treats the array face as pointing at
+zenith, so Az = φ and El = 90° − θ (see Antenna vs Radar Coordinate Systems
+below).
 
 .. code-block:: python
 
-   # Convert between conventions
-   theta, phi = pa.azel_to_thetaphi(az_deg=45, el_deg=30)
+   # Boresight-centered az/el; angles in radians
+   theta, phi = pa.azel_to_thetaphi(np.deg2rad(45), np.deg2rad(30))
+   print(f"az=45, el=30 -> theta={np.rad2deg(theta):.1f}, phi={np.rad2deg(phi):.1f}")
+
    az, el = pa.thetaphi_to_azel(theta, phi)
+   print(f"Round-trip: az={np.rad2deg(az):.1f}, el={np.rad2deg(el):.1f}")
 
 Sine-Space
 ----------
@@ -122,8 +131,15 @@ angle is:
    # Element normals
    print(f"Element 0 normal: ({geom.nx[0]:.2f}, {geom.ny[0]:.2f}, {geom.nz[0]:.2f})")
 
+   # Steer toward +x (theta=90, phi=0), broadside to the elements facing +x
+   k = pa.wavelength_to_k(1.0)
+   weights = pa.steering_vector(k, geom.x, geom.y, theta0_deg=90, phi0_deg=0, z=geom.z)
+
    # Use array_factor_conformal to account for element orientations
+   _, _, theta_grid, phi_grid = pa.create_theta_phi_grid(n_theta=181, n_phi=361)
    AF = pa.array_factor_conformal(theta_grid, phi_grid, geom, weights, k)
+   i, j = np.unravel_index(np.argmax(np.abs(AF)), AF.shape)
+   print(f"Peak: theta={np.rad2deg(theta_grid[i, j]):.1f}, phi={np.rad2deg(phi_grid[i, j]):.1f}")
 
 Coordinate Grid Generation
 --------------------------

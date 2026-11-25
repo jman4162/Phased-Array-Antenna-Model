@@ -97,14 +97,14 @@ incoherent measurements.
    print(f"S2 (+45/-45 preference): {S2:.3f}")
    print(f"S3 (R-L preference): {S3:.3f}")
 
-   # For RHCP: S0=2, S1=0, S2=0, S3=-2
+   # For RHCP: S0=2, S1=0, S2=0, S3=+2
 
 **Stokes parameter interpretation:**
 
 - **S0**: Total intensity
 - **S1**: Preference for horizontal (>0) vs vertical (<0)
 - **S2**: Preference for +45 deg (>0) vs -45 deg (<0)
-- **S3**: Preference for RHCP (<0) vs LHCP (>0)
+- **S3**: Preference for RHCP (>0) vs LHCP (<0)
 
 Axial Ratio
 -----------
@@ -128,7 +128,7 @@ ellipse:
    ar_lin = pa.axial_ratio(j_lin)
    print(f"Linear AR: {ar_lin}")  # inf
 
-   # Elliptical (3 dB axial ratio)
+   # Elliptical: |Ey/Ex| = 0.5 in quadrature gives AR = 2 (6 dB)
    j_ellip = pa.jones_vector(1.0, 0.5, phase_diff=np.pi/2)
    ar_ellip = pa.axial_ratio(j_ellip)
    print(f"Elliptical AR: {ar_ellip:.2f}")
@@ -223,12 +223,13 @@ the reference polarization with the principal planes.
    # Decompose into Ludwig-3 co/cross-pol
    E_co, E_cross = pa.ludwig3_decomposition(theta_grid, phi_grid, E_theta, E_phi)
 
-   # At phi=0, E_theta is co-pol
-   print(f"At phi=0: E_co = E_theta, E_cross = E_phi")
+   # At phi=0, E_theta is co-pol and E_phi is cross-pol
+   print(f"At phi=0: E_co == E_theta: {np.allclose(E_co[:, 0], E_theta[:, 0])}, "
+         f"E_cross == E_phi: {np.allclose(E_cross[:, 0], E_phi[:, 0])}")
 
-   # Compute co-pol and cross-pol patterns
-   co_pattern_dB = 20 * np.log10(np.abs(E_co) + 1e-10)
-   cross_pattern_dB = 20 * np.log10(np.abs(E_cross) + 1e-10)
+   # Compute co-pol and cross-pol patterns (power in dB)
+   co_pattern_dB = pa.linear_to_db(np.abs(E_co)**2)
+   cross_pattern_dB = pa.linear_to_db(np.abs(E_cross)**2)
 
 Using the convenience functions:
 
@@ -324,7 +325,7 @@ Co/cross-polar pattern cuts through any phi plane:
 
 .. code-block:: python
 
-   # Crossed dipoles radiate finite cross-pol away from boresight
+   # An x-directed dipole has finite Ludwig-3 cross-pol off boresight in the 45 deg plane
    theta_deg, co_dB, cross_dB = pa.compute_co_cross_pattern_cuts(
        geom.x, geom.y, weights, k,
        element_func=pa.dipole_element('x'),
@@ -339,7 +340,8 @@ Circularly polarized arrays with crossed-dipole elements:
    pattern = pa.compute_full_vector_pattern(
        geom.x, geom.y, weights, k, element_func=element
    )
-   ar_map = pattern.axial_ratio_map()   # 1.0 at boresight
+   ar_map = pattern.axial_ratio_map()
+   print(f"AR at boresight: {ar_map[0, 0]:.2f}")  # 1.00 (circular)
 
 Conformal arrays evaluate each element in its own local frame (local z
 along the element normal) and rotate the fields back to the global
@@ -359,12 +361,26 @@ solver) can be used anywhere an element function is accepted:
 
 .. code-block:: python
 
+   # Stand-in for solver data: an ideal x-pol patch sampled on a 2 deg grid
+   theta_s = np.linspace(0, np.pi/2, 46)                  # 1D, radians
+   phi_s = np.linspace(0, 2*np.pi, 180, endpoint=False)   # 1D, radians
+   T, P = np.meshgrid(theta_s, phi_s, indexing='ij')
+   E_theta_data, E_phi_data = pa.ideal_patch_element('x')(T, P)
+
    pattern_data = pa.GriddedElementPattern(
-       theta_grid, phi_grid, E_theta_data, E_phi_data
+       theta_s, phi_s, E_theta_data, E_phi_data
    )
    result = pa.compute_full_vector_pattern(
        geom.x, geom.y, weights, k, element_func=pattern_data
    )
+
+   # Compare with the analytic element the samples came from
+   exact = pa.compute_full_vector_pattern(
+       geom.x, geom.y, weights, k, element_func=pa.ideal_patch_element('x')
+   )
+   in_range = exact.power_dB() > -30
+   err = np.abs(result.power_dB() - exact.power_dB())[in_range].max()
+   print(f"Max interpolation error above -30 dB: {err:.3f} dB")
 
 Best Practices
 --------------

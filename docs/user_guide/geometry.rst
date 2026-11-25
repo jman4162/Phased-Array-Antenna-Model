@@ -15,6 +15,7 @@ rectangular grid with specified spacing.
 
 .. code-block:: python
 
+   import numpy as np
    import phased_array as pa
 
    # 16x16 array with half-wavelength spacing
@@ -47,7 +48,7 @@ than rectangular grids while maintaining similar grating lobe performance.
        Nx=16, Ny=16,
        dx=0.5  # dy is automatically set for equilateral spacing
    )
-   print(f"Elements: {geom.n_elements}")  # ~240 (fewer than 16x16)
+   print(f"Elements: {geom.n_elements}")  # 248 (fewer than 16x16)
 
 The row offset is ``dx/2``, and default ``dy = dx * sqrt(3)/2`` for equilateral
 triangular cells.
@@ -153,18 +154,21 @@ element orientations:
    geom = pa.create_cylindrical_array(16, 4, radius=3.0, height=2.0)
    k = pa.wavelength_to_k(1.0)
 
-   # Steering weights
-   weights = pa.steering_vector(k, geom.x, geom.y, theta0_deg=0, phi0_deg=0, z=geom.z)
+   # Steer toward +x (theta=90, phi=0), broadside to the elements facing +x
+   weights = pa.steering_vector(k, geom.x, geom.y, theta0_deg=90, phi0_deg=0, z=geom.z)
 
    # Use conformal array factor (accounts for element normals)
-   theta = np.linspace(0, np.pi/2, 91)
-   phi = np.linspace(0, 2*np.pi, 181)
+   theta = np.linspace(0, np.pi, 181)
+   phi = np.linspace(0, 2*np.pi, 361)
    theta_grid, phi_grid = np.meshgrid(theta, phi, indexing='ij')
 
    AF = pa.array_factor_conformal(
        theta_grid, phi_grid, geom, weights, k,
        element_pattern_func=pa.element_pattern
    )
+   AF_dB = pa.linear_to_db(np.abs(AF)**2)
+   AF_dB -= AF_dB.max()
+   print(f"Level toward theta=90, phi=0: {AF_dB[90, 0]:.2f} dB re peak")  # theta[90] = 90 deg
 
 Sparse/Thinned Arrays
 ---------------------
@@ -217,19 +221,14 @@ Optimize element selection to minimize an objective (e.g., peak sidelobe):
 .. code-block:: python
 
    def sidelobe_objective(geom):
-       # Compute peak sidelobe level
+       # Peak sidelobe level in the two principal cuts (main lobe excluded)
        k = pa.wavelength_to_k(1.0)
        weights = np.ones(geom.n_elements)
-       theta, phi, pattern_dB = pa.compute_full_pattern(
-           geom.x, geom.y, weights, k, n_theta=91, n_phi=1
+       angles_deg, cut1_dB, cut2_dB = pa.compute_pattern_cuts(
+           geom.x, geom.y, weights, k, n_points=361
        )
-       # Return peak sidelobe (excluding main beam)
-       main_beam_idx = np.argmax(pattern_dB[:, 0])
-       sidelobes = np.concatenate([
-           pattern_dB[:main_beam_idx-5, 0],
-           pattern_dB[main_beam_idx+5:, 0]
-       ])
-       return np.max(sidelobes)
+       return max(pa.compute_peak_sidelobe_level(angles_deg, cut1_dB),
+                  pa.compute_peak_sidelobe_level(angles_deg, cut2_dB))
 
    optimized_geom = pa.thin_array_genetic_algorithm(
        full_geom,
@@ -239,6 +238,8 @@ Optimize element selection to minimize an objective (e.g., peak sidelobe):
        n_generations=50,
        seed=42
    )
+   print(f"Peak sidelobe: full {sidelobe_objective(full_geom):.1f} dB, "
+         f"GA-thinned {sidelobe_objective(optimized_geom):.1f} dB")
 
 Subarray Architectures
 ----------------------
@@ -357,11 +358,16 @@ Computing Overlapped Subarray Patterns
        Nx_sub=4, Ny_sub=4,
        dx=0.5, dy=0.5
    )
+   weights_non = pa.compute_subarray_weights(arch_non, k, theta0_deg=15, phi0_deg=0)
 
-   # The overlapped architecture typically shows:
-   # - Lower grating lobes
-   # - Smoother transitions between subarrays
-   # - Better pattern quality at wide scan angles
+   # Peak sidelobe in the phi = 0 cut through the beam. Phase steering at
+   # the subarray level produces quantization (grating) lobes; overlap
+   # suppresses them.
+   for name, a, w in [("overlapped", arch, weights), ("non-overlapped", arch_non, weights_non)]:
+       angles_deg, cut_dB, _ = pa.compute_pattern_cuts(
+           a.geometry.x, a.geometry.y, w, k, theta0_deg=15, phi0_deg=0
+       )
+       print(f"{name}: peak sidelobe {pa.compute_peak_sidelobe_level(angles_deg, cut_dB):.1f} dB")
 
 ArrayGeometry Class
 -------------------
@@ -371,16 +377,20 @@ All geometry functions return an ``ArrayGeometry`` dataclass:
 .. code-block:: python
 
    from dataclasses import dataclass
+   from typing import Optional
 
    @dataclass
    class ArrayGeometry:
-       x: np.ndarray      # X positions (wavelengths or meters)
-       y: np.ndarray      # Y positions
-       z: np.ndarray      # Z positions (for 3D arrays)
-       nx: np.ndarray     # Normal vector X components
-       ny: np.ndarray     # Normal vector Y components
-       nz: np.ndarray     # Normal vector Z components
-       element_indices: np.ndarray  # Original indices
+       x: np.ndarray                    # X positions in meters
+       y: np.ndarray                    # Y positions in meters
+       z: Optional[np.ndarray] = None   # Z positions (3D/conformal arrays)
+       nx: Optional[np.ndarray] = None  # Normal vector X components
+       ny: Optional[np.ndarray] = None  # Normal vector Y components
+       nz: Optional[np.ndarray] = None  # Normal vector Z components
+       element_indices: Optional[np.ndarray] = None  # Indices before thinning
+       tx: Optional[np.ndarray] = None  # Tangent (polarization reference) X
+       ty: Optional[np.ndarray] = None  # Tangent Y
+       tz: Optional[np.ndarray] = None  # Tangent Z
 
    # Properties
    geom.n_elements   # Number of elements
@@ -393,7 +403,7 @@ Visualizing Array Geometries
 .. code-block:: python
 
    # 2D plot (matplotlib)
-   pa.plot_array_geometry(geom.x, geom.y)
+   pa.plot_array_geometry(geom)
 
    # 3D interactive plot (plotly)
    fig = pa.plot_array_geometry_3d_plotly(geom)

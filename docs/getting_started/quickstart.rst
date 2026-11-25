@@ -24,12 +24,14 @@ Create a 16x16 rectangular array with half-wavelength element spacing:
    )
    print(f"Array has {geom.n_elements} elements")
 
-The ``geom`` object contains the (x, y, z) positions of all elements in wavelengths.
+The ``geom`` object holds the (x, y, z) positions of all elements in meters.
+With the default ``wavelength=1.0``, meters and wavelengths coincide, so the
+spacing is 0.5 wavelength.
 
 Compute Steering Weights
 ------------------------
 
-To steer the beam to 30 degrees in theta (elevation):
+To steer the beam to theta = 30 degrees (measured from broadside):
 
 .. code-block:: python
 
@@ -63,8 +65,12 @@ Compute the full 3D radiation pattern:
        geom.x, geom.y, weights, k
    )
 
-   print(f"Pattern shape: {pattern_dB.shape}")
-   print(f"Peak gain: {pattern_dB.max():.1f} dB")
+   print(f"Pattern shape: {pattern_dB.shape}")  # (n_theta, n_phi)
+   print(f"Peak: {pattern_dB.max():.1f} dB (normalized to the beam peak)")
+
+   # theta and phi are 1D axes in radians
+   i, j = np.unravel_index(np.argmax(pattern_dB), pattern_dB.shape)
+   print(f"Beam at theta={np.rad2deg(theta[i]):.1f} deg, phi={np.rad2deg(phi[j]):.1f} deg")
 
 Visualize the Results
 ---------------------
@@ -85,8 +91,8 @@ Visualize the Results
 .. code-block:: python
 
    pa.plot_pattern_2d(
-       np.rad2deg(theta[:, 0]),
-       pattern_dB[:, 0],
+       np.rad2deg(theta),
+       pattern_dB[:, 0],  # column 0 is phi = 0
        title="E-plane Cut (phi=0°)"
    )
 
