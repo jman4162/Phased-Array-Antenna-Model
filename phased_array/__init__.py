@@ -39,12 +39,13 @@ __version__ = "1.7.0"
 # Beamforming functions
 from .beamforming import (  # Amplitude tapers; Null steering; Multiple beams; Beam spoiling; Adaptive
     adaptive_weights_gsc, adaptive_weights_smi, apply_taper_to_geometry,
-    chebyshev_taper_1d, chebyshev_taper_2d, compute_beam_isolation,
-    compute_null_depth, compute_sinr_improvement, compute_spoil_factor,
-    compute_taper_directivity_loss, compute_taper_efficiency,
-    cosine_on_pedestal_taper_1d, cosine_on_pedestal_taper_2d, cosine_taper_1d,
-    cosine_taper_2d, gaussian_taper_1d, gaussian_taper_2d, hamming_taper_1d,
-    hamming_taper_2d, hanning_taper_1d, hanning_taper_2d, monopulse_weights,
+    bayliss_taper_1d, bayliss_taper_2d, chebyshev_taper_1d, chebyshev_taper_2d,
+    compute_beam_isolation, compute_null_depth, compute_sinr_improvement,
+    compute_spoil_factor, compute_taper_directivity_loss,
+    compute_taper_efficiency, cosine_on_pedestal_taper_1d,
+    cosine_on_pedestal_taper_2d, cosine_taper_1d, cosine_taper_2d,
+    gaussian_taper_1d, gaussian_taper_2d, hamming_taper_1d, hamming_taper_2d,
+    hanning_taper_1d, hanning_taper_2d, monopulse_weights,
     multi_beam_weights_orthogonal, multi_beam_weights_superposition,
     null_steering_lcmv, null_steering_projection, plot_adapted_pattern,
     quadratic_phase_spoil, spoiled_beam_gain, spoiled_beamwidth,
@@ -181,6 +182,8 @@ __all__ = [
     # Beamforming - Amplitude tapers
     "taylor_taper_1d",
     "taylor_taper_2d",
+    "bayliss_taper_1d",
+    "bayliss_taper_2d",
     "chebyshev_taper_1d",
     "chebyshev_taper_2d",
     "hamming_taper_1d",

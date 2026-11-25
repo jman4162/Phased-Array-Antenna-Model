@@ -166,6 +166,170 @@ def chebyshev_taper_2d(
     return np.outer(tx, ty).ravel()
 
 
+def _bayliss_parameters(sidelobe_dB: float) -> Tuple[float, np.ndarray, float]:
+    """Bayliss A, the first four zero parameters and the peak position.
+
+    Polynomial fits in the sidelobe level (positive dB), Haupt, *Antenna
+    Arrays*, eqs. 3.34-3.35 (after Bayliss 1968 and Elliott).
+    """
+    s = abs(float(sidelobe_dB))
+    A = 0.3038753 + s * (0.05042922 + s * (-2.7989e-4 + s * (3.43e-6 - 2e-8 * s)))
+    xi = np.array([
+        0.9858302 + s * (0.0333885 + s * (1.4064e-4 + s * (-1.9e-6 + 1e-8 * s))),
+        2.00337487 + s * (0.01141548 + s * (4.159e-4 + s * (-3.73e-6 + 1e-8 * s))),
+        3.00636321 + s * (0.00683394 + s * (2.9281e-4 + s * (-1.61e-6))),
+        4.00518423 + s * (0.00501795 + s * (2.1735e-4 + s * (-8.8e-7))),
+    ])
+    peak = 0.4797212 + s * (0.01456692 + s * (-1.8739e-4 + s * (2.18e-6 - 1e-8 * s)))
+    return A, xi, peak
+
+
+def bayliss_taper_1d(
+    n: int,
+    sidelobe_dB: float = -30.0,
+    nbar: int = 5
+) -> np.ndarray:
+    """
+    Bayliss difference-pattern taper.
+
+    The difference-pattern counterpart of the Taylor taper: an
+    antisymmetric distribution whose pattern has an exact null on
+    boresight, ``nbar - 1`` nearly equal sidelobes at ``sidelobe_dB``
+    next to the two difference lobes, and sidelobes that decay beyond
+    them.
+
+    Parameters
+    ----------
+    n : int
+        Number of elements
+    sidelobe_dB : float
+        Design sidelobe level relative to the difference-pattern peak, in
+        dB. Either sign is accepted.
+    nbar : int
+        Number of nearly equal sidelobes plus one (at least 2). As for the
+        Taylor taper, deeper designs need larger values; for -35 dB use 6
+        or more.
+
+    Returns
+    -------
+    taper : ndarray
+        Antisymmetric real weights (n,), ``taper[::-1] == -taper``, scaled
+        to a peak magnitude of 1. Multiply by steering weights for a
+        steered difference beam.
+
+    Notes
+    -----
+    The weights sample the Bayliss line-source distribution
+    ``g(p) = sum_m B_m sin((m + 1/2) pi p)``, ``-1 <= p <= 1``, at the
+    element centers, with pattern zeros from Haupt, *Antenna Arrays*,
+    eqs. 3.33-3.34 (Bayliss 1968). For 32 to 128 elements the achieved
+    peak sidelobe is within about 0.4 dB of the design when ``nbar`` is
+    large enough. The difference peak lies near
+    ``z = L u / lambda`` given by Haupt eq. 3.35; the sampled designs put
+    it 2-6 percent farther out (6 percent at -20 dB, 2 percent at
+    -35 dB). (The worked example on Haupt p. 141
+    uses the Taylor parameter A = 0.95 instead of Bayliss's B, a
+    misprint.)
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> w = pa.bayliss_taper_1d(64, -30, nbar=5)
+    >>> bool(np.allclose(w[::-1], -w))
+    True
+    >>> geom = pa.create_rectangular_array(64, 1, 0.5, 0.5)
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> angles, cut, _ = pa.compute_pattern_cuts(geom.x, geom.y, w, k, n_points=8001)
+    >>> right = angles >= 0
+    >>> peak = cut[right].max()
+    >>> i = np.argmax(cut[right]); r = cut[right][i:]
+    >>> j = np.argmax(np.diff(r) > 0)          # first null beyond the lobe
+    >>> round(float(r[j:].max() - peak), 1)    # peak sidelobe in dB
+    -30.3
+    """
+    if nbar < 2:
+        raise ValueError(f"nbar must be at least 2, got {nbar}")
+    A, xi, _ = _bayliss_parameters(sidelobe_dB)
+
+    zeros = []
+    for m in range(1, nbar):
+        if m <= 4:
+            zeros.append((nbar + 0.5) * xi[m - 1] / np.sqrt(A**2 + nbar**2))
+        else:
+            zeros.append((nbar + 0.5) * np.sqrt((A**2 + m**2) / (A**2 + nbar**2)))
+    zeros = np.asarray(zeros)
+
+    coeffs = []
+    for m in range(nbar):
+        mu = m + 0.5
+        numerator = mu**2 * np.prod(1 - mu**2 / zeros**2)
+        denominator = np.prod([1 - mu**2 / (q + 0.5)**2 for q in range(nbar) if q != m])
+        coeffs.append((-1) ** m * numerator / denominator)
+
+    p = (2 * np.arange(n) - (n - 1)) / n
+    g = np.zeros(n)
+    for m, b in enumerate(coeffs):
+        g += b * np.sin((m + 0.5) * np.pi * p)
+    return g / np.max(np.abs(g))
+
+
+def bayliss_taper_2d(
+    Nx: int,
+    Ny: int,
+    sidelobe_dB: float = -30.0,
+    nbar: int = 5,
+    axis: str = 'x',
+    sum_sidelobe_dB: Optional[float] = None,
+    sum_nbar: int = 5
+) -> np.ndarray:
+    """
+    Separable 2D difference taper: Bayliss along one axis, sum taper along
+    the other.
+
+    Parameters
+    ----------
+    Nx, Ny : int
+        Number of elements in x and y
+    sidelobe_dB : float
+        Bayliss design sidelobe level (dB) along the difference axis
+    nbar : int
+        Bayliss ``nbar``
+    axis : str
+        'x' for an azimuth (x) difference pattern, 'y' for elevation
+    sum_sidelobe_dB : float, optional
+        Taylor sidelobe level for the other axis; uniform if omitted
+    sum_nbar : int
+        Taylor ``nbar`` for the other axis
+
+    Returns
+    -------
+    taper : ndarray
+        Weights flattened in the order of ``create_rectangular_array``
+        (x index major), shape (Nx * Ny,)
+
+    Examples
+    --------
+    >>> import phased_array as pa
+    >>> geom = pa.create_rectangular_array(16, 16, 0.5, 0.5)
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> w_delta = pa.steering_vector(k, geom.x, geom.y, 10, 0) * \\
+    ...     pa.bayliss_taper_2d(16, 16, -30, axis='x', sum_sidelobe_dB=-30)
+    >>> w_delta.shape
+    (256,)
+    """
+    if axis not in ('x', 'y'):
+        raise ValueError(f"axis must be 'x' or 'y', got {axis!r}")
+    n_diff, n_sum = (Nx, Ny) if axis == 'x' else (Ny, Nx)
+    diff = bayliss_taper_1d(n_diff, sidelobe_dB, nbar)
+    if sum_sidelobe_dB is None:
+        other = np.ones(n_sum)
+    else:
+        other = taylor_taper_1d(n_sum, sum_sidelobe_dB, sum_nbar)
+    tx, ty = (diff, other) if axis == 'x' else (other, diff)
+    return np.outer(tx, ty).ravel()
+
+
 def hamming_taper_1d(n: int) -> np.ndarray:
     """Generate 1D Hamming window."""
     return np.hamming(n)
