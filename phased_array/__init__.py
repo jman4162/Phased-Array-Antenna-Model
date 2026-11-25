@@ -55,6 +55,7 @@ from .coordinates import (antenna_to_cone, antenna_to_radar, cone_to_antenna,
                           rotation_matrix_yaw)
 # Core computation functions
 from .core import (array_factor_fft, array_factor_uv, array_factor_vectorized,
+                   array_manifold,
                    compute_directivity, compute_full_pattern,
                    compute_half_power_beamwidth, compute_pattern_cuts,
                    compute_peak_sidelobe_level,
@@ -128,6 +129,7 @@ __all__ = [
     "__version__",
     # Core
     "steering_vector",
+    "array_manifold",
     "array_factor_vectorized",
     "array_factor_uv",
     "array_factor_fft",

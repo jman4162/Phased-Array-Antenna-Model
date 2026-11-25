@@ -50,6 +50,15 @@ def steering_vector(
     weights : ndarray
         Complex steering weights (unit magnitude, appropriate phases)
 
+    Notes
+    -----
+    The array factor convention is ``AF(u) = sum_n w_n exp(+j k r_n . u)``
+    (see :func:`array_factor_vectorized`), so the weights are
+    ``exp(-j k r_n . u0)``, the conjugate of the array manifold returned
+    by :func:`array_manifold`. A plane wave arriving from ``u0`` produces
+    element signals proportional to the manifold, not to these weights;
+    build received snapshots with :func:`array_manifold`.
+
     Examples
     --------
     Create steering weights for a 4x4 array pointing at 30 degrees:
@@ -84,6 +93,57 @@ def steering_vector(
         phase = k * (x * u0 + y * v0 + z * w0)
 
     return np.exp(-1j * phase)
+
+
+def array_manifold(
+    k: float,
+    x: np.ndarray,
+    y: np.ndarray,
+    theta_deg: float,
+    phi_deg: float,
+    z: Optional[np.ndarray] = None
+) -> np.ndarray:
+    """
+    Array manifold (received signal vector) for a plane wave.
+
+    A plane wave arriving from direction ``(theta, phi)`` produces the
+    element signals ``a_n = exp(+j k r_n . u)``, with ``u`` the unit vector
+    toward the source. In this package the array output for weights ``w``
+    is ``w @ a`` (no conjugation), which equals
+    :func:`array_factor_vectorized` evaluated in that direction. Use this
+    function to synthesize snapshots for :func:`adaptive_weights_smi` and
+    :func:`adaptive_weights_gsc`.
+
+    Parameters
+    ----------
+    k : float
+        Wavenumber (2*pi/wavelength) in rad/m
+    x, y : ndarray
+        Element positions in meters
+    theta_deg : float
+        Arrival direction theta in degrees (from z-axis)
+    phi_deg : float
+        Arrival direction phi in degrees
+    z : ndarray, optional
+        Element z-positions in meters
+
+    Returns
+    -------
+    a : ndarray
+        Complex manifold vector, ``np.conj(steering_vector(...))``
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> geom = pa.create_rectangular_array(8, 1, 0.5, 0.5)
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> w = pa.steering_vector(k, geom.x, geom.y, 30, 0)
+    >>> a = pa.array_manifold(k, geom.x, geom.y, 30, 0)
+    >>> round(abs(w @ a), 6)  # matched beam: full array gain N
+    8.0
+    """
+    return np.conj(steering_vector(k, x, y, theta_deg, phi_deg, z))
 
 
 def array_factor_vectorized(
