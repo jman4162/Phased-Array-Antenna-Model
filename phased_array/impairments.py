@@ -5,11 +5,12 @@ Includes mutual coupling, phase quantization, element failures, and scan blindne
 """
 
 import warnings
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
 from .geometry import ArrayGeometry
+from .utils import SeedLike, _make_rng
 
 # ============== Mutual Coupling ==============
 
@@ -509,7 +510,7 @@ def simulate_element_failures(
     weights: np.ndarray,
     failure_rate: float,
     mode: str = 'off',
-    seed: Union[int, np.random.Generator, None] = None
+    seed: SeedLike = None
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Simulate random element failures.
@@ -524,9 +525,10 @@ def simulate_element_failures(
         'off' - failed elements have zero output
         'stuck' - failed elements stuck at nominal magnitude, random phase
         'full' - failed elements at full power, random phase
-    seed : int or numpy.random.Generator, optional
-        Seed or generator for reproducibility. A local generator is used;
-        NumPy's global random state is neither read nor modified.
+    seed : int, numpy.random.Generator or numpy.random.RandomState, optional
+        Seed or generator for reproducibility. An int reproduces the
+        results of earlier releases for the same seed. NumPy's global
+        random state is neither read nor modified.
 
     Returns
     -------
@@ -564,7 +566,7 @@ def simulate_element_failures(
     ...     weights, geom, k, failure_rates=[0.0, 0.05, 0.1], n_trials=5
     ... )
     """
-    rng = np.random.default_rng(seed)
+    rng = _make_rng(seed)
 
     n = len(weights)
     failure_mask = rng.random(n) < failure_rate
@@ -654,7 +656,7 @@ def analyze_graceful_degradation(
     failure_rates: List[float],
     n_trials: int = 100,
     mode: str = 'off',
-    seed: Union[int, np.random.Generator, None] = None
+    seed: SeedLike = None
 ) -> Dict[str, np.ndarray]:
     """
     Monte Carlo analysis of graceful degradation vs failure rate.
@@ -673,9 +675,10 @@ def analyze_graceful_degradation(
         Number of Monte Carlo trials per rate
     mode : str
         Failure mode
-    seed : int or numpy.random.Generator, optional
-        Seed or generator for the trials. A local generator is used;
-        NumPy's global random state is neither read nor modified.
+    seed : int, numpy.random.Generator or numpy.random.RandomState, optional
+        Seed or generator for the trials. An int gives the same trials as
+        calling ``np.random.seed(seed)`` before this function did in
+        earlier releases. NumPy's global random state is not touched.
 
     Returns
     -------
@@ -700,7 +703,7 @@ def analyze_graceful_degradation(
     x, y, z = geometry.x, geometry.y, geometry.z
 
     # Beam direction of the nominal weights, refined well below a beamwidth
-    rng = np.random.default_rng(seed)
+    rng = _make_rng(seed)
     theta_beam, phi_beam, beamwidth = _beam_direction(x, y, z, weights, k)
 
     # Cut through the beam: the phi_beam plane, theta from -90 to 90 deg,

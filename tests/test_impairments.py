@@ -621,15 +621,31 @@ class TestLocalRandomGenerators:
 
     def test_seed_reproducible_and_generator_accepted(self):
         w = np.ones(100)
-        a, ma = pa.simulate_element_failures(w, 0.3, seed=9)
-        b, mb = pa.simulate_element_failures(w, 0.3, seed=9)
+        _, ma = pa.simulate_element_failures(w, 0.3, seed=9)
+        _, mb = pa.simulate_element_failures(w, 0.3, seed=9)
         np.testing.assert_array_equal(ma, mb)
-        rng = np.random.default_rng(9)
-        c, mc = pa.simulate_element_failures(w, 0.3, seed=rng)
-        np.testing.assert_array_equal(mc, ma)
+        _, mc = pa.simulate_element_failures(w, 0.3, seed=np.random.default_rng(9))
+        _, md = pa.simulate_element_failures(w, 0.3, seed=np.random.default_rng(9))
+        np.testing.assert_array_equal(mc, md)
         # A shared generator advances between calls
-        _, md = pa.simulate_element_failures(w, 0.3, seed=rng)
-        assert not np.array_equal(mc, md)
+        rng = np.random.default_rng(9)
+        _, m1 = pa.simulate_element_failures(w, 0.3, seed=rng)
+        _, m2 = pa.simulate_element_failures(w, 0.3, seed=rng)
+        assert not np.array_equal(m1, m2)
+
+    def test_int_seed_matches_previous_releases(self):
+        # Earlier releases called np.random.seed(seed) and drew globally;
+        # an int seed must reproduce those draws.
+        w = np.ones(256)
+        np.random.seed(101)
+        legacy = np.random.random(256) < 0.02
+        _, mask = pa.simulate_element_failures(w, 0.02, seed=101)
+        np.testing.assert_array_equal(mask, legacy)
+        g = pa.create_rectangular_array(8, 8, 0.5, 0.5)
+        np.random.seed(4)
+        legacy_keep = np.sort(np.random.choice(64, 32, replace=False))
+        np.testing.assert_array_equal(pa.thin_array_random(g, 0.5, seed=4).element_indices,
+                                      legacy_keep)
 
     def test_degradation_seed_reproducible(self):
         g = pa.create_rectangular_array(8, 8, 0.5, 0.5)

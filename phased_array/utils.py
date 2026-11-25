@@ -381,3 +381,26 @@ def create_uv_grid(
     u_grid, v_grid = np.meshgrid(u_1d, v_1d, indexing='ij')
 
     return u_1d, v_1d, u_grid, v_grid
+
+
+SeedLike = Union[int, np.random.Generator, np.random.RandomState, None]
+
+
+def _make_rng(seed: SeedLike):
+    """
+    Random number source for library functions that take ``seed``.
+
+    - ``None``: a fresh ``numpy.random.Generator``
+    - ``int``: a local ``numpy.random.RandomState(seed)``, which yields the
+      same sequence earlier releases drew after ``np.random.seed(seed)``,
+      so seeded results stay reproducible across versions
+    - a ``Generator`` or ``RandomState``: used as is (and advanced)
+
+    NumPy's global random state is never read or modified.
+    """
+    if seed is None:
+        return np.random.default_rng()
+    if isinstance(seed, (np.random.Generator, np.random.RandomState)):
+        return seed
+    return np.random.RandomState(seed)
+

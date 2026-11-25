@@ -9,6 +9,8 @@ from typing import Callable, List, Optional, Tuple, Union
 
 import numpy as np
 
+from .utils import SeedLike, _make_rng
+
 
 @dataclass
 class ArrayGeometry:
@@ -675,7 +677,7 @@ def _subset(geometry: ArrayGeometry, keep: np.ndarray) -> ArrayGeometry:
 def thin_array_random(
     geometry: ArrayGeometry,
     thinning_factor: float,
-    seed: Union[int, np.random.Generator, None] = None
+    seed: SeedLike = None
 ) -> ArrayGeometry:
     """
     Randomly thin an array by removing elements.
@@ -686,9 +688,10 @@ def thin_array_random(
         Original array geometry
     thinning_factor : float
         Fraction of elements to keep (0 to 1)
-    seed : int or numpy.random.Generator, optional
-        Seed or generator for reproducibility. A local generator is used;
-        NumPy's global random state is neither read nor modified.
+    seed : int, numpy.random.Generator or numpy.random.RandomState, optional
+        Seed or generator for reproducibility. An int reproduces the
+        results of earlier releases for the same seed. NumPy's global
+        random state is neither read nor modified.
 
     Returns
     -------
@@ -696,7 +699,7 @@ def thin_array_random(
         Thinned array geometry. ``element_indices`` index the original
         (unthinned) array, also when thinning an already thinned geometry.
     """
-    rng = np.random.default_rng(seed)
+    rng = _make_rng(seed)
 
     n_keep = int(geometry.n_elements * thinning_factor)
     keep_indices = rng.choice(geometry.n_elements, n_keep, replace=False)
@@ -708,7 +711,7 @@ def thin_array_random(
 def thin_array_density_tapered(
     geometry: ArrayGeometry,
     density_func: Callable[[np.ndarray, np.ndarray], np.ndarray],
-    seed: Union[int, np.random.Generator, None] = None
+    seed: SeedLike = None
 ) -> ArrayGeometry:
     """
     Thin array with position-dependent density (statistical thinning).
@@ -719,16 +722,17 @@ def thin_array_density_tapered(
         Original array geometry
     density_func : callable
         Function(x, y) -> probability of keeping each element (0 to 1)
-    seed : int or numpy.random.Generator, optional
-        Seed or generator for reproducibility. A local generator is used;
-        NumPy's global random state is neither read nor modified.
+    seed : int, numpy.random.Generator or numpy.random.RandomState, optional
+        Seed or generator for reproducibility. An int reproduces the
+        results of earlier releases for the same seed. NumPy's global
+        random state is neither read nor modified.
 
     Returns
     -------
     geometry : ArrayGeometry
         Thinned geometry. ``element_indices`` index the original array.
     """
-    rng = np.random.default_rng(seed)
+    rng = _make_rng(seed)
 
     # Compute keep probability for each element
     keep_prob = density_func(geometry.x, geometry.y)
@@ -748,7 +752,7 @@ def thin_array_genetic_algorithm(
     population_size: int = 50,
     n_generations: int = 100,
     mutation_rate: float = 0.1,
-    seed: Union[int, np.random.Generator, None] = None
+    seed: SeedLike = None
 ) -> ArrayGeometry:
     """
     Optimize element selection using a genetic algorithm.
@@ -767,16 +771,17 @@ def thin_array_genetic_algorithm(
         Number of generations
     mutation_rate : float
         Probability of mutation per gene
-    seed : int or numpy.random.Generator, optional
-        Seed or generator for reproducibility. A local generator is used;
-        NumPy's global random state is neither read nor modified.
+    seed : int, numpy.random.Generator or numpy.random.RandomState, optional
+        Seed or generator for reproducibility. An int reproduces the
+        results of earlier releases for the same seed. NumPy's global
+        random state is neither read nor modified.
 
     Returns
     -------
     geometry : ArrayGeometry
         Optimized thinned geometry
     """
-    rng = np.random.default_rng(seed)
+    rng = _make_rng(seed)
 
     n_elements = geometry.n_elements
 
