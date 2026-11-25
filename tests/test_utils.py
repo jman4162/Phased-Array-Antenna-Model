@@ -3,7 +3,6 @@
 import numpy as np
 import pytest
 
-import phased_array as pa
 from phased_array.utils import (
     azel_to_thetaphi,
     create_theta_phi_grid,

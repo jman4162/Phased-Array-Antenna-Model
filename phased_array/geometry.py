@@ -4,8 +4,7 @@ Array geometry definitions and generation functions.
 Includes rectangular, circular, conformal, sparse, and subarray architectures.
 """
 
-import warnings
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Callable, List, Optional, Tuple, Union
 
 import numpy as np
@@ -962,7 +961,6 @@ def compute_subarray_weights(
     weights : ndarray
         Complex weights for all elements
     """
-    from .core import steering_vector
 
     geom = architecture.geometry
     weights = np.ones(geom.n_elements, dtype=complex)

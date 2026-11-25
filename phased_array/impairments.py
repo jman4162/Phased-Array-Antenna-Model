@@ -5,7 +5,7 @@ Includes mutual coupling, phase quantization, element failures, and scan blindne
 """
 
 import warnings
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -903,7 +903,6 @@ def scan_blindness_model(
         angular_distance = np.abs(theta_deg - theta_blind)
     else:
         # Point null at specific direction
-        phi_deg = np.rad2deg(phi)
         phi_blind_rad = np.deg2rad(phi_blind)
         theta_blind_rad = np.deg2rad(theta_blind)
 

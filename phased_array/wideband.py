@@ -5,7 +5,7 @@ Includes true-time delay (TTD), hybrid phase/TTD steering,
 beam squint analysis, and wideband pattern computation.
 """
 
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Optional, Union
 
 import numpy as np
 
@@ -354,7 +354,6 @@ def compute_beam_squint(
     ...     geom.x, geom.y, 30, 0, 10e9, freqs, steering_mode='ttd'
     ... )
     """
-    from .core import array_factor_vectorized
 
     c = C
     k_center = 2 * np.pi * center_frequency / c
@@ -683,7 +682,6 @@ def compute_subarray_weights_hybrid(
     v0 = np.sin(theta0) * np.sin(phi0)
 
     k = 2 * np.pi * frequency / c
-    wavelength = c / frequency
 
     weights = np.ones(geometry.n_elements, dtype=complex)
     subarray_delays = np.zeros(architecture.n_subarrays)

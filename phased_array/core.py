@@ -11,7 +11,7 @@ from typing import Optional, Tuple, Union
 import numpy as np
 from scipy.integrate import trapezoid
 
-from .utils import create_theta_phi_grid, linear_to_db, theta_phi_to_uv
+from .utils import create_theta_phi_grid, linear_to_db
 
 ArrayLike = Union[np.ndarray, float]
 

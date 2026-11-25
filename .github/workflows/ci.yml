@@ -8,12 +8,11 @@ on:
 
 jobs:
   test:
-    # ubuntu-latest (26.04) has no Python 3.9 build; 3.9 runs on 24.04
-    runs-on: ${{ matrix.python-version == '3.9' && 'ubuntu-24.04' || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
       - uses: actions/checkout@v4
@@ -48,16 +47,15 @@ jobs:
     # Exercise the declared minimums, NumPy 1.x, and modern NumPy 2.x
     # explicitly instead of relying on the default dependency resolution.
     name: deps (py${{ matrix.python-version }}, ${{ matrix.label }})
-    runs-on: ${{ matrix.os || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - python-version: "3.9"
+          - python-version: "3.10"
             label: "oldest supported"
-            os: ubuntu-24.04  # no Python 3.9 build for ubuntu-latest (26.04)
-            numpy: "numpy==1.20.0"
-            scipy: "scipy==1.7.0"
+            numpy: "numpy==1.21.3"
+            scipy: "scipy==1.7.2"
             matplotlib: "matplotlib==3.5.0"
           - python-version: "3.11"
             label: "numpy 1.x"
@@ -102,8 +100,21 @@ jobs:
           pip install isort
           isort --check-only --diff phased_array/
 
-      - name: Check code style
+      - name: Lint (ruff, config in pyproject.toml)
         run: |
-          pip install flake8
-          # Check for critical errors only (E9, F63, F7, F82)
-          flake8 phased_array/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          pip install ruff
+          ruff check phased_array/ tests/
+
+  typecheck:
+    # Informational until the existing type errors are cleared
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: mypy
+        run: |
+          python -m pip install -e . mypy
+          mypy

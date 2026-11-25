@@ -67,8 +67,8 @@ class TestSteeringVectorHybrid:
         )
         np.testing.assert_array_almost_equal(np.abs(weights), 1.0)
 
-    def test_hybrid_same_as_ttd_at_subarray_centers(self):
-        """Hybrid steering should give same phase at subarray centers as TTD."""
+    def test_hybrid_exact_at_center_frequency(self):
+        """At its design frequency hybrid TTD+phase steering is exact."""
         geom = pa.create_rectangular_array(16, 16, 0.5, 0.5)
         arch = pa.create_rectangular_subarrays(16, 16, 4, 4, 0.5, 0.5)
 
@@ -77,9 +77,10 @@ class TestSteeringVectorHybrid:
         weights_hybrid = pa.steering_vector_hybrid(
             geom, arch, theta0, phi0, freq
         )
-
-        # For elements at subarray centers, hybrid should match TTD
-        # (This is approximate since elements may not be exactly at centers)
+        k = 2 * np.pi * freq / 299792458.0
+        weights_exact = pa.steering_vector(k, geom.x, geom.y, theta0, phi0)
+        ratio = weights_hybrid / weights_exact
+        np.testing.assert_allclose(ratio, ratio[0], atol=1e-9)
 
 
 class TestBeamSquint:
@@ -310,7 +311,6 @@ class TestSubarrayDelaysTTD:
 
     def test_delays_non_negative(self):
         """Subarray delays should be non-negative."""
-        geom = pa.create_rectangular_array(16, 16, 0.5, 0.5)
         arch = pa.create_rectangular_subarrays(16, 16, 4, 4, 0.5, 0.5)
 
         delays = pa.compute_subarray_delays_ttd(
@@ -322,7 +322,6 @@ class TestSubarrayDelaysTTD:
 
     def test_broadside_zero_delays(self):
         """Broadside steering should have all zero delays."""
-        geom = pa.create_rectangular_array(16, 16, 0.5, 0.5)
         arch = pa.create_rectangular_subarrays(16, 16, 4, 4, 0.5, 0.5)
 
         delays = pa.compute_subarray_delays_ttd(
