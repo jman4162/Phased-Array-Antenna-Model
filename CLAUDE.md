@@ -14,7 +14,7 @@ All GitHub commits and contributions for this repository should be attributed to
 This repository contains a Python package and Jupyter notebooks for computing and visualizing phased array antenna radiation patterns. The project includes:
 
 1. **`phased_array/` package** - Comprehensive library for array modeling with:
-   - Vectorized array factor computation (50-100x faster than loops)
+   - Vectorized array factor computation (bounded memory; lattice fast path, see benchmarks/)
    - Multiple array geometries (rectangular, circular, conformal, sparse)
    - Beamforming techniques (tapering, null steering, multi-beam)
    - Realistic impairments (mutual coupling, quantization, failures, scan blindness)

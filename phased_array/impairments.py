@@ -5,11 +5,12 @@ Includes mutual coupling, phase quantization, element failures, and scan blindne
 """
 
 import warnings
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
 from .geometry import ArrayGeometry
+from .utils import SeedLike, _make_rng
 
 # ============== Mutual Coupling ==============
 
@@ -47,34 +48,47 @@ def mutual_coupling_matrix_theoretical(
             f"{coupling_model!r}"
         )
 
-    n = geometry.n_elements
-    C = np.eye(n, dtype=complex)
+    x = np.asarray(geometry.x, dtype=float)
+    y = np.asarray(geometry.y, dtype=float)
+    z = (np.zeros_like(x) if geometry.z is None
+         else np.asarray(geometry.z, dtype=float))
 
-    for i in range(n):
-        for j in range(n):
-            if i != j:
-                # Distance between elements
-                dx = geometry.x[i] - geometry.x[j]
-                dy = geometry.y[i] - geometry.y[j]
-                dz = 0
-                if geometry.z is not None:
-                    dz = geometry.z[i] - geometry.z[j]
+    # Pairwise k*r, built in place one coordinate at a time. Peak memory is
+    # about 34 N^2 bytes: kr and one scratch array (float64), the complex
+    # result, and a boolean mask.
+    kr = np.subtract.outer(x, x)
+    kr *= kr
+    scratch = np.subtract.outer(y, y)
+    scratch *= scratch
+    kr += scratch
+    np.subtract(z[:, None], z[None, :], out=scratch)
+    scratch *= scratch
+    kr += scratch
+    np.sqrt(kr, out=kr)
+    kr *= k
 
-                r = np.sqrt(dx**2 + dy**2 + dz**2)
-                kr = k * r
+    # Phase term exp(-j kr), written straight into the result
+    n = x.size
+    C = np.empty((n, n), dtype=complex)
+    np.cos(kr, out=C.real)
+    np.sin(kr, out=C.imag)
+    np.negative(C.imag, out=C.imag)
 
-                if coupling_model == 'sinc':
-                    # Sinc model: approximates dipole coupling
-                    if kr > 1e-10:
-                        coupling = coupling_coeff * np.sin(kr) / kr
-                    else:
-                        coupling = coupling_coeff
-                else:
-                    # Exponential decay
-                    coupling = coupling_coeff * np.exp(-kr / 2)
+    # Magnitude term into the scratch array
+    if coupling_model == 'sinc':
+        # sin(kr)/kr, equal to 1 for coincident elements
+        np.sin(kr, out=scratch)
+        coincident = kr <= 1e-12
+        np.divide(scratch, kr, out=scratch, where=~coincident)
+        scratch[coincident] = 1.0
+    else:
+        np.multiply(kr, -0.5, out=scratch)
+        np.exp(scratch, out=scratch)
+    scratch *= coupling_coeff
 
-                # Add phase based on distance
-                C[i, j] = coupling * np.exp(-1j * kr)
+    C.real *= scratch
+    C.imag *= scratch
+    np.fill_diagonal(C, 1.0)
 
     return C
 
@@ -389,7 +403,8 @@ def quantization_sidelobe_level(
 def quantization_lobes(
     n_bits: int,
     u_scan: float,
-    max_order: int = 1
+    max_order: int = 1,
+    element_spacing: Optional[float] = None
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Positions and levels of phase-quantization lobes at small scan.
@@ -403,8 +418,17 @@ def quantization_lobes(
 
     with a field level of ``1 / |1 + m * 2**n_bits|`` relative to the main
     beam, from the Fourier series of the sawtooth error. The model assumes
-    a large array and round-to-nearest quantization; lobes with
-    ``|u_m| > 1`` fall in invisible space.
+    a large array, round-to-nearest quantization, and a phase that
+    advances by much less than one quantization step per element
+    (``k d u_scan << 2*pi / 2**n_bits``). When the per-element phase step
+    approaches the quantization step, the positions still hold but the
+    levels can be off by several dB.
+
+    For an array with element spacing ``d`` the pattern repeats in ``u``
+    with period ``lambda / d``, so a lobe at ``|u_m| > 1`` can alias back
+    into visible space. Pass ``element_spacing`` to get the positions
+    folded into one period, ``[-lambda/(2d), lambda/(2d))``; without it
+    the continuous-aperture positions are returned.
 
     Parameters
     ----------
@@ -415,6 +439,9 @@ def quantization_lobes(
     max_order : int
         Highest lobe order; orders ``-max_order..-1, 1..max_order`` are
         returned
+    element_spacing : float, optional
+        Element spacing in wavelengths along the scan plane. When given,
+        positions are folded into one period of the array pattern.
 
     Returns
     -------
@@ -433,6 +460,9 @@ def quantization_lobes(
     orders = np.r_[np.arange(-max_order, 0), np.arange(1, max_order + 1)]
     factor = 1 + orders * 2.0**n_bits
     u_positions = u_scan * factor
+    if element_spacing is not None:
+        period = 1.0 / element_spacing
+        u_positions = np.mod(u_positions + period / 2, period) - period / 2
     levels_dB = -20 * np.log10(np.abs(factor))
     return u_positions, levels_dB
 
@@ -517,7 +547,7 @@ def simulate_element_failures(
     weights: np.ndarray,
     failure_rate: float,
     mode: str = 'off',
-    seed: Optional[int] = None
+    seed: SeedLike = None
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Simulate random element failures.
@@ -532,8 +562,10 @@ def simulate_element_failures(
         'off' - failed elements have zero output
         'stuck' - failed elements stuck at nominal magnitude, random phase
         'full' - failed elements at full power, random phase
-    seed : int, optional
-        Random seed
+    seed : int, numpy.random.Generator or numpy.random.RandomState, optional
+        Seed or generator for reproducibility. An int reproduces the
+        results of earlier releases for the same seed without reseeding
+        NumPy's global generator; None draws from the global generator.
 
     Returns
     -------
@@ -571,24 +603,23 @@ def simulate_element_failures(
     ...     weights, geom, k, failure_rates=[0.0, 0.05, 0.1], n_trials=5
     ... )
     """
-    if seed is not None:
-        np.random.seed(seed)
+    rng = _make_rng(seed)
 
     n = len(weights)
-    failure_mask = np.random.random(n) < failure_rate
+    failure_mask = rng.random(n) < failure_rate
     degraded_weights = weights.copy()
 
     if mode == 'off':
         degraded_weights[failure_mask] = 0
     elif mode == 'stuck':
         # Random phase, same magnitude
-        random_phase = np.random.uniform(0, 2*np.pi, np.sum(failure_mask))
+        random_phase = rng.uniform(0, 2*np.pi, np.sum(failure_mask))
         degraded_weights[failure_mask] = (
             np.abs(degraded_weights[failure_mask]) * np.exp(1j * random_phase)
         )
     elif mode == 'full':
         # Full power, random phase
-        random_phase = np.random.uniform(0, 2*np.pi, np.sum(failure_mask))
+        random_phase = rng.uniform(0, 2*np.pi, np.sum(failure_mask))
         degraded_weights[failure_mask] = np.exp(1j * random_phase)
     else:
         raise ValueError(f"Unknown failure mode: {mode}")
@@ -661,7 +692,8 @@ def analyze_graceful_degradation(
     k: float,
     failure_rates: List[float],
     n_trials: int = 100,
-    mode: str = 'off'
+    mode: str = 'off',
+    seed: SeedLike = None
 ) -> Dict[str, np.ndarray]:
     """
     Monte Carlo analysis of graceful degradation vs failure rate.
@@ -680,6 +712,11 @@ def analyze_graceful_degradation(
         Number of Monte Carlo trials per rate
     mode : str
         Failure mode
+    seed : int, numpy.random.Generator or numpy.random.RandomState, optional
+        Seed or generator for the trials. An int gives the same trials as
+        calling ``np.random.seed(seed)`` before this function did in
+        earlier releases, without reseeding the global generator; None
+        draws from the global generator.
 
     Returns
     -------
@@ -695,9 +732,8 @@ def analyze_graceful_degradation(
     Patterns are evaluated on a cut through the beam peak (the
     ``phi`` plane of the beam, theta from -90 to 90 degrees), and the
     sidelobe level is measured outside the first nulls with
-    :func:`~phased_array.core.compute_peak_sidelobe_level`. Trials use
-    NumPy's global random state; call ``np.random.seed`` first for
-    repeatable results.
+    :func:`~phased_array.core.compute_peak_sidelobe_level`. Pass ``seed``
+    for repeatable results.
     """
     from .core import array_factor_vectorized, compute_peak_sidelobe_level
     from .utils import linear_to_db
@@ -705,6 +741,7 @@ def analyze_graceful_degradation(
     x, y, z = geometry.x, geometry.y, geometry.z
 
     # Beam direction of the nominal weights, refined well below a beamwidth
+    rng = _make_rng(seed)
     theta_beam, phi_beam, beamwidth = _beam_direction(x, y, z, weights, k)
 
     # Cut through the beam: the phi_beam plane, theta from -90 to 90 deg,
@@ -733,7 +770,7 @@ def analyze_graceful_degradation(
 
         for trial in range(n_trials):
             degraded, _ = simulate_element_failures(
-                weights, rate, mode, seed=None
+                weights, rate, mode, seed=rng
             )
             pattern_dB = cut_power_dB(degraded)
 
@@ -903,7 +940,6 @@ def scan_blindness_model(
         angular_distance = np.abs(theta_deg - theta_blind)
     else:
         # Point null at specific direction
-        phi_deg = np.rad2deg(phi)
         phi_blind_rad = np.deg2rad(phi_blind)
         theta_blind_rad = np.deg2rad(theta_blind)
 

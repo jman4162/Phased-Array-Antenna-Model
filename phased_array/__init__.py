@@ -4,7 +4,8 @@ Phased Array Antenna Modeling Package
 A comprehensive Python library for computing and visualizing phased array
 antenna radiation patterns, including:
 
-- Vectorized array factor computation (50-100x faster than loops)
+- Vectorized array factor computation with bounded memory and a fast
+  path for elements on a rectilinear lattice
 - FFT-based pattern computation for uniform rectangular arrays
 - Various array geometries (rectangular, circular, conformal, sparse)
 - Beamforming techniques (tapering, null steering, multi-beam)
@@ -33,7 +34,7 @@ Example
 >>> theta, phi, pattern_dB = pa.compute_full_pattern(geom.x, geom.y, weights, k)
 """
 
-__version__ = "1.6.0"
+__version__ = "1.7.0"
 
 # Beamforming functions
 from .beamforming import (  # Amplitude tapers; Null steering; Multiple beams; Beam spoiling; Adaptive

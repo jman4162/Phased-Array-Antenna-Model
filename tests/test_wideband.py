@@ -67,8 +67,8 @@ class TestSteeringVectorHybrid:
         )
         np.testing.assert_array_almost_equal(np.abs(weights), 1.0)
 
-    def test_hybrid_same_as_ttd_at_subarray_centers(self):
-        """Hybrid steering should give same phase at subarray centers as TTD."""
+    def test_hybrid_exact_at_center_frequency(self):
+        """At its design frequency hybrid TTD+phase steering is exact."""
         geom = pa.create_rectangular_array(16, 16, 0.5, 0.5)
         arch = pa.create_rectangular_subarrays(16, 16, 4, 4, 0.5, 0.5)
 
@@ -77,9 +77,10 @@ class TestSteeringVectorHybrid:
         weights_hybrid = pa.steering_vector_hybrid(
             geom, arch, theta0, phi0, freq
         )
-
-        # For elements at subarray centers, hybrid should match TTD
-        # (This is approximate since elements may not be exactly at centers)
+        k = 2 * np.pi * freq / 299792458.0
+        weights_exact = pa.steering_vector(k, geom.x, geom.y, theta0, phi0)
+        ratio = weights_hybrid / weights_exact
+        np.testing.assert_allclose(ratio, ratio[0], atol=1e-9)
 
 
 class TestBeamSquint:
@@ -310,7 +311,6 @@ class TestSubarrayDelaysTTD:
 
     def test_delays_non_negative(self):
         """Subarray delays should be non-negative."""
-        geom = pa.create_rectangular_array(16, 16, 0.5, 0.5)
         arch = pa.create_rectangular_subarrays(16, 16, 4, 4, 0.5, 0.5)
 
         delays = pa.compute_subarray_delays_ttd(
@@ -322,7 +322,6 @@ class TestSubarrayDelaysTTD:
 
     def test_broadside_zero_delays(self):
         """Broadside steering should have all zero delays."""
-        geom = pa.create_rectangular_array(16, 16, 0.5, 0.5)
         arch = pa.create_rectangular_subarrays(16, 16, 4, 4, 0.5, 0.5)
 
         delays = pa.compute_subarray_delays_ttd(
@@ -398,3 +397,38 @@ class TestHybridSquintPhysics:
                                                steering_mode='hybrid', architecture=arch)
         assert 'note' in r
         assert r['ibw_ratio'] == pytest.approx(3.0)
+
+
+class TestInstantaneousBandwidthSearch:
+
+    def test_returned_bandwidth_sits_on_the_tolerance_edge(self):
+        # A grating lobe takes over the peak in this case, so squint jumps;
+        # linear extrapolation reported 5.4% although 35% was within 4.5 deg.
+        arch = pa.create_rectangular_subarrays(16, 16, 8, 8, 0.5, 0.5, 0.03)
+        g = arch.geometry
+        tol = 4.5
+        r = pa.analyze_instantaneous_bandwidth(g.x, g.y, 45, 0, 10e9, squint_tolerance_deg=tol,
+                                               steering_mode='hybrid', architecture=arch)
+
+        def squint(bw_percent):
+            f = 10e9 * np.array([1 - bw_percent / 200, 1, 1 + bw_percent / 200])
+            s = pa.compute_beam_squint(g.x, g.y, 45, 0, 10e9, f,
+                                       steering_mode='hybrid', architecture=arch)
+            return np.max(np.abs(s['squint']))
+
+        assert r['ibw_percent'] > 30
+        assert squint(r['ibw_percent']) <= tol
+        assert squint(r['ibw_percent'] + 0.01) > tol
+
+    def test_phase_only_edge(self):
+        g = pa.create_rectangular_array(16, 16, 0.5, 0.5, wavelength=299792458.0 / 10e9)
+        r = pa.analyze_instantaneous_bandwidth(g.x, g.y, 30, 0, 10e9, squint_tolerance_deg=2.0)
+        f = 10e9 * np.array([1 - r['ibw_percent'] / 200, 1, 1 + r['ibw_percent'] / 200])
+        s = pa.compute_beam_squint(g.x, g.y, 30, 0, 10e9, f)
+        assert np.max(np.abs(s['squint'])) <= 2.0
+
+
+def test_speed_of_light_is_shared():
+    from phased_array import utils, wideband
+    assert utils.C == wideband.C == 299792458.0
+    assert pa.frequency_to_k(10e9) == pytest.approx(2 * np.pi * 10e9 / 299792458.0)

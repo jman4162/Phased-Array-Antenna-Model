@@ -8,8 +8,7 @@ import io
 import json
 import warnings
 from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional
 
 import numpy as np
 
@@ -77,7 +76,7 @@ def export_pattern_csv(
 
     # Write metadata as comments
     if metadata:
-        buffer.write(f"# Phased Array Pattern Export\n")
+        buffer.write("# Phased Array Pattern Export\n")
         buffer.write(f"# Generated: {datetime.now().isoformat()}\n")
         for key, value in metadata.items():
             buffer.write(f"# {key}: {value}\n")
@@ -180,7 +179,7 @@ def export_pattern_2d_csv(
 
     # Write metadata
     if metadata:
-        buffer.write(f"# Phased Array 2D Pattern Export\n")
+        buffer.write("# Phased Array 2D Pattern Export\n")
         buffer.write(f"# Generated: {datetime.now().isoformat()}\n")
         for key, value in metadata.items():
             buffer.write(f"# {key}: {value}\n")
@@ -244,7 +243,7 @@ def export_uv_pattern_csv(
     buffer = io.StringIO()
 
     if metadata:
-        buffer.write(f"# Phased Array UV-Space Pattern Export\n")
+        buffer.write("# Phased Array UV-Space Pattern Export\n")
         buffer.write(f"# Generated: {datetime.now().isoformat()}\n")
         for key, value in metadata.items():
             buffer.write(f"# {key}: {value}\n")
@@ -304,7 +303,7 @@ def export_weights_csv(
     buffer = io.StringIO()
 
     if metadata:
-        buffer.write(f"# Phased Array Weights Export\n")
+        buffer.write("# Phased Array Weights Export\n")
         buffer.write(f"# Generated: {datetime.now().isoformat()}\n")
         buffer.write(f"# N_elements: {geometry.n_elements}\n")
         for key, value in metadata.items():
@@ -357,7 +356,7 @@ def export_geometry_csv(
     buffer = io.StringIO()
 
     if metadata:
-        buffer.write(f"# Phased Array Geometry Export\n")
+        buffer.write("# Phased Array Geometry Export\n")
         buffer.write(f"# Generated: {datetime.now().isoformat()}\n")
         buffer.write(f"# N_elements: {geometry.n_elements}\n")
         for key, value in metadata.items():
@@ -608,7 +607,7 @@ def export_coupling_matrix_csv(
     n = coupling_matrix.shape[0]
 
     if metadata:
-        buffer.write(f"# Mutual Coupling Matrix Export\n")
+        buffer.write("# Mutual Coupling Matrix Export\n")
         buffer.write(f"# Generated: {datetime.now().isoformat()}\n")
         buffer.write(f"# Format: {format}\n")
         buffer.write(f"# Size: {n} x {n}\n")

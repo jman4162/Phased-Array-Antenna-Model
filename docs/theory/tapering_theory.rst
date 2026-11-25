@@ -83,6 +83,9 @@ where A is determined by the desired sidelobe level:
 
 **Typical values:**
 
+Computed with ``pa.taylor_taper_1d`` for a 1000-element line array. The
+beamwidth factor is the half-power beamwidth relative to uniform weighting.
+
 .. list-table::
    :header-rows: 1
 
@@ -92,20 +95,20 @@ where A is determined by the desired sidelobe level:
      - Beamwidth Factor
    * - -25
      - 3
-     - 94%
-     - 1.08
+     - 90%
+     - 1.20
    * - -30
      - 4
-     - 90%
-     - 1.14
+     - 85%
+     - 1.27
    * - -35
      - 5
-     - 87%
-     - 1.19
+     - 81%
+     - 1.34
    * - -40
      - 6
-     - 84%
-     - 1.24
+     - 77%
+     - 1.41
 
 Chebyshev (Dolph-Chebyshev) Taper
 ---------------------------------
@@ -202,13 +205,27 @@ For 2D arrays, tapers can be applied as:
 
    a(r) = f\left(\sqrt{x^2 + y^2}\right)
 
-Separable tapers are simpler but produce slightly higher sidelobes in
-diagonal planes. The library uses separable tapers:
+Separable tapers are simpler. Their diagonal-plane sidelobes are roughly the
+product of the two principal-plane levels (near -60 dB for a -30 dB taper),
+and their efficiency is the product of the two 1D efficiencies. The library
+uses separable tapers:
 
 .. code-block:: python
 
+   import numpy as np
+   import phased_array as pa
+
+   Nx, Ny = 16, 16
+
    # 2D Taylor = product of 1D Taylors
    taper_2d = pa.taylor_taper_2d(Nx, Ny, sidelobe_dB=-30)
+
+   def taper_efficiency(a):
+       return np.abs(a.sum())**2 / (a.size * np.sum(np.abs(a)**2))
+
+   eta_1d = taper_efficiency(pa.taylor_taper_1d(Nx, sidelobe_dB=-30))
+   print(f"1D efficiency: {eta_1d:.3f}, squared: {eta_1d**2:.3f}")
+   print(f"2D efficiency: {taper_efficiency(taper_2d):.3f}")
 
 Taper Selection Guidelines
 --------------------------
@@ -233,8 +250,11 @@ Amplitude taper and phase steering are multiplicative:
 
 .. code-block:: python
 
+   geom = pa.create_rectangular_array(Nx, Ny, dx=0.5, dy=0.5)
+   k = pa.wavelength_to_k(1.0)
+
    # Steering weights (complex, unit magnitude)
-   steer = pa.steering_vector(k, geom.x, geom.y, theta0, phi0)
+   steer = pa.steering_vector(k, geom.x, geom.y, theta0_deg=30, phi0_deg=0)
 
    # Amplitude taper (real, varying magnitude)
    taper = pa.taylor_taper_2d(Nx, Ny, sidelobe_dB=-30)

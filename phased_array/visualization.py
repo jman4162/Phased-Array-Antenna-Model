@@ -4,29 +4,24 @@ Visualization functions for phased array patterns.
 Includes 3D Plotly plots, UV-space representation, and array geometry plots.
 """
 
-import warnings
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
 try:
     import plotly.graph_objects as go
-    from plotly.subplots import make_subplots
     PLOTLY_AVAILABLE = True
 except ImportError:
     PLOTLY_AVAILABLE = False
 
 try:
     import matplotlib.pyplot as plt
-    from matplotlib import cm
-    from mpl_toolkits.mplot3d import Axes3D
     MATPLOTLIB_AVAILABLE = True
 except ImportError:
     MATPLOTLIB_AVAILABLE = False
 
 from .geometry import ArrayGeometry
-from .utils import (is_visible_region, linear_to_db, theta_phi_to_uv,
-                    uv_to_theta_phi)
+from .utils import linear_to_db
 
 # ============== Matplotlib Plots (2D) ==============
 

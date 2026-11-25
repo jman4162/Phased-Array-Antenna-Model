@@ -18,31 +18,21 @@ Custom Optimization Objectives
    k = pa.wavelength_to_k(1.0)
 
    def peak_sidelobe_objective(geom):
-       """Objective function: minimize peak sidelobe level."""
+       """Objective: peak sidelobe level (dB) in both principal cuts."""
        weights = np.ones(geom.n_elements)
-       theta_deg, E_plane, _ = pa.compute_pattern_cuts(
-           geom.x, geom.y, weights, k, n_points=721
+       theta_deg, cut_1, cut_2 = pa.compute_pattern_cuts(
+           geom.x, geom.y, weights, k, n_points=1441
        )
+       return max(pa.compute_peak_sidelobe_level(theta_deg, cut_1),
+                  pa.compute_peak_sidelobe_level(theta_deg, cut_2))
 
-       # Find main beam region
-       peak_idx = np.argmax(E_plane)
-       half_bw = 10  # samples to exclude
-
-       # Peak sidelobe outside main beam
-       sidelobes = np.concatenate([
-           E_plane[:max(0, peak_idx-half_bw)],
-           E_plane[min(len(E_plane), peak_idx+half_bw):]
-       ])
-
-       return np.max(sidelobes) if len(sidelobes) > 0 else 0
-
-   # Optimize using genetic algorithm
+   # Optimize using genetic algorithm (more generations improve the result)
    optimized_geom = pa.thin_array_genetic_algorithm(
        full_geom,
        n_target=300,  # Keep 300 of 576 elements
        objective_func=peak_sidelobe_objective,
-       population_size=50,
-       n_generations=100,
+       population_size=30,
+       n_generations=40,
        mutation_rate=0.1,
        seed=42
    )
@@ -54,11 +44,10 @@ Custom Optimization Objectives
    w_full = np.ones(full_geom.n_elements)
    w_opt = np.ones(optimized_geom.n_elements)
 
-   _, E_full, _ = pa.compute_pattern_cuts(full_geom.x, full_geom.y, w_full, k)
-   _, E_opt, _ = pa.compute_pattern_cuts(optimized_geom.x, optimized_geom.y, w_opt, k)
-
-   print(f"Full array SLL: {np.max(E_full[100:]):.1f} dB")
-   print(f"Optimized SLL: {np.max(E_opt[100:]):.1f} dB")
+   random_geom = pa.thin_array_random(full_geom, 300 / 576, seed=42)
+   print(f"Full array peak sidelobe: {peak_sidelobe_objective(full_geom):.1f} dB")
+   print(f"Random thinning (300 elements): {peak_sidelobe_objective(random_geom):.1f} dB")
+   print(f"GA thinning (300 elements): {peak_sidelobe_objective(optimized_geom):.1f} dB")
 
 Adaptive Beamforming Simulation
 -------------------------------
@@ -83,7 +72,10 @@ Adaptive Beamforming Simulation
        """
        n = geom.n_elements
 
-       # Steering vector for desired signal
+       # Steering vector for desired signal. Building the covariance and the
+       # constraint from steering vectors (rather than the array manifold)
+       # conjugates both, so the result is already in the w @ x convention
+       # used by array_factor_vectorized; see the Conventions page.
        a_d = pa.steering_vector(k, geom.x, geom.y, theta_desired, phi_desired)
 
        # Build interference-plus-noise covariance matrix
@@ -122,7 +114,11 @@ Adaptive Beamforming Simulation
    theta_deg, E_conv, _ = pa.compute_pattern_cuts(geom.x, geom.y, w_conv, k)
    _, E_mvdr, _ = pa.compute_pattern_cuts(geom.x, geom.y, w_mvdr, k)
 
-   # MVDR will have deep nulls at interference locations
+   # MVDR puts deep nulls on the interferers
+   for theta_i in (45, 60):
+       depth_conv = pa.compute_null_depth(w_conv, geom, k, theta_i, 0, 20, 0)
+       depth_mvdr = pa.compute_null_depth(w_mvdr, geom, k, theta_i, 0, 20, 0)
+       print(f"{theta_i} deg: conventional {depth_conv:.1f} dB, MVDR {depth_mvdr:.1f} dB")
 
 Custom Array Geometries
 -----------------------
@@ -182,14 +178,10 @@ Mutual Coupling Compensation
 
    # Create coupling matrix
    geom = pa.create_rectangular_array(8, 8, dx=0.5, dy=0.5)
-   coupling = pa.mutual_coupling_matrix_theoretical(
-       geom.x, geom.y,
-       coupling_coefficient=0.3,
-       coupling_exponent=2.0
-   )
+   k = pa.wavelength_to_k(1.0)
+   coupling = pa.mutual_coupling_matrix_theoretical(geom, k, coupling_coeff=0.3)
 
    # Desired steering
-   k = pa.wavelength_to_k(1.0)
    w_desired = pa.steering_vector(k, geom.x, geom.y, 30, 0)
    w_desired *= pa.taylor_taper_2d(8, 8, sidelobe_dB=-30)
 
@@ -201,8 +193,11 @@ Mutual Coupling Compensation
 
    _, E_desired, _ = pa.compute_pattern_cuts(geom.x, geom.y, w_desired, k)
    _, E_result, _ = pa.compute_pattern_cuts(geom.x, geom.y, w_result, k)
+   _, E_uncomp, _ = pa.compute_pattern_cuts(geom.x, geom.y, coupling @ w_desired, k)
 
-   # E_result should be close to E_desired
+   above = E_desired > -40  # compare where the pattern is above -40 dB
+   print(f"Max pattern error, compensated: {np.max(np.abs(E_result - E_desired)[above]):.2e} dB")
+   print(f"Max pattern error, uncompensated: {np.max(np.abs(E_uncomp - E_desired)[above]):.1f} dB")
 
 Statistical Analysis with Monte Carlo
 -------------------------------------
@@ -211,45 +206,38 @@ Statistical Analysis with Monte Carlo
 
 .. code-block:: python
 
-   def monte_carlo_analysis(geom, k, weights, n_trials=1000,
+   def monte_carlo_analysis(geom, k, weights, theta0_deg, n_trials=1000,
                             pos_error_std=0.01,  # wavelengths
                             amp_error_std=0.5,   # dB
-                            phase_error_std=3.0  # degrees
-                            ):
+                            phase_error_std=3.0,  # degrees
+                            seed=0):
        """
        Monte Carlo analysis of array performance with random errors.
        """
-       results = {
-           'sll': [],
-           'hpbw': [],
-           'beam_pointing': [],
-           'directivity_loss': []
-       }
+       rng = np.random.default_rng(seed)
+       results = {'sll': [], 'hpbw': [], 'beam_pointing': []}
 
        for _ in range(n_trials):
            # Position errors
-           x_err = geom.x + pos_error_std * np.random.randn(geom.n_elements)
-           y_err = geom.y + pos_error_std * np.random.randn(geom.n_elements)
+           x_err = geom.x + pos_error_std * rng.standard_normal(geom.n_elements)
+           y_err = geom.y + pos_error_std * rng.standard_normal(geom.n_elements)
 
            # Amplitude and phase errors
-           amp_err = 10 ** (amp_error_std * np.random.randn(geom.n_elements) / 20)
-           phase_err = np.deg2rad(phase_error_std * np.random.randn(geom.n_elements))
+           amp_err = 10 ** (amp_error_std * rng.standard_normal(geom.n_elements) / 20)
+           phase_err = np.deg2rad(phase_error_std * rng.standard_normal(geom.n_elements))
            w_err = weights * amp_err * np.exp(1j * phase_err)
 
-           # Compute pattern
+           # Pattern cut through the nominal beam direction
            theta_deg, E_plane, _ = pa.compute_pattern_cuts(
-               x_err, y_err, w_err, k, n_points=721
+               x_err, y_err, w_err, k, theta0_deg=theta0_deg, n_points=1441
            )
 
            # Extract metrics
-           peak_idx = np.argmax(E_plane)
-           results['beam_pointing'].append(theta_deg[peak_idx])
+           results['beam_pointing'].append(theta_deg[np.argmax(E_plane)])
            results['hpbw'].append(pa.compute_half_power_beamwidth(theta_deg, E_plane))
+           results['sll'].append(pa.compute_peak_sidelobe_level(theta_deg, E_plane))
 
-           sidelobes = E_plane[np.abs(theta_deg) > 15]
-           results['sll'].append(np.max(sidelobes))
-
-       return {k: np.array(v) for k, v in results.items()}
+       return {name: np.array(v) for name, v in results.items()}
 
    # Run analysis
    geom = pa.create_rectangular_array(16, 16, dx=0.5, dy=0.5)
@@ -257,9 +245,9 @@ Statistical Analysis with Monte Carlo
    weights = pa.steering_vector(k, geom.x, geom.y, 20, 0)
    weights *= pa.taylor_taper_2d(16, 16, sidelobe_dB=-35)
 
-   stats = monte_carlo_analysis(geom, k, weights, n_trials=500)
+   stats = monte_carlo_analysis(geom, k, weights, theta0_deg=20, n_trials=200)
 
-   print("Performance Statistics (500 trials)")
+   print("Performance Statistics (200 trials)")
    print("-" * 40)
    print(f"SLL: {np.mean(stats['sll']):.1f} dB (std: {np.std(stats['sll']):.1f})")
    print(f"HPBW: {np.mean(stats['hpbw']):.2f} deg (std: {np.std(stats['hpbw']):.2f})")

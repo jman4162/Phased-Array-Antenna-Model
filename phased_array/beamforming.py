@@ -1099,8 +1099,9 @@ def adaptive_weights_smi(
     >>> k = pa.wavelength_to_k(1.0)
     >>> # Simulate interference data (normally from receiver)
     >>> n_snapshots = 100
-    >>> interference = np.random.randn(n_snapshots, geom.n_elements) + \\
-    ...                1j * np.random.randn(n_snapshots, geom.n_elements)
+    >>> rng = np.random.default_rng(0)
+    >>> interference = rng.standard_normal((n_snapshots, geom.n_elements)) + \\
+    ...                1j * rng.standard_normal((n_snapshots, geom.n_elements))
     >>> weights = pa.adaptive_weights_smi(
     ...     geom, k, theta_desired_deg=0, phi_desired_deg=0,
     ...     interference_data=interference, diagonal_loading=0.01
@@ -1206,8 +1207,9 @@ def adaptive_weights_gsc(
     >>> import phased_array as pa
     >>> geom = pa.create_rectangular_array(8, 8, dx=0.5, dy=0.5)
     >>> k = pa.wavelength_to_k(1.0)
-    >>> interference = np.random.randn(50, geom.n_elements) + \\
-    ...                1j * np.random.randn(50, geom.n_elements)
+    >>> rng = np.random.default_rng(0)
+    >>> interference = rng.standard_normal((50, geom.n_elements)) + \\
+    ...                1j * rng.standard_normal((50, geom.n_elements))
     >>> weights, B = pa.adaptive_weights_gsc(
     ...     geom, k, theta_desired_deg=0, phi_desired_deg=0,
     ...     interference_data=interference

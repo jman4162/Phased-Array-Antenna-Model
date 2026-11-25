@@ -379,3 +379,103 @@ class TestPeakSidelobeLevel:
             geom.x, geom.y, np.ones(8), pa.wavelength_to_k(1.0), n_points=2001)
         assert pa.compute_peak_sidelobe_level(angles, e_cut + 17.0) == pytest.approx(
             pa.compute_peak_sidelobe_level(angles, e_cut))
+
+
+class TestArrayFactorChunking:
+
+    def test_chunked_equals_single_pass(self, monkeypatch):
+        import phased_array.core as core
+        geom = pa.create_cylindrical_array(12, 5, 2.0, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        rng = np.random.default_rng(7)
+        w = rng.standard_normal(geom.n_elements) + 1j * rng.standard_normal(geom.n_elements)
+        _, _, theta, phi = pa.create_theta_phi_grid((0, np.pi), (0, 2 * np.pi), 37, 73)
+        ref = np.sum(w * np.exp(1j * k * (
+            np.multiply.outer(np.sin(theta) * np.cos(phi), geom.x)
+            + np.multiply.outer(np.sin(theta) * np.sin(phi), geom.y)
+            + np.multiply.outer(np.cos(theta), geom.z))), axis=-1)
+        full = pa.array_factor_vectorized(theta, phi, geom.x, geom.y, w, k, geom.z)
+        monkeypatch.setattr(core, "_AF_CHUNK_BYTES", 16 * geom.n_elements * 7)
+        chunked = pa.array_factor_vectorized(theta, phi, geom.x, geom.y, w, k, geom.z)
+        np.testing.assert_allclose(full, ref, rtol=1e-12, atol=1e-12)
+        np.testing.assert_allclose(chunked, ref, rtol=1e-12, atol=1e-12)
+
+    def test_uv_chunked(self, monkeypatch):
+        import phased_array.core as core
+        geom = pa.create_rectangular_array(9, 7, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        uu, vv = np.meshgrid(np.linspace(-1, 1, 41), np.linspace(-1, 1, 39), indexing='ij')
+        full = pa.array_factor_uv(uu, vv, geom.x, geom.y, np.ones(63), k)
+        monkeypatch.setattr(core, "_AF_CHUNK_BYTES", 16 * 63 * 5)
+        np.testing.assert_allclose(pa.array_factor_uv(uu, vv, geom.x, geom.y, np.ones(63), k),
+                                   full, rtol=1e-12, atol=1e-12)
+
+
+class TestLatticeFastPath:
+    """The factorized lattice sum must equal the direct sum."""
+
+    @staticmethod
+    def _direct(theta, phi, x, y, w, k, z=None):
+        u = np.sin(theta) * np.cos(phi)
+        v = np.sin(theta) * np.sin(phi)
+        ph = np.multiply.outer(u, x) + np.multiply.outer(v, y)
+        if z is not None:
+            ph = ph + np.multiply.outer(np.cos(theta), z)
+        return np.sum(w * np.exp(1j * k * ph), axis=-1)
+
+    @pytest.mark.parametrize("build", [
+        lambda: pa.create_rectangular_array(12, 9, 0.5, 0.6),
+        lambda: pa.create_triangular_array(10, 8, 0.6, 0.52),
+        lambda: pa.create_elliptical_array(3, 2, 0.5),
+        lambda: pa.create_elliptical_array(3, 2, 0.5, grid_type='triangular'),
+        lambda: pa.thin_array_random(pa.create_rectangular_array(16, 16, 0.5, 0.5), 0.6, seed=2),
+        lambda: pa.create_rectangular_array(8, 8, 0.5, 0.5, wavelength=0.03),
+    ])
+    def test_matches_direct_sum(self, build):
+        geom = build()
+        wavelength = 0.03 if np.ptp(geom.x) < 1 else 1.0
+        k = pa.wavelength_to_k(wavelength)
+        rng = np.random.default_rng(11)
+        w = rng.standard_normal(geom.n_elements) + 1j * rng.standard_normal(geom.n_elements)
+        _, _, theta, phi = pa.create_theta_phi_grid((0, np.pi), (0, 2 * np.pi), 31, 61)
+        got = pa.array_factor_vectorized(theta, phi, geom.x, geom.y, w, k)
+        ref = self._direct(theta, phi, geom.x, geom.y, w, k)
+        np.testing.assert_allclose(got, ref, rtol=1e-10, atol=1e-10 * np.abs(ref).max())
+
+    def test_constant_z_offset_and_duplicates(self):
+        geom = pa.create_rectangular_array(6, 6, 0.5, 0.5)
+        x = np.r_[geom.x, geom.x[:3]]  # duplicated positions add their weights
+        y = np.r_[geom.y, geom.y[:3]]
+        z = np.full(x.size, 0.37)
+        k = pa.wavelength_to_k(1.0)
+        w = np.linspace(0.5, 1.5, x.size) * np.exp(0.3j * np.arange(x.size))
+        _, _, theta, phi = pa.create_theta_phi_grid((0, np.pi), (0, 2 * np.pi), 25, 49)
+        got = pa.array_factor_vectorized(theta, phi, x, y, w, k, z)
+        np.testing.assert_allclose(got, self._direct(theta, phi, x, y, w, k, z), rtol=1e-10, atol=1e-10)
+
+    def test_irregular_positions_use_direct_path(self):
+        from phased_array.core import _lattice_factorization
+        geom = pa.create_circular_array(32, 2.0)
+        assert _lattice_factorization(geom.x, geom.y, np.ones(32)) is None
+        rect = pa.create_rectangular_array(8, 8, 0.5, 0.5)
+        xs, ys, W = _lattice_factorization(rect.x, rect.y, np.ones(64))
+        assert xs.size == 8 and ys.size == 8 and W.shape == (8, 8)
+
+
+class TestArrayFactorWeightBroadcast:
+
+    @pytest.mark.parametrize("build", [
+        lambda: pa.create_circular_array(32, 2.0),
+        lambda: pa.create_rectangular_array(4, 4, 0.5, 0.5),
+        lambda: pa.create_rectangular_array(8, 8, 0.5, 0.5),
+    ])
+    @pytest.mark.parametrize("n_angles", [5, 400])
+    def test_scalar_weights_broadcast(self, build, n_angles):
+        geom = build()
+        k = pa.wavelength_to_k(1.0)
+        theta = np.linspace(0, np.pi / 2, n_angles)
+        phi = np.full(n_angles, 0.3)
+        scalar = pa.array_factor_vectorized(theta, phi, geom.x, geom.y, 1.0, k)
+        full = pa.array_factor_vectorized(theta, phi, geom.x, geom.y,
+                                          np.ones(geom.n_elements), k)
+        np.testing.assert_allclose(scalar, full, rtol=1e-12, atol=1e-12)

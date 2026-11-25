@@ -11,7 +11,7 @@ from typing import Optional, Tuple, Union
 import numpy as np
 from scipy.integrate import trapezoid
 
-from .utils import create_theta_phi_grid, linear_to_db, theta_phi_to_uv
+from .utils import create_theta_phi_grid, linear_to_db
 
 ArrayLike = Union[np.ndarray, float]
 
@@ -158,8 +158,10 @@ def array_factor_vectorized(
     """
     Compute array factor using vectorized NumPy operations.
 
-    This is 50-100x faster than nested loop implementations for typical
-    grid sizes (181x181 angular points).
+    The element sum is a matrix-vector product over chunks of angles, so
+    memory stays bounded (about 64 MiB of intermediate phase terms) for
+    any grid and array size. See ``benchmarks/bench_array_factor.py`` for
+    timings against loop implementations.
 
     Parameters
     ----------
@@ -211,7 +213,8 @@ def array_factor_vectorized(
     >>> AF_grid.shape
     (91, 181)
     """
-    # Flatten inputs for computation
+    theta = np.asarray(theta)
+    phi = np.asarray(phi)
     original_shape = theta.shape
     theta_flat = theta.ravel()
     phi_flat = phi.ravel()
@@ -219,25 +222,124 @@ def array_factor_vectorized(
     # Direction cosines for all observation angles: shape (n_angles,)
     u = np.sin(theta_flat) * np.cos(phi_flat)
     v = np.sin(theta_flat) * np.sin(phi_flat)
+    w = np.cos(theta_flat) if z is not None else None
 
-    # Element positions: shape (n_elements,)
-    x = np.asarray(x).ravel()
-    y = np.asarray(y).ravel()
-    weights = np.asarray(weights).ravel()
-
-    # Phase contributions: shape (n_angles, n_elements)
-    # Using broadcasting: (n_angles, 1) * (1, n_elements)
-    phase = k * (np.outer(u, x) + np.outer(v, y))
-
-    if z is not None:
-        w = np.cos(theta_flat)
-        z = np.asarray(z).ravel()
-        phase += k * np.outer(w, z)
-
-    # Array factor: sum over elements
-    AF = np.sum(weights * np.exp(1j * phase), axis=1)
-
+    AF = _array_factor_from_cosines(u, v, w, x, y, z, weights, k)
     return AF.reshape(original_shape)
+
+
+# Upper bound on the (angles x elements) phase matrix built per chunk
+_AF_CHUNK_BYTES = 64 * 2**20
+
+# Below this many angles the direct sum beats lattice detection overhead
+_LATTICE_MIN_ANGLES = 256
+
+
+def _array_factor_from_cosines(
+    u: np.ndarray,
+    v: np.ndarray,
+    w: Optional[np.ndarray],
+    x: np.ndarray,
+    y: np.ndarray,
+    z: Optional[np.ndarray],
+    weights: np.ndarray,
+    k: float
+) -> np.ndarray:
+    """
+    AF(u) = sum_n w_n exp(+j k r_n . u) for flat direction-cosine arrays.
+
+    Angles are processed in chunks so the intermediate phase matrix stays
+    below ``_AF_CHUNK_BYTES`` (complex128) regardless of grid and array
+    size; the element sum is a matrix-vector product.
+    """
+    x = np.asarray(x, dtype=float).ravel()
+    y = np.asarray(y, dtype=float).ravel()
+    # Scalar or length-1 weights broadcast to every element
+    weights = np.broadcast_to(np.asarray(weights), x.shape).ravel()
+    if z is not None:
+        z = np.asarray(z, dtype=float).ravel()
+
+    # Planar elements on a rectilinear lattice (any z offset is common):
+    # factor exp(jk(xu + yv)) = exp(jkxu) exp(jkyv) over the distinct x and
+    # y coordinates, which needs far fewer complex exponentials. The
+    # one-time lattice detection only pays off over many angles.
+    if (x.size >= 16 and u.size >= _LATTICE_MIN_ANGLES
+            and (z is None or np.ptp(z) == 0)):
+        lattice = _lattice_factorization(x, y, weights)
+        if lattice is not None:
+            AF = _array_factor_lattice(u, v, *lattice, k)
+            if z is not None and z[0] != 0:
+                AF *= np.exp(1j * k * w * z[0])
+            return AF
+
+    n_angles = u.size
+    n_elements = max(x.size, 1)
+    chunk = max(1, _AF_CHUNK_BYTES // (16 * n_elements))
+
+    AF = np.empty(n_angles, dtype=complex)
+    for start in range(0, n_angles, chunk):
+        sl = slice(start, start + chunk)
+        phase = np.outer(u[sl], x)
+        phase += np.outer(v[sl], y)
+        if z is not None:
+            phase += np.outer(w[sl], z)
+        phase *= k
+        # Separate cos/sin is ~25% faster than np.exp of a complex array
+        AF[sl] = np.cos(phase) @ weights + 1j * (np.sin(phase) @ weights)
+    return AF
+
+
+def _distinct_coordinates(c: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """Distinct values of c (to ~1e-9 of its span) and each element's index."""
+    span = float(np.ptp(c)) or 1.0
+    keys = np.round((c - c.min()) / (span * 1e-9)).astype(np.int64)
+    _, index = np.unique(keys, return_inverse=True)
+    index = index.ravel()
+    values = np.bincount(index, weights=c) / np.bincount(index)
+    return values, index
+
+
+def _lattice_factorization(
+    x: np.ndarray,
+    y: np.ndarray,
+    weights: np.ndarray
+) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+    """
+    Distinct x and y coordinates and the weight matrix W[ix, iy], or None.
+
+    Returns None when the positions do not sit on a rectilinear lattice
+    compact enough for the factorized sum to pay off (more lattice points
+    than four times the element count).
+    """
+    xs, ix = _distinct_coordinates(x)
+    ys, iy = _distinct_coordinates(y)
+    if xs.size * ys.size > 4 * x.size:
+        return None
+    W = np.zeros((xs.size, ys.size), dtype=complex)
+    np.add.at(W, (ix, iy), weights)
+    return xs, ys, W
+
+
+def _array_factor_lattice(
+    u: np.ndarray,
+    v: np.ndarray,
+    xs: np.ndarray,
+    ys: np.ndarray,
+    W: np.ndarray,
+    k: float
+) -> np.ndarray:
+    """AF = sum_ij W_ij exp(jk xs_i u) exp(jk ys_j v), chunked over angles."""
+    n_angles = u.size
+    per_angle = 16 * (2 * xs.size + ys.size)
+    chunk = max(1, _AF_CHUNK_BYTES // per_angle)
+    WT = W.T
+    AF = np.empty(n_angles, dtype=complex)
+    for start in range(0, n_angles, chunk):
+        sl = slice(start, start + chunk)
+        A = np.exp(1j * k * np.outer(u[sl], xs))
+        B = np.exp(1j * k * np.outer(v[sl], ys))
+        AF[sl] = np.einsum('ai,ai->a', A, B @ WT)
+    return AF
 
 
 def array_factor_uv(
@@ -271,20 +373,11 @@ def array_factor_uv(
     AF : ndarray
         Complex array factor, same shape as u/v
     """
-    original_shape = u.shape
-    u_flat = u.ravel()
-    v_flat = v.ravel()
-
-    x = np.asarray(x).ravel()
-    y = np.asarray(y).ravel()
-    weights = np.asarray(weights).ravel()
-
-    # Phase: (n_angles, n_elements)
-    phase = k * (np.outer(u_flat, x) + np.outer(v_flat, y))
-
-    AF = np.sum(weights * np.exp(1j * phase), axis=1)
-
-    return AF.reshape(original_shape)
+    u = np.asarray(u, dtype=float)
+    v = np.asarray(v, dtype=float)
+    AF = _array_factor_from_cosines(u.ravel(), v.ravel(), None, x, y, None,
+                                    weights, k)
+    return AF.reshape(u.shape)
 
 
 def array_factor_fft(

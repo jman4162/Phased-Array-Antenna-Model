@@ -254,11 +254,11 @@ Analyze how pattern degrades with increasing failure rate:
    weights = (pa.steering_vector(k, geom.x, geom.y, theta0_deg=30, phi0_deg=0)
               * pa.taylor_taper_2d(16, 16, sidelobe_dB=-30))
 
-   np.random.seed(42)  # trials use NumPy's global random state
    results = pa.analyze_graceful_degradation(
        weights, geom, k,
        failure_rates=[0.0, 0.02, 0.05, 0.10, 0.20],
-       n_trials=50  # Average over multiple random failures
+       n_trials=50,  # Average over multiple random failures
+       seed=42
    )
 
    print(f"Nominal peak sidelobe: {results['sidelobe_ref_dB']:.1f} dB")

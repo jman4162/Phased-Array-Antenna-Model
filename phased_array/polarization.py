@@ -162,7 +162,6 @@ def axial_ratio(jones: np.ndarray) -> np.ndarray:
     a = np.abs(Ex)**2
     b = np.abs(Ey)**2
     c = 2 * np.real(Ex * np.conj(Ey))
-    d = 2 * np.imag(Ex * np.conj(Ey))
 
     # Semi-major and semi-minor axes
     sum_ab = a + b

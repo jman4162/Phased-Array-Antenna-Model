@@ -474,8 +474,7 @@ class TestGracefulDegradationSidelobes:
         geom = pa.create_rectangular_array(16, 16, 0.5, 0.5)
         k = pa.wavelength_to_k(1.0)
         w = pa.taylor_taper_2d(16, 16, -35) * pa.steering_vector(k, geom.x, geom.y, theta0, 0)
-        np.random.seed(0)
-        r = pa.analyze_graceful_degradation(w, geom, k, [0.0, 0.3], n_trials=10)
+        r = pa.analyze_graceful_degradation(w, geom, k, [0.0, 0.3], n_trials=10, seed=0)
         assert r['sidelobe_increase_mean_dB'][1] > 5.0
         assert r['gain_loss_mean_dB'][1] > 1.0
 
@@ -568,3 +567,137 @@ class TestGracefulDegradationOffPlaneBeam:
         theta, phi, _ = _beam_direction(geom.x, geom.y, geom.z, w, k)
         assert np.rad2deg(theta) == pytest.approx(37.3, abs=0.01)
         assert np.rad2deg(phi) == pytest.approx(51.7, abs=0.01)
+
+
+class TestCouplingMatrixVectorized:
+
+    @staticmethod
+    def _loop_reference(geometry, k, model, coeff):
+        n = geometry.n_elements
+        C = np.eye(n, dtype=complex)
+        z = geometry.z if geometry.z is not None else np.zeros(n)
+        for i in range(n):
+            for j in range(n):
+                if i == j:
+                    continue
+                r = np.sqrt((geometry.x[i] - geometry.x[j]) ** 2
+                            + (geometry.y[i] - geometry.y[j]) ** 2
+                            + (z[i] - z[j]) ** 2)
+                kr = k * r
+                if model == 'sinc':
+                    c = coeff * np.sin(kr) / kr if kr > 1e-10 else coeff
+                else:
+                    c = coeff * np.exp(-kr / 2)
+                C[i, j] = c * np.exp(-1j * kr)
+        return C
+
+    @pytest.mark.parametrize("model", ["sinc", "exponential"])
+    def test_matches_loop_implementation(self, model):
+        geom = pa.create_cylindrical_array(6, 3, 1.0, 0.5)
+        geom.x = geom.x.copy(); geom.x[1] = geom.x[0]  # coincident pair
+        geom.y = geom.y.copy(); geom.y[1] = geom.y[0]
+        geom.z = geom.z.copy(); geom.z[1] = geom.z[0]
+        k = pa.wavelength_to_k(1.0)
+        C = pa.mutual_coupling_matrix_theoretical(geom, k, coupling_model=model,
+                                                  coupling_coeff=0.27)
+        np.testing.assert_allclose(C, self._loop_reference(geom, k, model, 0.27),
+                                   rtol=1e-12, atol=1e-14)
+
+
+class TestLocalRandomGenerators:
+    """Library functions must not read or modify NumPy's global RNG."""
+
+    def test_global_state_untouched(self):
+        g = pa.create_rectangular_array(8, 8, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        np.random.seed(123)
+        expected = np.random.random(3)
+        np.random.seed(123)
+        pa.simulate_element_failures(np.ones(64), 0.2, seed=5)
+        pa.thin_array_random(g, 0.5, seed=5)
+        pa.thin_array_density_tapered(g, lambda x, y: np.full_like(x, 0.5), seed=5)
+        pa.analyze_graceful_degradation(np.ones(64), g, k, [0.1], n_trials=2, seed=5)
+        np.testing.assert_array_equal(np.random.random(3), expected)
+
+    def test_seed_reproducible_and_generator_accepted(self):
+        w = np.ones(100)
+        _, ma = pa.simulate_element_failures(w, 0.3, seed=9)
+        _, mb = pa.simulate_element_failures(w, 0.3, seed=9)
+        np.testing.assert_array_equal(ma, mb)
+        _, mc = pa.simulate_element_failures(w, 0.3, seed=np.random.default_rng(9))
+        _, md = pa.simulate_element_failures(w, 0.3, seed=np.random.default_rng(9))
+        np.testing.assert_array_equal(mc, md)
+        # A shared generator advances between calls
+        rng = np.random.default_rng(9)
+        _, m1 = pa.simulate_element_failures(w, 0.3, seed=rng)
+        _, m2 = pa.simulate_element_failures(w, 0.3, seed=rng)
+        assert not np.array_equal(m1, m2)
+
+    def test_int_seed_matches_previous_releases(self):
+        # Earlier releases called np.random.seed(seed) and drew globally;
+        # an int seed must reproduce those draws.
+        w = np.ones(256)
+        np.random.seed(101)
+        legacy = np.random.random(256) < 0.02
+        _, mask = pa.simulate_element_failures(w, 0.02, seed=101)
+        np.testing.assert_array_equal(mask, legacy)
+        g = pa.create_rectangular_array(8, 8, 0.5, 0.5)
+        np.random.seed(4)
+        legacy_keep = np.sort(np.random.choice(64, 32, replace=False))
+        np.testing.assert_array_equal(pa.thin_array_random(g, 0.5, seed=4).element_indices,
+                                      legacy_keep)
+
+    def test_degradation_seed_reproducible(self):
+        g = pa.create_rectangular_array(8, 8, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        r1 = pa.analyze_graceful_degradation(np.ones(64), g, k, [0.2], n_trials=5, seed=3)
+        r2 = pa.analyze_graceful_degradation(np.ones(64), g, k, [0.2], n_trials=5, seed=3)
+        np.testing.assert_array_equal(r1['gain_loss_mean_dB'], r2['gain_loss_mean_dB'])
+
+
+class TestQuantizationLobeAliasing:
+
+    def test_folded_positions_are_pattern_peaks(self):
+        N, d, B = 64, 0.5, 3
+        k = pa.wavelength_to_k(1.0)
+        geom = pa.create_rectangular_array(N, 1, d, d)
+        for us in (0.15, 0.225):
+            w = pa.quantize_phase(pa.steering_vector(k, geom.x, geom.y,
+                                                     np.rad2deg(np.arcsin(us)), 0), B)
+            u_pos, _ = pa.quantization_lobes(B, us, element_spacing=d)
+            assert np.all(np.abs(u_pos) <= 1.0)
+            u = np.linspace(-1, 1, 20001)
+            af = np.abs(np.exp(1j * k * np.outer(u, geom.x)) @ w)
+            for um in u_pos:
+                window = np.abs(u - um) < 2.0 / N
+                # A lobe peak lies within one beamwidth (1/(N d) / 2 = 1/N in
+                # u for d = 0.5) of the prediction; overlapping sidelobes can
+                # pull it slightly
+                assert abs(u[window][np.argmax(af[window])] - um) < 1.0 / N
+
+    def test_unfolded_default_unchanged(self):
+        u_pos, levels = pa.quantization_lobes(3, 0.225)
+        np.testing.assert_allclose(u_pos, [0.225 * -7, 0.225 * 9])
+        u_fold, levels_fold = pa.quantization_lobes(3, 0.225, element_spacing=0.5)
+        np.testing.assert_allclose(u_fold, [0.425, 0.025], atol=1e-12)
+        np.testing.assert_allclose(levels_fold, levels)
+
+
+
+class TestSeedNoneUsesGlobalGenerator:
+
+    def test_prior_np_random_seed_still_repeatable(self):
+        g = pa.create_rectangular_array(8, 8, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        np.random.seed(0)
+        r1 = pa.analyze_graceful_degradation(np.ones(64), g, k, [0.2], n_trials=5)
+        np.random.seed(0)
+        r2 = pa.analyze_graceful_degradation(np.ones(64), g, k, [0.2], n_trials=5)
+        np.testing.assert_array_equal(r1['gain_loss_mean_dB'], r2['gain_loss_mean_dB'])
+
+    def test_int_seed_does_not_reseed_global(self):
+        np.random.seed(7)
+        expected = np.random.random(4)
+        np.random.seed(7)
+        pa.simulate_element_failures(np.ones(50), 0.2, seed=123)
+        np.testing.assert_array_equal(np.random.random(4), expected)

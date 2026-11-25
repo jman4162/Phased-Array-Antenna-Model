@@ -3,7 +3,6 @@
 import numpy as np
 import pytest
 
-import phased_array as pa
 from phased_array.utils import (
     azel_to_thetaphi,
     create_theta_phi_grid,
@@ -85,7 +84,7 @@ class TestWavenumberFrequency:
         assert np.isclose(wavelength_to_k(0.5), 4 * np.pi)
 
     def test_frequency_to_wavelength(self):
-        assert np.isclose(frequency_to_wavelength(3e8), 1.0)
+        assert np.isclose(frequency_to_wavelength(299792458.0), 1.0)
         assert np.isclose(frequency_to_wavelength(10e9, c=3e8), 0.03)
 
     def test_frequency_to_k_consistent(self):

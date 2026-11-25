@@ -3,7 +3,6 @@ Unit tests for phased_array.polarization module.
 """
 
 import numpy as np
-import pytest
 import phased_array as pa
 
 
