@@ -84,7 +84,8 @@ from .impairments import (  # Mutual coupling; Phase quantization; Element failu
     analyze_quantization_effect, apply_mutual_coupling, apply_scan_blindness,
     compute_scan_loss, mismatch_loss, mutual_coupling_matrix_measured,
     mutual_coupling_matrix_theoretical, quantization_rms_error,
-    quantization_sidelobe_increase, quantize_phase, scan_blindness_model,
+    quantization_lobes, quantization_sidelobe_increase,
+    quantization_sidelobe_level, quantize_phase, scan_blindness_model,
     simulate_element_failures, surface_wave_scan_angle, vswr_vs_scan)
 # Polarization functions
 from .polarization import (axial_ratio, co_pol_pattern,
@@ -222,6 +223,8 @@ __all__ = [
     "quantize_phase",
     "quantization_rms_error",
     "quantization_sidelobe_increase",
+    "quantization_sidelobe_level",
+    "quantization_lobes",
     "analyze_quantization_effect",
     "simulate_element_failures",
     "analyze_graceful_degradation",
