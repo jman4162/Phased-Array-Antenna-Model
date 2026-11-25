@@ -266,6 +266,158 @@ def cos_q_polarized_element(
     return element_func
 
 
+def patch_design(
+    frequency: float,
+    eps_r: float,
+    height: float,
+    c: Optional[float] = None
+) -> dict:
+    """
+    Rectangular microstrip patch dimensions for a resonant frequency.
+
+    Transmission-line model design equations, Balanis, *Antenna Theory*,
+    eqs. 14-1, 14-2, 14-6 and 14-7: width for efficient radiation,
+    effective permittivity, fringing extension, and the physical and
+    effective resonant lengths.
+
+    Parameters
+    ----------
+    frequency : float
+        Resonant frequency in Hz
+    eps_r : float
+        Substrate relative permittivity
+    height : float
+        Substrate height in meters
+    c : float, optional
+        Speed of light in m/s (default 299792458; Balanis's examples use
+        3e8)
+
+    Returns
+    -------
+    design : dict
+        ``'width'``, ``'length'``, ``'effective_length'`` and
+        ``'delta_length'`` (fringing extension per edge) in meters, and
+        ``'eps_eff'``
+
+    Examples
+    --------
+    Balanis Example 14.1 (2.2 permittivity, 1.588 mm substrate, 10 GHz):
+
+    >>> import phased_array as pa
+    >>> d = pa.patch_design(10e9, 2.2, 0.1588e-2, c=3e8)
+    >>> round(d['width'] * 100, 3), round(d['length'] * 100, 3)
+    (1.186, 0.906)
+    >>> round(d['effective_length'] * 100, 3)
+    1.068
+    """
+    from .utils import C
+
+    c = C if c is None else c
+    width = c / (2 * frequency) * np.sqrt(2 / (eps_r + 1))
+    eps_eff = (eps_r + 1) / 2 + (eps_r - 1) / 2 / np.sqrt(1 + 12 * height / width)
+    wh = width / height
+    delta = (0.412 * height * (eps_eff + 0.3) * (wh + 0.264)
+             / ((eps_eff - 0.258) * (wh + 0.8)))
+    effective_length = c / (2 * frequency * np.sqrt(eps_eff))
+    return {
+        'width': float(width),
+        'length': float(effective_length - 2 * delta),
+        'effective_length': float(effective_length),
+        'delta_length': float(delta),
+        'eps_eff': float(eps_eff),
+    }
+
+
+def rectangular_patch_element(
+    width: float,
+    effective_length: float,
+    height: float,
+    wavelength: float = 1.0,
+    pol: str = 'x'
+) -> Callable:
+    """
+    Cavity-model rectangular microstrip patch over an infinite ground plane.
+
+    The two radiating slots of the TM010 mode give, in the package frame
+    (boresight +z, resonant length along the polarization axis),
+
+        E_theta = F cos(phi),  E_phi = -F cos(theta) sin(phi)     (pol='x')
+        F = sinc(k h cos(theta) / 2) sinc(k W v / 2) cos(k Le u / 2)
+
+    with ``sinc(a) = sin(a)/a``, direction cosines ``u`` (along the length)
+    and ``v`` (along the width), and zero field behind the ground plane.
+    This is Balanis, *Antenna Theory*, eqs. 14-43 to 14-46 rotated into
+    the package frame; the E-plane is ``phi = 0`` and the H-plane
+    ``phi = 90`` deg for ``pol='x'``.
+
+    Parameters
+    ----------
+    width : float
+        Patch width W (non-resonant dimension), same unit as ``wavelength``
+    effective_length : float
+        Effective resonant length Le = L + 2 dL (see :func:`patch_design`)
+    height : float
+        Substrate height h
+    wavelength : float
+        Free-space wavelength
+    pol : str
+        'x' (resonant length along x) or 'y'
+
+    Returns
+    -------
+    element_func : callable
+        ``f(theta, phi) -> (E_theta, E_phi)``, normalized to unit field at
+        boresight
+
+    Notes
+    -----
+    Unlike :func:`ideal_patch_element`, the E- and H-plane patterns differ:
+    for Balanis Example 14.1 the half-power beamwidths are 89.5 deg
+    (E-plane) and 77.2 deg (H-plane), and the E-plane stays -7.2 dB at
+    grazing while the H-plane falls to a null there.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> d = pa.patch_design(10e9, 2.2, 1.588e-3)
+    >>> lam = 299792458.0 / 10e9
+    >>> patch = pa.rectangular_patch_element(d['width'], d['effective_length'],
+    ...                                      1.588e-3, wavelength=lam)
+    >>> et, ep = patch(np.array([np.pi / 2]), np.array([0.0]))   # E-plane, grazing
+    >>> round(float(20 * np.log10(abs(et[0]))), 1)
+    -7.2
+    """
+    if pol not in ('x', 'y'):
+        raise ValueError(f"pol must be 'x' or 'y', got {pol!r}")
+    k = 2 * np.pi / wavelength
+
+    def sinc(a):
+        return np.sinc(a / np.pi)
+
+    boresight = sinc(k * height / 2)
+
+    def element_func(theta, phi, **kwargs):
+        theta = np.asarray(theta, dtype=float)
+        phi = np.asarray(phi, dtype=float)
+        cos_t = np.cos(theta)
+        ux = np.sin(theta) * np.cos(phi)
+        uy = np.sin(theta) * np.sin(phi)
+        along, across = (ux, uy) if pol == 'x' else (uy, ux)
+        F = (sinc(k * height * cos_t / 2) * sinc(k * width * across / 2)
+             * np.cos(k * effective_length * along / 2)) / boresight
+        F = np.where(cos_t > 0, F, 0.0)
+        if pol == 'x':
+            E_theta = F * np.cos(phi)
+            E_phi = -F * cos_t * np.sin(phi)
+        else:
+            E_theta = F * np.sin(phi)
+            E_phi = F * cos_t * np.cos(phi)
+        return E_theta.astype(complex), E_phi.astype(complex)
+
+    return element_func
+
+
 def crossed_dipole_element(phase_diff: float = -np.pi / 2) -> Callable:
     """
     Crossed-dipole (turnstile) element for circular polarization.
