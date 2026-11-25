@@ -72,6 +72,22 @@ def _check_n_sources(n_sources: int, n_elements: int) -> int:
     return n
 
 
+def _check_n_snapshots(n_snapshots: int) -> int:
+    n = int(n_snapshots)
+    if n != n_snapshots or n < 1:
+        raise ValueError(
+            f"n_snapshots must be a positive integer, got {n_snapshots}"
+        )
+    return n
+
+
+def _check_positive(name: str, value: float) -> float:
+    value = float(value)
+    if not np.isfinite(value) or value <= 0:
+        raise ValueError(f"{name} must be positive and finite, got {value}")
+    return value
+
+
 def _spectrum(geometry, k, theta_deg, phi_deg, quadratic):
     """Evaluate ``quadratic(A)`` over angle chunks; A holds manifold rows."""
     th, ph = np.broadcast_arrays(
@@ -151,9 +167,7 @@ def generate_snapshots(
     >>> X.shape
     (100, 8)
     """
-    n_snapshots = int(n_snapshots)
-    if n_snapshots < 1:
-        raise ValueError("n_snapshots must be at least 1")
+    n_snapshots = _check_n_snapshots(n_snapshots)
     directions = np.asarray(list(sources), dtype=float)
     if directions.size == 0:
         directions = directions.reshape(0, 2)
@@ -163,7 +177,14 @@ def generate_snapshots(
             f"got an array of shape {directions.shape}"
         )
     n_src = directions.shape[0]
-    snr = np.broadcast_to(np.asarray(snr_db, dtype=float), (n_src,))
+    snr = np.asarray(snr_db, dtype=float)
+    if snr.ndim == 0:
+        snr = np.full(n_src, float(snr))
+    elif snr.shape != (n_src,):
+        raise ValueError(
+            "snr_db must be a scalar or one value per source: got "
+            f"{snr.size} snr_db values for {n_src} sources"
+        )
     amp = np.sqrt(10.0 ** (snr / 10.0))
 
     rng = _make_rng(seed)
@@ -317,8 +338,9 @@ def capon_spectrum(
         Scan directions in degrees, broadcast against each other.
     diagonal_loading : float, optional
         Value ``delta`` added to the diagonal, ``R + delta I``, before
-        inversion. Use it when R is singular or estimated from few
-        snapshots (K < N makes the sample covariance singular).
+        inversion. Needed when R is singular, for example a sample
+        covariance from fewer snapshots than elements (rank K < N). A value
+        near the noise power is a common choice.
 
     Returns
     -------
@@ -328,13 +350,22 @@ def capon_spectrum(
         direction and is not normalized: in a source direction it
         approaches ``p + 1/N`` for a source of power ``p`` in unit noise.
 
+    Raises
+    ------
+    ValueError
+        If ``R + delta I`` is singular or numerically rank-deficient.
+
     Notes
     -----
     Capon resolves sources inside the Bartlett beamwidth when the SNR is
     high enough; its peaks broaden as the SNR drops. With a sample
     covariance from K Gaussian snapshots the expected level is the true
-    level times ``(K - N + 1) / K``. If R is singular the pseudo-inverse is
-    used.
+    level times ``(K - N + 1) / K``.
+
+    ``R + delta I`` must have full numerical rank
+    (:func:`numpy.linalg.matrix_rank`, tolerance ``N * eps`` times the
+    largest singular value). The inverse of a near-singular matrix gives a
+    meaningless spectrum, so the function raises instead of returning one.
 
     Examples
     --------
@@ -350,12 +381,18 @@ def capon_spectrum(
     20.0
     """
     R = _check_covariance(R, geometry.n_elements)
+    n_el = R.shape[0]
     if diagonal_loading:
-        R = R + diagonal_loading * np.eye(R.shape[0])
-    try:
-        R_inv = np.linalg.inv(R)
-    except np.linalg.LinAlgError:
-        R_inv = np.linalg.pinv(R)
+        R = R + diagonal_loading * np.eye(n_el)
+    rank = np.linalg.matrix_rank(R)
+    if rank < n_el:
+        raise ValueError(
+            f"R is singular or ill-conditioned (numerical rank {rank} of "
+            f"{n_el}; a sample covariance from K < N snapshots has rank K). "
+            "Pass diagonal_loading > 0, for example a value near the noise "
+            "power."
+        )
+    R_inv = np.linalg.inv(R)
 
     def quad(A):
         denom = np.real(np.sum(A.conj() * (A @ R_inv.T), axis=1))
@@ -491,6 +528,8 @@ def root_music(
     [-10.0, 25.0]
     """
     R = _check_covariance(R)
+    spacing = _check_positive("spacing", spacing)
+    wavelength = _check_positive("wavelength", wavelength)
     n_el = R.shape[0]
     m = _check_n_sources(n_sources, n_el)
     if m == 0:
@@ -562,6 +601,8 @@ def esprit(
     [-10.0, 25.0]
     """
     R = _check_covariance(R)
+    spacing = _check_positive("spacing", spacing)
+    wavelength = _check_positive("wavelength", wavelength)
     m = _check_n_sources(n_sources, R.shape[0])
     if m == 0:
         return np.empty(0)
@@ -594,6 +635,12 @@ def estimate_num_sources(
     n_sources : int
         The value of ``m`` in ``0 .. N-1`` that minimizes the criterion.
 
+    Raises
+    ------
+    ValueError
+        If ``n_snapshots <= N``, or R is numerically rank-deficient or not
+        positive definite.
+
     Notes
     -----
     With eigenvalues ``l_1 >= ... >= l_N`` of R and
@@ -603,8 +650,11 @@ def estimate_num_sources(
     - ``AIC(m) = 2 L(m) + 2 m (2N - m)``
     - ``MDL(m) = L(m) + m (2N - m) log(K) / 2``
 
-    Both assume white noise and K > N. Coherent sources reduce the rank of
-    the signal covariance and are undercounted.
+    Both assume white noise of nonzero power and K > N, so a ValueError is
+    raised for ``n_snapshots <= N`` or a numerically rank-deficient R
+    (with K <= N the smallest ``N - K`` eigenvalues are zero and the
+    criteria return a meaningless count). Coherent sources reduce the rank
+    of the signal covariance and are undercounted.
 
     References: M. Wax and T. Kailath, "Detection of signals by information
     theoretic criteria," IEEE Trans. ASSP, 33(2), 1985.
@@ -623,12 +673,22 @@ def estimate_num_sources(
     method = method.lower()
     if method not in ("mdl", "aic"):
         raise ValueError(f"method must be 'mdl' or 'aic', got {method!r}")
-    n_snapshots = int(n_snapshots)
-    if n_snapshots < 1:
-        raise ValueError("n_snapshots must be at least 1")
+    n_snapshots = _check_n_snapshots(n_snapshots)
+    n_el = R.shape[0]
+    if n_snapshots <= n_el:
+        raise ValueError(
+            f"MDL/AIC need more snapshots than elements: n_snapshots = "
+            f"{n_snapshots}, n_elements = {n_el}"
+        )
     vals, _ = _sorted_eigh(R)
-    n_el = vals.size
-    vals = np.maximum(vals, np.finfo(float).tiny * max(vals[0], 1.0))
+    # Same tolerance as numpy.linalg.matrix_rank; also catches indefinite R
+    if vals[-1] <= n_el * np.finfo(float).eps * abs(vals[0]):
+        rank = int(np.sum(vals > n_el * np.finfo(float).eps * abs(vals[0])))
+        raise ValueError(
+            f"R is rank-deficient or not positive definite (numerical rank "
+            f"{rank} of {n_el}); MDL and AIC assume white noise of nonzero "
+            "power"
+        )
 
     scores = np.empty(n_el)
     for m in range(n_el):
@@ -751,8 +811,11 @@ def crb_ula_single_source(
     0.0045
     """
     n = int(n_elements)
-    if n < 2:
-        raise ValueError("n_elements must be at least 2")
+    if n != n_elements or n < 2:
+        raise ValueError(f"n_elements must be an integer >= 2, got {n_elements}")
+    spacing = _check_positive("spacing", spacing)
+    wavelength = _check_positive("wavelength", wavelength)
+    n_snapshots = _check_n_snapshots(n_snapshots)
     snr = 10.0 ** (snr_db / 10.0)
     var_psi = 6.0 / (n_snapshots * snr * n * (n**2 - 1))
     k = 2 * np.pi / wavelength

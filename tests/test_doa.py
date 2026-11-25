@@ -63,6 +63,21 @@ class TestSnapshots:
         with pytest.raises(ValueError, match="pairs"):
             pa.generate_snapshots(_ula(4), K_NORM, (20, 0), 10, 8)
 
+    def test_snr_length_must_match_sources(self):
+        geom = _ula(4)
+        with pytest.raises(ValueError, match="1 snr_db values for 2 sources"):
+            pa.generate_snapshots(geom, K_NORM, [(10, 0), (30, 0)], [10], 8)
+        with pytest.raises(ValueError, match="3 snr_db values for 2 sources"):
+            pa.generate_snapshots(geom, K_NORM, [(10, 0), (30, 0)], [10, 5, 0], 8)
+
+    @pytest.mark.parametrize("bad", [3.7, 0, -2])
+    def test_rejects_non_integer_or_nonpositive_snapshots(self, bad):
+        with pytest.raises(ValueError, match="n_snapshots"):
+            pa.generate_snapshots(_ula(4), K_NORM, [(10, 0)], 10, bad)
+
+    def test_integral_float_snapshots_accepted(self):
+        assert pa.generate_snapshots(_ula(4), K_NORM, [(10, 0)], 10, 4.0, seed=0).shape == (4, 4)
+
     def test_seed_handling(self):
         geom = _ula(4)
         args = (geom, K_NORM, [(10, 0)], 5, 16)
@@ -165,6 +180,18 @@ class TestSpectra:
         assert np.all(np.isfinite(P))
         assert SCAN[np.argmax(P)] == pytest.approx(15, abs=2)
 
+    def test_capon_rejects_singular_covariance(self):
+        """K = 4 < N = 8 without loading used to return a spectrum peaking at -90 deg."""
+        geom = _ula(8)
+        X = pa.generate_snapshots(geom, K_NORM, [(15, 0)], 20, 4, seed=0)
+        R = pa.sample_covariance(X)
+        assert np.linalg.cond(R) > 1e15  # inv() succeeds on this matrix
+        with pytest.raises(ValueError, match="diagonal_loading"):
+            pa.capon_spectrum(R, geom, K_NORM, SCAN, 0)
+        a = pa.array_manifold(K_NORM, geom.x, geom.y, 15, 0)
+        with pytest.raises(ValueError, match="rank 1 of 8"):
+            pa.capon_spectrum(np.outer(a, a.conj()), geom, K_NORM, SCAN, 0)
+
     def test_input_validation(self):
         geom = _ula(8)
         with pytest.raises(ValueError, match="geometry has"):
@@ -203,6 +230,17 @@ class TestRootMusicEsprit:
         assert func(R, 1, 0.5)[0] == pytest.approx(12, abs=0.2)
         assert func(R[::-1, ::-1], 1, 0.5)[0] == pytest.approx(-12, abs=0.2)
 
+    @pytest.mark.parametrize("func", [pa.root_music, pa.esprit])
+    @pytest.mark.parametrize("kwargs", [
+        {"spacing": 0.0}, {"spacing": -0.5},
+        {"spacing": 0.5, "wavelength": 0.0}, {"spacing": 0.5, "wavelength": -1.0},
+        {"spacing": float("nan")},
+    ])
+    def test_rejects_nonpositive_spacing_or_wavelength(self, func, kwargs):
+        name = "wavelength" if "wavelength" in kwargs else "spacing"
+        with pytest.raises(ValueError, match=name):
+            func(np.eye(8), 1, **kwargs)
+
     def test_rmse_near_crb(self):
         """30 dB, 200 snapshots, 200 trials, N = 8, theta = 10 deg."""
         n, snr, n_snap, theta = 8, 30.0, 200, 10.0
@@ -225,6 +263,19 @@ class TestRootMusicEsprit:
 
 
 class TestCRB:
+
+    @pytest.mark.parametrize("args, name", [
+        ((8, 0.0, 10, 100, 20), "spacing"),
+        ((8, -0.5, 10, 100, 20), "spacing"),
+        ((8, 0.5, 10, 0, 20), "n_snapshots"),
+        ((8, 0.5, 10, 2.5, 20), "n_snapshots"),
+        ((1, 0.5, 10, 100, 20), "n_elements"),
+    ])
+    def test_rejects_invalid_arguments(self, args, name):
+        with pytest.raises(ValueError, match=name):
+            pa.crb_ula_single_source(*args)
+        with pytest.raises(ValueError, match="wavelength"):
+            pa.crb_ula_single_source(8, 0.5, 10, 100, 20, wavelength=0.0)
 
     def test_scaling(self):
         base = pa.crb_ula_single_source(8, 0.5, 10, 100, 20)
@@ -262,6 +313,22 @@ class TestModelOrder:
         assert pa.estimate_num_sources(R, 200, method="AIC") == 2
         with pytest.raises(ValueError, match="method"):
             pa.estimate_num_sources(R, 200, method="bic")
+
+    @pytest.mark.parametrize("n_snap", [4, 8])
+    def test_rejects_too_few_snapshots(self, n_snap):
+        """K = 4, N = 8 used to return 6 sources for one true source."""
+        geom = _ula(8)
+        X = pa.generate_snapshots(geom, K_NORM, [(15, 0)], 20, n_snap, seed=0)
+        with pytest.raises(ValueError, match="more snapshots than elements"):
+            pa.estimate_num_sources(pa.sample_covariance(X), n_snap)
+
+    def test_rejects_rank_deficient_covariance(self):
+        geom = _ula(8)
+        a = pa.array_manifold(K_NORM, geom.x, geom.y, 15, 0)
+        with pytest.raises(ValueError, match="rank-deficient"):
+            pa.estimate_num_sources(np.outer(a, a.conj()), 200)
+        with pytest.raises(ValueError, match="not positive definite"):
+            pa.estimate_num_sources(-np.eye(8), 200)
 
 
 class TestForwardBackward:
