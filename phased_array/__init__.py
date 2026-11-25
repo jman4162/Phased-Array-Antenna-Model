@@ -9,9 +9,11 @@ antenna radiation patterns, including:
 - FFT-based pattern computation for uniform rectangular arrays
 - Various array geometries (rectangular, circular, conformal, sparse)
 - Beamforming techniques (tapering, null steering, multi-beam)
+- Direction-of-arrival estimation (Bartlett, Capon, MUSIC, root-MUSIC, ESPRIT)
 - Linear array factor synthesis (binomial, Woodward-Lawson, least squares)
 - Realistic impairments (mutual coupling, quantization, failures, scan blindness)
 - Vector (polarized) patterns: co/cross-pol, axial ratio, XPD, conformal
+- Data import: Touchstone S-parameter files and tabulated element patterns
 - Interactive 3D visualization with Plotly
 - UV-space pattern representation
 
@@ -37,15 +39,18 @@ Example
 
 __version__ = "1.7.0"
 
+# Pattern summary
+from .analysis import pattern_summary
 # Beamforming functions
 from .beamforming import (  # Amplitude tapers; Null steering; Multiple beams; Beam spoiling; Adaptive
     adaptive_weights_gsc, adaptive_weights_smi, apply_taper_to_geometry,
-    chebyshev_taper_1d, chebyshev_taper_2d, compute_beam_isolation,
-    compute_null_depth, compute_sinr_improvement, compute_spoil_factor,
-    compute_taper_directivity_loss, compute_taper_efficiency,
-    cosine_on_pedestal_taper_1d, cosine_on_pedestal_taper_2d, cosine_taper_1d,
-    cosine_taper_2d, gaussian_taper_1d, gaussian_taper_2d, hamming_taper_1d,
-    hamming_taper_2d, hanning_taper_1d, hanning_taper_2d, monopulse_weights,
+    bayliss_taper_1d, bayliss_taper_2d, chebyshev_taper_1d, chebyshev_taper_2d,
+    compute_beam_isolation, compute_null_depth, compute_sinr_improvement,
+    compute_spoil_factor, compute_taper_directivity_loss,
+    compute_taper_efficiency, cosine_on_pedestal_taper_1d,
+    cosine_on_pedestal_taper_2d, cosine_taper_1d, cosine_taper_2d,
+    gaussian_taper_1d, gaussian_taper_2d, hamming_taper_1d, hamming_taper_2d,
+    hanning_taper_1d, hanning_taper_2d, monopulse_weights,
     multi_beam_weights_orthogonal, multi_beam_weights_superposition,
     null_steering_lcmv, null_steering_projection, plot_adapted_pattern,
     quadratic_phase_spoil, spoiled_beam_gain, spoiled_beamwidth,
@@ -57,11 +62,17 @@ from .coordinates import (antenna_to_cone, antenna_to_radar, cone_to_antenna,
                           rotation_matrix_yaw)
 # Core computation functions
 from .core import (array_factor_fft, array_factor_uv, array_factor_vectorized,
-                   array_manifold, compute_directivity, compute_full_pattern,
+                   array_manifold, compute_directivity,
+                   compute_first_null_beamwidth, compute_full_pattern,
                    compute_half_power_beamwidth, compute_pattern_cuts,
                    compute_peak_sidelobe_level, element_pattern,
                    element_pattern_cosine_tapered, steering_vector,
                    total_pattern)
+# Direction-of-arrival estimation
+from .doa import (bartlett_spectrum, capon_spectrum, crb_ula_single_source,
+                  esprit, estimate_num_sources, find_spectrum_peaks,
+                  generate_snapshots, music_spectrum, root_music,
+                  sample_covariance)
 # Export functions
 from .export import (export_array_config_json, export_coupling_matrix_csv,
                      export_geometry_csv, export_pattern_2d_csv,
@@ -86,8 +97,11 @@ from .impairments import (  # Mutual coupling; Phase quantization; Element failu
     compute_scan_loss, mismatch_loss, mutual_coupling_matrix_measured,
     mutual_coupling_matrix_theoretical, quantization_lobes,
     quantization_rms_error, quantization_sidelobe_increase,
-    quantization_sidelobe_level, quantize_phase, scan_blindness_model,
-    simulate_element_failures, surface_wave_scan_angle, vswr_vs_scan)
+    quantization_sidelobe_level, quantize_phase, random_error_sidelobe_level,
+    scan_blindness_model, simulate_element_failures, surface_wave_scan_angle,
+    vswr_vs_scan)
+# Data import (Touchstone, tabulated element patterns)
+from .io import load_element_pattern_csv, read_touchstone, write_touchstone
 # Polarization functions
 from .polarization import (axial_ratio, co_pol_pattern,
                            cross_pol_discrimination, cross_pol_pattern,
@@ -146,6 +160,8 @@ __all__ = [
     "compute_directivity",
     "compute_half_power_beamwidth",
     "compute_peak_sidelobe_level",
+    "compute_first_null_beamwidth",
+    "pattern_summary",
     # Utils
     "deg2rad",
     "rad2deg",
@@ -185,6 +201,8 @@ __all__ = [
     # Beamforming - Amplitude tapers
     "taylor_taper_1d",
     "taylor_taper_2d",
+    "bayliss_taper_1d",
+    "bayliss_taper_2d",
     "chebyshev_taper_1d",
     "chebyshev_taper_2d",
     "hamming_taper_1d",
@@ -219,6 +237,17 @@ __all__ = [
     "adaptive_weights_gsc",
     "compute_sinr_improvement",
     "plot_adapted_pattern",
+    # Direction-of-arrival estimation
+    "generate_snapshots",
+    "sample_covariance",
+    "bartlett_spectrum",
+    "capon_spectrum",
+    "music_spectrum",
+    "root_music",
+    "esprit",
+    "estimate_num_sources",
+    "find_spectrum_peaks",
+    "crb_ula_single_source",
     # Synthesis
     "binomial_taper_1d",
     "woodward_lawson_weights",
@@ -233,6 +262,7 @@ __all__ = [
     "quantization_sidelobe_increase",
     "quantization_sidelobe_level",
     "quantization_lobes",
+    "random_error_sidelobe_level",
     "analyze_quantization_effect",
     "simulate_element_failures",
     "analyze_graceful_degradation",
@@ -270,6 +300,10 @@ __all__ = [
     "load_pattern_npz",
     "export_coupling_matrix_csv",
     "export_summary_report",
+    # Data import
+    "read_touchstone",
+    "write_touchstone",
+    "load_element_pattern_csv",
     # Wideband / TTD
     "steering_vector_ttd",
     "steering_delays_ttd",

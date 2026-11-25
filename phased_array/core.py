@@ -1179,14 +1179,7 @@ def compute_peak_sidelobe_level(
         )
 
     n = pattern_dB.size
-    peak_idx = int(np.argmax(pattern_dB))
-
-    left = peak_idx
-    while left > 0 and pattern_dB[left - 1] <= pattern_dB[left]:
-        left -= 1
-    right = peak_idx
-    while right < n - 1 and pattern_dB[right + 1] <= pattern_dB[right]:
-        right += 1
+    peak_idx, left, right = _main_lobe_bounds(pattern_dB)
 
     outside = np.r_[np.arange(0, left), np.arange(right + 1, n)].astype(int)
     if outside.size == 0:
@@ -1197,3 +1190,70 @@ def compute_peak_sidelobe_level(
     if return_angle:
         return level, float(angles_deg[sl_idx])
     return level
+
+
+def _main_lobe_bounds(pattern_dB: np.ndarray) -> Tuple[int, int, int]:
+    """
+    Indices (peak, left null, right null) of the main lobe of a 1D cut.
+
+    Walks downhill from the maximum to the first local minimum on each
+    side; the minima are the first nulls (or the cut ends).
+    """
+    n = pattern_dB.size
+    peak_idx = int(np.argmax(pattern_dB))
+    left = peak_idx
+    while left > 0 and pattern_dB[left - 1] <= pattern_dB[left]:
+        left -= 1
+    right = peak_idx
+    while right < n - 1 and pattern_dB[right + 1] <= pattern_dB[right]:
+        right += 1
+    return peak_idx, left, right
+
+
+def compute_first_null_beamwidth(
+    angles_deg: np.ndarray,
+    pattern_dB: np.ndarray
+) -> float:
+    """
+    First-null beamwidth (FNBW) of a 1D pattern cut.
+
+    The angular distance between the first local minima on either side of
+    the main-beam peak, the same main-lobe boundaries that
+    :func:`compute_peak_sidelobe_level` uses. If the cut ends before a
+    null on one side, that end of the cut is used.
+
+    Parameters
+    ----------
+    angles_deg : ndarray
+        Cut angles in degrees, shape (n,)
+    pattern_dB : ndarray
+        Power pattern in dB on the same samples
+
+    Returns
+    -------
+    fnbw_deg : float
+        First-null beamwidth in degrees
+
+    Examples
+    --------
+    A 16-element half-wavelength array has its first nulls at
+    sin(theta) = +-1/8, so FNBW = 2 asin(0.125) = 14.36 degrees:
+
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> geom = pa.create_rectangular_array(16, 1, 0.5, 0.5)
+    >>> angles, cut, _ = pa.compute_pattern_cuts(
+    ...     geom.x, geom.y, np.ones(16), pa.wavelength_to_k(1.0), n_points=18001)
+    >>> round(pa.compute_first_null_beamwidth(angles, cut), 2)
+    14.36
+    """
+    angles_deg = np.asarray(angles_deg, dtype=float)
+    pattern_dB = np.asarray(pattern_dB, dtype=float)
+    if angles_deg.ndim != 1 or angles_deg.shape != pattern_dB.shape:
+        raise ValueError(
+            "angles_deg and pattern_dB must be 1D arrays of the same length, "
+            f"got shapes {angles_deg.shape} and {pattern_dB.shape}"
+        )
+    _, left, right = _main_lobe_bounds(pattern_dB)
+    return float(abs(angles_deg[right] - angles_deg[left]))
+

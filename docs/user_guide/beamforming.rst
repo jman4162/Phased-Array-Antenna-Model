@@ -243,6 +243,38 @@ Sum and difference patterns for angle tracking.
    # The halves are split about the array centroid; elements on the split
    # line (odd-sized arrays) get zero weight.
 
+The difference weights above are uniform in amplitude, so the difference
+pattern has high sidelobes. A Bayliss taper lowers them while keeping the
+boresight null; pair it with a Taylor taper on the other axis:
+
+.. code-block:: python
+
+   n = int(round(np.sqrt(geom.n_elements)))  # square array from above
+   steer = pa.steering_vector(k, geom.x, geom.y, theta0_deg=20, phi0_deg=0)
+   w_sum = steer * pa.taylor_taper_2d(n, n, sidelobe_dB=-30)
+   w_delta_az = steer * pa.bayliss_taper_2d(n, n, sidelobe_dB=-30, axis='x',
+                                            sum_sidelobe_dB=-30)
+
+   angles, sum_cut, _ = pa.compute_pattern_cuts(geom.x, geom.y, w_sum, k,
+                                                theta0_deg=20, n_points=4001)
+   print(f"Sum peak sidelobe: {pa.compute_peak_sidelobe_level(angles, sum_cut):.1f} dB")
+
+   def difference_sidelobe(w):
+       """Peak sidelobe beyond the null outside the upper difference lobe."""
+       a, cut, _ = pa.compute_pattern_cuts(geom.x, geom.y, w, k,
+                                           theta0_deg=20, n_points=4001)
+       upper = a >= 20
+       c = cut[upper]
+       i = int(np.argmax(c))
+       while i < c.size - 1 and c[i + 1] <= c[i]:
+           i += 1
+       return c[i + 1:].max() - cut.max()
+
+   w_delta_uniform = pa.monopulse_weights(geom, k, theta0_deg=20, phi0_deg=0,
+                                          mode='delta_az')
+   print(f"Difference sidelobe, uniform: {difference_sidelobe(w_delta_uniform):.1f} dB")
+   print(f"Difference sidelobe, Bayliss: {difference_sidelobe(w_delta_az):.1f} dB")
+
 Applying Tapers to Arbitrary Geometries
 ---------------------------------------
 

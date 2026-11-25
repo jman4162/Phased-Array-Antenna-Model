@@ -110,6 +110,31 @@ Array Geometry Plot
        title='16x16 Array Element Positions'
    )
 
+Pattern Summary
+---------------
+
+:func:`~phased_array.pattern_summary` reports the numbers usually quoted
+next to a pattern plot: beam direction, directivity, half-power and
+first-null beamwidths and peak sidelobe level in two orthogonal cuts, the
+highest sidelobe anywhere in the visible hemisphere, and any grating lobes.
+
+.. code-block:: python
+
+   summary = pa.pattern_summary(geom.x, geom.y, weights, k)
+
+   print(f"Beam: theta = {summary['theta0_deg']:.1f}, phi = {summary['phi0_deg']:.1f} deg")
+   print(f"Directivity: {summary['directivity_dBi']:.1f} dBi (hemisphere)")
+   print("HPBW (cut 1, cut 2): {:.2f}, {:.2f} deg".format(*summary['hpbw_deg']))
+   print("FNBW (cut 1, cut 2): {:.2f}, {:.2f} deg".format(*summary['fnbw_deg']))
+   print("Cut sidelobes: {:.1f}, {:.1f} dB".format(*summary['sll_dB']))
+   print(f"Peak sidelobe over the hemisphere: {summary['peak_sidelobe_dB']:.1f} dB")
+   print(f"Grating lobes: {summary['grating_lobes']}")
+
+The cut values describe the two planes through the beam; the hemisphere
+value also catches sidelobes that neither cut passes through, which matters
+for beams steered off the principal planes. With the beam direction left
+out, the function locates the beam itself.
+
 UV-Space Visualization
 ----------------------
 

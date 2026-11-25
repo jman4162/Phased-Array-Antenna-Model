@@ -20,6 +20,8 @@ Modules
      - Array geometry creation: rectangular, triangular, circular, conformal, sparse
    * - :doc:`beamforming`
      - Beamforming techniques: amplitude tapers, null steering, multi-beam, beam spoiling, adaptive
+   * - :doc:`doa`
+     - Direction-of-arrival estimation: Bartlett, Capon, MUSIC, root-MUSIC, ESPRIT, MDL/AIC, CRB
    * - :doc:`synthesis`
      - Array factor synthesis: binomial taper, Woodward-Lawson, least squares
    * - :doc:`impairments`
@@ -36,6 +38,8 @@ Modules
      - Utility functions: coordinate transforms, unit conversions
    * - :doc:`export`
      - Data export: CSV, JSON, NPZ formats
+   * - :doc:`io`
+     - Data import: Touchstone S-parameter files, tabulated element patterns
 
 Quick Reference
 ---------------
@@ -72,6 +76,7 @@ Most Commonly Used Functions
    core
    geometry
    beamforming
+   doa
    synthesis
    impairments
    polarization
@@ -81,3 +86,4 @@ Most Commonly Used Functions
    wideband
    utils
    export
+   io

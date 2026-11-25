@@ -10,8 +10,9 @@ radiation patterns.
 
 **User Guide**
    In-depth guides covering :doc:`user_guide/geometry`, :doc:`user_guide/beamforming`,
-   :doc:`user_guide/synthesis`, :doc:`user_guide/impairments`, :doc:`user_guide/wideband`,
-   and :doc:`user_guide/visualization`.
+   :doc:`user_guide/synthesis`, :doc:`user_guide/doa`, :doc:`user_guide/impairments`,
+   :doc:`user_guide/data_import`, :doc:`user_guide/wideband`, and
+   :doc:`user_guide/visualization`.
 
 **API Reference**
    Complete :doc:`api/index` for all functions, classes, and modules with detailed examples.
@@ -28,12 +29,16 @@ Features
   see ``benchmarks/bench_array_factor.py``)
 - **Multiple geometries** - Rectangular, triangular, circular, cylindrical, spherical, and sparse arrays
 - **Beamforming** - Amplitude tapering, null steering, multi-beam synthesis
+- **Direction finding** - Bartlett, Capon, MUSIC, root-MUSIC and ESPRIT estimators, MDL/AIC
+  source counting, Cramer-Rao bound
 - **Pattern synthesis** - Binomial taper, Woodward-Lawson and least-squares weights for a
   desired linear array factor
 - **Realistic impairments** - Mutual coupling, phase quantization, element failures, scan blindness
 - **Wideband support** - True time delay (TTD), hybrid phase/TTD, beam squint analysis
 - **Interactive visualization** - 2D/3D plots with Plotly, UV-space, pattern animations
 - **Data export** - CSV, JSON, NPZ formats for integration with other tools
+- **Data import** - Touchstone (``.sNp``) S-parameter files and tabulated element patterns
+  from EM solvers or measurements
 
 Quick Example
 -------------
@@ -95,6 +100,7 @@ For interactive Plotly visualizations:
    user_guide/beamforming
    user_guide/synthesis
    user_guide/impairments
+   user_guide/data_import
    user_guide/wideband
    user_guide/visualization
 
@@ -115,6 +121,7 @@ For interactive Plotly visualizations:
    api/wideband
    api/utils
    api/export
+   api/io
 
 .. toctree::
    :maxdepth: 2
