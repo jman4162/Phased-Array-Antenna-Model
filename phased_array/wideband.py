@@ -14,7 +14,7 @@ from .geometry import ArrayGeometry, SubarrayArchitecture
 ArrayLike = Union[np.ndarray, float]
 
 # Speed of light
-C = 299792458.0  # m/s
+from .utils import C  # speed of light, m/s
 
 
 def steering_vector_ttd(
@@ -324,7 +324,9 @@ def compute_beam_squint(
     results : dict
         'frequencies' : Frequency values (Hz)
         'beam_angles' : Actual beam pointing angle at each frequency (deg)
-        'squint' : Pointing error (deg), positive = beam moved towards broadside
+        'squint' : Pointing error (deg), beam angle minus ``theta0_deg``;
+        with phase steering it is positive below the center frequency
+        (beam farther from broadside) and negative above it
         'relative_gain' : Gain relative to center frequency (dB)
 
     Examples
@@ -485,25 +487,34 @@ def analyze_instantaneous_bandwidth(
     # Start with a wide range and narrow down
     max_bw_percent = 100  # Start with +/- 50%
 
-    for bw_percent in np.linspace(1, max_bw_percent, 100):
+    def max_squint_at(bw_percent):
         bw_hz = center_frequency * bw_percent / 100
         frequencies = np.array([
             center_frequency - bw_hz / 2,
             center_frequency,
             center_frequency + bw_hz / 2
         ])
-
         results = compute_beam_squint(
             x, y, theta0_deg, phi0_deg, center_frequency, frequencies,
             steering_mode=steering_mode, architecture=architecture
         )
+        return np.max(np.abs(results['squint']))
 
-        max_squint = np.max(np.abs(results['squint']))
-
-        if max_squint > squint_tolerance_deg:
-            # Found the limit
-            ibw_hz = bw_hz * squint_tolerance_deg / max_squint
-            ibw_percent = ibw_hz / center_frequency * 100
+    last_ok = 0.0
+    for bw_percent in np.linspace(1, max_bw_percent, 100):
+        if max_squint_at(bw_percent) > squint_tolerance_deg:
+            # Bisect between the last bandwidth within tolerance and this
+            # one. Squint is not linear in bandwidth (a grating lobe can take
+            # over the peak), so the edge is located, not extrapolated.
+            lo, hi = last_ok, bw_percent
+            while hi - lo > 1e-3:
+                mid = 0.5 * (lo + hi)
+                if max_squint_at(mid) > squint_tolerance_deg:
+                    hi = mid
+                else:
+                    lo = mid
+            ibw_percent = lo
+            ibw_hz = center_frequency * ibw_percent / 100
             f_low = center_frequency - ibw_hz / 2
             f_high = center_frequency + ibw_hz / 2
 
@@ -514,6 +525,7 @@ def analyze_instantaneous_bandwidth(
                 'f_low': f_low,
                 'f_high': f_high
             }
+        last_ok = bw_percent
 
     # If we get here, bandwidth exceeds our search range
     half_bw = max_bw_percent / 200

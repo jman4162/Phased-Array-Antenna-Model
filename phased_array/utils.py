@@ -199,16 +199,21 @@ def wavelength_to_k(wavelength: float) -> float:
     >>> round(k, 2)
     209.44
 
-    Or use frequency directly:
+    Or use frequency directly (exact c = 299792458 m/s, so 10 GHz is
+    2.998 cm rather than 3 cm):
 
     >>> k = pa.frequency_to_k(10e9)  # 10 GHz
     >>> round(k, 2)
-    209.44
+    209.58
     """
     return 2.0 * np.pi / wavelength
 
 
-def frequency_to_wavelength(frequency: float, c: float = 3e8) -> float:
+# Speed of light in vacuum (exact SI value), shared by all modules
+C = 299792458.0  # m/s
+
+
+def frequency_to_wavelength(frequency: float, c: float = C) -> float:
     """
     Convert frequency to wavelength.
 
@@ -217,7 +222,7 @@ def frequency_to_wavelength(frequency: float, c: float = 3e8) -> float:
     frequency : float
         Frequency in Hz
     c : float, optional
-        Speed of light in m/s (default: 3e8)
+        Speed of light in m/s (default: 299792458, as in ``wideband``)
 
     Returns
     -------
@@ -227,7 +232,7 @@ def frequency_to_wavelength(frequency: float, c: float = 3e8) -> float:
     return c / frequency
 
 
-def frequency_to_k(frequency: float, c: float = 3e8) -> float:
+def frequency_to_k(frequency: float, c: float = C) -> float:
     """
     Convert frequency to wavenumber.
 
@@ -236,7 +241,7 @@ def frequency_to_k(frequency: float, c: float = 3e8) -> float:
     frequency : float
         Frequency in Hz
     c : float, optional
-        Speed of light in m/s (default: 3e8)
+        Speed of light in m/s (default: 299792458, as in ``wideband``)
 
     Returns
     -------
