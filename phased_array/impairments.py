@@ -53,20 +53,41 @@ def mutual_coupling_matrix_theoretical(
     z = (np.zeros_like(x) if geometry.z is None
          else np.asarray(geometry.z, dtype=float))
 
-    # Pairwise separations, built one coordinate at a time to limit memory
-    r2 = (x[:, None] - x[None, :]) ** 2
-    r2 += (y[:, None] - y[None, :]) ** 2
-    r2 += (z[:, None] - z[None, :]) ** 2
-    kr = k * np.sqrt(r2)
+    # Pairwise k*r, built in place one coordinate at a time. Peak memory is
+    # about 34 N^2 bytes: kr and one scratch array (float64), the complex
+    # result, and a boolean mask.
+    kr = np.subtract.outer(x, x)
+    kr *= kr
+    scratch = np.subtract.outer(y, y)
+    scratch *= scratch
+    kr += scratch
+    np.subtract(z[:, None], z[None, :], out=scratch)
+    scratch *= scratch
+    kr += scratch
+    np.sqrt(kr, out=kr)
+    kr *= k
 
+    # Phase term exp(-j kr), written straight into the result
+    n = x.size
+    C = np.empty((n, n), dtype=complex)
+    np.cos(kr, out=C.real)
+    np.sin(kr, out=C.imag)
+    np.negative(C.imag, out=C.imag)
+
+    # Magnitude term into the scratch array
     if coupling_model == 'sinc':
         # sin(kr)/kr, equal to 1 for coincident elements
-        coupling = coupling_coeff * np.sinc(kr / np.pi)
+        np.sin(kr, out=scratch)
+        coincident = kr <= 1e-12
+        np.divide(scratch, kr, out=scratch, where=~coincident)
+        scratch[coincident] = 1.0
     else:
-        coupling = coupling_coeff * np.exp(-kr / 2)
+        np.multiply(kr, -0.5, out=scratch)
+        np.exp(scratch, out=scratch)
+    scratch *= coupling_coeff
 
-    # Add phase based on distance; unit self-coupling on the diagonal
-    C = coupling * np.exp(-1j * kr)
+    C.real *= scratch
+    C.imag *= scratch
     np.fill_diagonal(C, 1.0)
 
     return C
@@ -543,8 +564,8 @@ def simulate_element_failures(
         'full' - failed elements at full power, random phase
     seed : int, numpy.random.Generator or numpy.random.RandomState, optional
         Seed or generator for reproducibility. An int reproduces the
-        results of earlier releases for the same seed. NumPy's global
-        random state is neither read nor modified.
+        results of earlier releases for the same seed without reseeding
+        NumPy's global generator; None draws from the global generator.
 
     Returns
     -------
@@ -694,7 +715,8 @@ def analyze_graceful_degradation(
     seed : int, numpy.random.Generator or numpy.random.RandomState, optional
         Seed or generator for the trials. An int gives the same trials as
         calling ``np.random.seed(seed)`` before this function did in
-        earlier releases. NumPy's global random state is not touched.
+        earlier releases, without reseeding the global generator; None
+        draws from the global generator.
 
     Returns
     -------

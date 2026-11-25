@@ -682,3 +682,22 @@ class TestQuantizationLobeAliasing:
         np.testing.assert_allclose(u_fold, [0.425, 0.025], atol=1e-12)
         np.testing.assert_allclose(levels_fold, levels)
 
+
+
+class TestSeedNoneUsesGlobalGenerator:
+
+    def test_prior_np_random_seed_still_repeatable(self):
+        g = pa.create_rectangular_array(8, 8, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        np.random.seed(0)
+        r1 = pa.analyze_graceful_degradation(np.ones(64), g, k, [0.2], n_trials=5)
+        np.random.seed(0)
+        r2 = pa.analyze_graceful_degradation(np.ones(64), g, k, [0.2], n_trials=5)
+        np.testing.assert_array_equal(r1['gain_loss_mean_dB'], r2['gain_loss_mean_dB'])
+
+    def test_int_seed_does_not_reseed_global(self):
+        np.random.seed(7)
+        expected = np.random.random(4)
+        np.random.seed(7)
+        pa.simulate_element_failures(np.ones(50), 0.2, seed=123)
+        np.testing.assert_array_equal(np.random.random(4), expected)

@@ -460,3 +460,22 @@ class TestLatticeFastPath:
         rect = pa.create_rectangular_array(8, 8, 0.5, 0.5)
         xs, ys, W = _lattice_factorization(rect.x, rect.y, np.ones(64))
         assert xs.size == 8 and ys.size == 8 and W.shape == (8, 8)
+
+
+class TestArrayFactorWeightBroadcast:
+
+    @pytest.mark.parametrize("build", [
+        lambda: pa.create_circular_array(32, 2.0),
+        lambda: pa.create_rectangular_array(4, 4, 0.5, 0.5),
+        lambda: pa.create_rectangular_array(8, 8, 0.5, 0.5),
+    ])
+    @pytest.mark.parametrize("n_angles", [5, 400])
+    def test_scalar_weights_broadcast(self, build, n_angles):
+        geom = build()
+        k = pa.wavelength_to_k(1.0)
+        theta = np.linspace(0, np.pi / 2, n_angles)
+        phi = np.full(n_angles, 0.3)
+        scalar = pa.array_factor_vectorized(theta, phi, geom.x, geom.y, 1.0, k)
+        full = pa.array_factor_vectorized(theta, phi, geom.x, geom.y,
+                                          np.ones(geom.n_elements), k)
+        np.testing.assert_allclose(scalar, full, rtol=1e-12, atol=1e-12)

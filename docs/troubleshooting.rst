@@ -234,8 +234,9 @@ Performance Issues
 - ``array_factor_vectorized`` and ``compute_full_pattern`` process angles in
   chunks, so intermediate memory stays near 64 MiB; the output grid takes
   16 bytes per complex sample
-- Functions that build N x N matrices (mutual coupling, null steering) take
-  16 N² bytes per matrix, 1.6 GB at N = 10,000
+- Functions that build N x N matrices (mutual coupling, null steering) hold
+  a 16 N² byte complex matrix plus working arrays; building the coupling
+  matrix peaks near 34 N² bytes (3.4 GB at N = 10,000)
 - Reduce pattern resolution, or compute the pattern in phi slices and keep
   only what you need
 

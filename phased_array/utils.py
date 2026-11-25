@@ -395,16 +395,18 @@ def _make_rng(seed: SeedLike):
     """
     Random number source for library functions that take ``seed``.
 
-    - ``None``: a fresh ``numpy.random.Generator``
+    - ``None``: NumPy's global legacy generator, as in earlier releases, so
+      a prior ``np.random.seed()`` call still makes results repeatable
     - ``int``: a local ``numpy.random.RandomState(seed)``, which yields the
-      same sequence earlier releases drew after ``np.random.seed(seed)``,
-      so seeded results stay reproducible across versions
+      same sequence earlier releases drew after ``np.random.seed(seed)``
+      without reseeding the global generator
     - a ``Generator`` or ``RandomState``: used as is (and advanced)
 
-    NumPy's global random state is never read or modified.
+    The library never calls ``np.random.seed``.
     """
-    if seed is None:
-        return np.random.default_rng()
+    if seed is None or seed is np.random:
+        # The np.random module exposes the global RandomState's methods
+        return np.random
     if isinstance(seed, (np.random.Generator, np.random.RandomState)):
         return seed
     return np.random.RandomState(seed)

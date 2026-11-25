@@ -37,14 +37,18 @@ in CI.
   supported by measurement (the old code ran at 0.8-0.9x the element
   loop) and has been replaced in the README, docs and notebook
 - `mutual_coupling_matrix_theoretical()` is vectorized (was an O(N^2)
-  Python loop); results are identical
+  Python loop) and built in place, peaking near 34 N^2 bytes; results are
+  identical
+- `array_factor_vectorized()` and `array_factor_uv()` broadcast scalar
+  weights for every geometry, and use the lattice path only for grids of
+  256 or more angles, so single-direction calls keep their 1.6 speed
 - Random functions (`thin_array_random`, `thin_array_density_tapered`,
   `thin_array_genetic_algorithm`, `simulate_element_failures`) no longer
-  call `np.random.seed` or draw from NumPy's global generator. An int
-  seed uses a local `RandomState`, which reproduces the results of
-  earlier releases for the same seed; a `numpy.random.Generator` or
-  `RandomState` can be passed instead. `seed=None` no longer follows a
-  prior `np.random.seed()` call
+  call `np.random.seed`, which reset the caller's global random stream.
+  An int seed uses a local `RandomState` and reproduces the results of
+  earlier releases for the same seed; `seed=None` draws from NumPy's
+  global generator as before; a `numpy.random.Generator` or
+  `RandomState` can be passed instead
 
 ### Added
 

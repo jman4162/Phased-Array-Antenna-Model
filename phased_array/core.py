@@ -231,6 +231,9 @@ def array_factor_vectorized(
 # Upper bound on the (angles x elements) phase matrix built per chunk
 _AF_CHUNK_BYTES = 64 * 2**20
 
+# Below this many angles the direct sum beats lattice detection overhead
+_LATTICE_MIN_ANGLES = 256
+
 
 def _array_factor_from_cosines(
     u: np.ndarray,
@@ -251,14 +254,17 @@ def _array_factor_from_cosines(
     """
     x = np.asarray(x, dtype=float).ravel()
     y = np.asarray(y, dtype=float).ravel()
-    weights = np.asarray(weights).ravel()
+    # Scalar or length-1 weights broadcast to every element
+    weights = np.broadcast_to(np.asarray(weights), x.shape).ravel()
     if z is not None:
         z = np.asarray(z, dtype=float).ravel()
 
     # Planar elements on a rectilinear lattice (any z offset is common):
     # factor exp(jk(xu + yv)) = exp(jkxu) exp(jkyv) over the distinct x and
-    # y coordinates, which needs far fewer complex exponentials.
-    if x.size >= 16 and (z is None or np.ptp(z) == 0):
+    # y coordinates, which needs far fewer complex exponentials. The
+    # one-time lattice detection only pays off over many angles.
+    if (x.size >= 16 and u.size >= _LATTICE_MIN_ANGLES
+            and (z is None or np.ptp(z) == 0)):
         lattice = _lattice_factorization(x, y, weights)
         if lattice is not None:
             AF = _array_factor_lattice(u, v, *lattice, k)

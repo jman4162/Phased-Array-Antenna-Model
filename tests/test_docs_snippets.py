@@ -24,7 +24,7 @@ OPTION = re.compile(r"^\s+:[\w-]+:")
 PAGES = sorted(
     p for p in DOCS.rglob("*.rst")
     if "_build" not in p.parts
-    and any(DIRECTIVE.match(line) for line in p.read_text().splitlines())
+    and any(DIRECTIVE.match(line) for line in p.read_text(encoding="utf-8").splitlines())
 )
 
 
@@ -85,7 +85,7 @@ def test_docs_page_runs(page, headless):
 
     namespace = {"__name__": "__docs__"}
     failures = []
-    for lineno, source, skip in code_blocks(page.read_text()):
+    for lineno, source, skip in code_blocks(page.read_text(encoding="utf-8")):
         if skip:
             continue
         try:

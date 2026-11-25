@@ -690,8 +690,8 @@ def thin_array_random(
         Fraction of elements to keep (0 to 1)
     seed : int, numpy.random.Generator or numpy.random.RandomState, optional
         Seed or generator for reproducibility. An int reproduces the
-        results of earlier releases for the same seed. NumPy's global
-        random state is neither read nor modified.
+        results of earlier releases for the same seed without reseeding
+        NumPy's global generator; None draws from the global generator.
 
     Returns
     -------
@@ -724,8 +724,8 @@ def thin_array_density_tapered(
         Function(x, y) -> probability of keeping each element (0 to 1)
     seed : int, numpy.random.Generator or numpy.random.RandomState, optional
         Seed or generator for reproducibility. An int reproduces the
-        results of earlier releases for the same seed. NumPy's global
-        random state is neither read nor modified.
+        results of earlier releases for the same seed without reseeding
+        NumPy's global generator; None draws from the global generator.
 
     Returns
     -------
@@ -773,8 +773,8 @@ def thin_array_genetic_algorithm(
         Probability of mutation per gene
     seed : int, numpy.random.Generator or numpy.random.RandomState, optional
         Seed or generator for reproducibility. An int reproduces the
-        results of earlier releases for the same seed. NumPy's global
-        random state is neither read nor modified.
+        results of earlier releases for the same seed without reseeding
+        NumPy's global generator; None draws from the global generator.
 
     Returns
     -------
