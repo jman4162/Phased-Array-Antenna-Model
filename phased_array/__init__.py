@@ -37,15 +37,18 @@ Example
 
 __version__ = "1.7.0"
 
+# Pattern summary
+from .analysis import pattern_summary
 # Beamforming functions
 from .beamforming import (  # Amplitude tapers; Null steering; Multiple beams; Beam spoiling; Adaptive
     adaptive_weights_gsc, adaptive_weights_smi, apply_taper_to_geometry,
-    chebyshev_taper_1d, chebyshev_taper_2d, compute_beam_isolation,
-    compute_null_depth, compute_sinr_improvement, compute_spoil_factor,
-    compute_taper_directivity_loss, compute_taper_efficiency,
-    cosine_on_pedestal_taper_1d, cosine_on_pedestal_taper_2d, cosine_taper_1d,
-    cosine_taper_2d, gaussian_taper_1d, gaussian_taper_2d, hamming_taper_1d,
-    hamming_taper_2d, hanning_taper_1d, hanning_taper_2d, monopulse_weights,
+    bayliss_taper_1d, bayliss_taper_2d, chebyshev_taper_1d, chebyshev_taper_2d,
+    compute_beam_isolation, compute_null_depth, compute_sinr_improvement,
+    compute_spoil_factor, compute_taper_directivity_loss,
+    compute_taper_efficiency, cosine_on_pedestal_taper_1d,
+    cosine_on_pedestal_taper_2d, cosine_taper_1d, cosine_taper_2d,
+    gaussian_taper_1d, gaussian_taper_2d, hamming_taper_1d, hamming_taper_2d,
+    hanning_taper_1d, hanning_taper_2d, monopulse_weights,
     multi_beam_weights_orthogonal, multi_beam_weights_superposition,
     null_steering_lcmv, null_steering_projection, plot_adapted_pattern,
     quadratic_phase_spoil, spoiled_beam_gain, spoiled_beamwidth,
@@ -57,7 +60,8 @@ from .coordinates import (antenna_to_cone, antenna_to_radar, cone_to_antenna,
                           rotation_matrix_yaw)
 # Core computation functions
 from .core import (array_factor_fft, array_factor_uv, array_factor_vectorized,
-                   array_manifold, compute_directivity, compute_full_pattern,
+                   array_manifold, compute_directivity,
+                   compute_first_null_beamwidth, compute_full_pattern,
                    compute_half_power_beamwidth, compute_pattern_cuts,
                    compute_peak_sidelobe_level, element_pattern,
                    element_pattern_cosine_tapered, steering_vector,
@@ -91,8 +95,9 @@ from .impairments import (  # Mutual coupling; Phase quantization; Element failu
     compute_scan_loss, mismatch_loss, mutual_coupling_matrix_measured,
     mutual_coupling_matrix_theoretical, quantization_lobes,
     quantization_rms_error, quantization_sidelobe_increase,
-    quantization_sidelobe_level, quantize_phase, scan_blindness_model,
-    simulate_element_failures, surface_wave_scan_angle, vswr_vs_scan)
+    quantization_sidelobe_level, quantize_phase, random_error_sidelobe_level,
+    scan_blindness_model, simulate_element_failures, surface_wave_scan_angle,
+    vswr_vs_scan)
 # Polarization functions
 from .polarization import (axial_ratio, co_pol_pattern,
                            cross_pol_discrimination, cross_pol_pattern,
@@ -148,6 +153,8 @@ __all__ = [
     "compute_directivity",
     "compute_half_power_beamwidth",
     "compute_peak_sidelobe_level",
+    "compute_first_null_beamwidth",
+    "pattern_summary",
     # Utils
     "deg2rad",
     "rad2deg",
@@ -187,6 +194,8 @@ __all__ = [
     # Beamforming - Amplitude tapers
     "taylor_taper_1d",
     "taylor_taper_2d",
+    "bayliss_taper_1d",
+    "bayliss_taper_2d",
     "chebyshev_taper_1d",
     "chebyshev_taper_2d",
     "hamming_taper_1d",
@@ -242,6 +251,7 @@ __all__ = [
     "quantization_sidelobe_increase",
     "quantization_sidelobe_level",
     "quantization_lobes",
+    "random_error_sidelobe_level",
     "analyze_quantization_effect",
     "simulate_element_failures",
     "analyze_graceful_degradation",

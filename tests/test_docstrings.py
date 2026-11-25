@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 MODULES = [
+    "analysis",
     "core",
     "utils",
     "geometry",
