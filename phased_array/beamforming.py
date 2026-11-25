@@ -778,6 +778,13 @@ def monopulse_weights(
         # line get zero weight so the halves cancel exactly on boresight.
         coord = np.asarray(geometry.x if mode == 'delta_az' else geometry.y,
                            dtype=float)
+        if np.ptp(coord) == 0:
+            axis = 'x' if mode == 'delta_az' else 'y'
+            raise ValueError(
+                f"{mode} needs element positions that vary in {axis}; this "
+                "array has no extent in that direction, so it has no "
+                "difference pattern in that plane"
+            )
         offset = coord - coord.mean()
         tol = 1e-9 * max(float(np.ptp(coord)), 1e-30)
         sign = np.where(np.abs(offset) <= tol, 0.0, np.sign(offset))

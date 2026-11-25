@@ -322,3 +322,16 @@ class TestUVPlotCircles:
                                       show_visible_region=False,
                                       show_grating_circles=True, dx_wavelengths=0.7)
         assert ax is not None
+
+
+class TestRadianHeuristic:
+
+    def test_small_degree_grid_does_not_warn(self):
+        import warnings
+        theta = np.linspace(0, 3, 7)   # degrees: a main-beam zoom
+        phi = np.linspace(0, 6, 7)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            pa.export_pattern_2d_csv(theta, phi, np.zeros((7, 7)))
+            pa.export_pattern_2d_csv(np.linspace(0, 90, 5), np.linspace(0, 360, 9),
+                                     np.zeros((5, 9)))

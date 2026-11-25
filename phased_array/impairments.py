@@ -596,6 +596,65 @@ def simulate_element_failures(
     return degraded_weights, failure_mask
 
 
+def _beam_direction(
+    x: np.ndarray,
+    y: np.ndarray,
+    z: Optional[np.ndarray],
+    weights: np.ndarray,
+    k: float
+) -> Tuple[float, float, float]:
+    """
+    Direction (theta, phi) of the array-factor peak in the front hemisphere.
+
+    A grid search with spacing below half a beamwidth (evaluated in chunks
+    to bound memory) is refined with Nelder-Mead. Returns
+    ``(theta, phi, beamwidth)`` in radians, where ``beamwidth`` is the
+    nominal ``lambda / aperture`` used to set the search resolution. A
+    beam within a quarter beamwidth of broadside reports ``phi = 0``.
+    """
+    from scipy.optimize import minimize
+
+    from .core import array_factor_vectorized
+
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    zz = np.zeros_like(x) if z is None else np.asarray(z, dtype=float)
+    pos = np.column_stack([x, y, zz])
+    aperture = 2 * float(np.max(np.linalg.norm(pos - pos.mean(axis=0), axis=1)))
+    wavelength = 2 * np.pi / k
+    beamwidth = wavelength / max(aperture, wavelength)
+
+    step = min(np.deg2rad(1.0), beamwidth / 2)
+    theta = np.linspace(0, np.pi / 2, int(np.ceil((np.pi / 2) / step)) + 1)
+    phi = np.linspace(0, 2 * np.pi, int(np.ceil(2 * np.pi / step)), endpoint=False)
+
+    rows = max(1, int(4e6 // (phi.size * x.size)))
+    best = (-1.0, 0.0, 0.0)
+    for i0 in range(0, theta.size, rows):
+        TH, PH = np.meshgrid(theta[i0:i0 + rows], phi, indexing='ij')
+        af = np.abs(array_factor_vectorized(TH, PH, x, y, weights, k, z))
+        j = int(np.argmax(af))
+        if af.flat[j] > best[0]:
+            best = (float(af.flat[j]), float(TH.flat[j]), float(PH.flat[j]))
+
+    def neg_af(p):
+        return -abs(array_factor_vectorized(
+            np.array([p[0]]), np.array([p[1]]), x, y, weights, k, z)[0])
+
+    x0 = np.array([best[1], best[2]])
+    simplex = np.array([x0, x0 + [step / 2, 0], x0 + [0, step / 2]])
+    res = minimize(neg_af, x0, method='Nelder-Mead',
+                   options={'initial_simplex': simplex, 'xatol': 1e-7,
+                            'fatol': 1e-12 * best[0], 'maxiter': 400})
+    theta_b, phi_b = (res.x if -res.fun >= best[0] else x0)
+    if theta_b < 0:  # theta < 0 is the same direction at phi + 180
+        theta_b, phi_b = -theta_b, phi_b + np.pi
+    phi_b = float(np.mod(phi_b, 2 * np.pi))
+    if theta_b < beamwidth / 4:
+        phi_b = 0.0
+    return float(theta_b), phi_b, beamwidth
+
+
 def analyze_graceful_degradation(
     weights: np.ndarray,
     geometry: ArrayGeometry,
@@ -645,16 +704,13 @@ def analyze_graceful_degradation(
 
     x, y, z = geometry.x, geometry.y, geometry.z
 
-    # Beam direction of the nominal weights, from a coarse hemisphere search
-    th_c, ph_c = np.meshgrid(np.linspace(0, np.pi / 2, 91),
-                             np.linspace(0, 2 * np.pi, 180, endpoint=False),
-                             indexing='ij')
-    af_c = np.abs(array_factor_vectorized(th_c, ph_c, x, y, weights, k, z))
-    i_pk = np.unravel_index(np.argmax(af_c), af_c.shape)
-    phi_beam = ph_c[i_pk]
+    # Beam direction of the nominal weights, refined well below a beamwidth
+    theta_beam, phi_beam, beamwidth = _beam_direction(x, y, z, weights, k)
 
-    # Cut through the beam: the phi_beam plane, theta from -90 to 90 deg
-    angles_deg = np.linspace(-90, 90, 721)
+    # Cut through the beam: the phi_beam plane, theta from -90 to 90 deg,
+    # sampled finely enough to resolve the nulls next to the main lobe
+    spacing_deg = min(0.25, np.rad2deg(beamwidth) / 8)
+    angles_deg = np.linspace(-90, 90, int(np.ceil(180 / spacing_deg)) + 1)
     t = np.deg2rad(angles_deg)
     theta_cut = np.abs(t)
     phi_cut = np.where(t >= 0, phi_beam, phi_beam + np.pi)
@@ -713,7 +769,8 @@ def _tm0_surface_wave_beta(substrate_er: float, substrate_h: float) -> float:
         sqrt(er - b**2) * tan(k0 h sqrt(er - b**2)) = er * sqrt(b**2 - 1)
 
     for the TM0 root ``b = beta/k0`` in ``(1, sqrt(er))``. TM0 has no
-    cutoff, so the root exists for any ``er > 1`` and ``h > 0``.
+    cutoff, so the root exists for any ``er > 1`` and ``h > 0``; it lies
+    on the branch where ``k0 h sqrt(er - b**2) < pi/2``.
     """
     from scipy.optimize import brentq
 
@@ -723,23 +780,26 @@ def _tm0_surface_wave_beta(substrate_er: float, substrate_h: float) -> float:
         raise ValueError(f"substrate_h must be positive, got {substrate_h}")
 
     k0h = 2 * np.pi * substrate_h
-    n_max = np.sqrt(substrate_er)
 
-    def residual(b):
-        kd = np.sqrt(substrate_er - b * b)
-        return kd * np.tan(k0h * kd) - substrate_er * np.sqrt(b * b - 1)
+    # Solve in the tan argument x = k0 h kd, kd = sqrt(er - b^2) / 1, on the
+    # TM0 branch 0 < x < min(pi/2, k0 h sqrt(er - 1)). Multiplying the
+    # dispersion relation by cos(x) removes the tan pole, so the bracket
+    # stays well conditioned for thick substrates.
+    def residual(x):
+        kd = x / k0h
+        alpha = np.sqrt(max(substrate_er - 1 - kd * kd, 0.0))
+        return kd * np.sin(x) - substrate_er * alpha * np.cos(x)
 
-    # Keep k0 h sqrt(er - b^2) below pi/2 so the bracket excludes the tan
-    # pole; the TM0 root lies in that branch.
-    lower = 1.0
-    if k0h * np.sqrt(substrate_er - 1) >= np.pi / 2:
-        lower = np.sqrt(substrate_er - (np.pi / (2 * k0h))**2)
-    span = n_max - lower
-    eps = 1e-13 * max(span, 1e-300)
-    if residual(lower + eps) <= 0:
-        # Extremely thin slab: root is within rounding of b = 1
+    x_hi = min(np.pi / 2, k0h * np.sqrt(substrate_er - 1))
+    if x_hi < 1e-3 or residual(x_hi) <= 0:
+        # Thin slab: the root crowds the upper bracket edge, where the
+        # residual is ill-conditioned. The series below is accurate to a
+        # relative error of order x_hi**2 in b - 1.
         return 1.0 + 0.5 * (k0h * (substrate_er - 1) / substrate_er)**2
-    return float(brentq(residual, lower + eps, n_max - eps, xtol=1e-15, rtol=1e-15))
+    x = brentq(residual, 0.0, x_hi, xtol=1e-16 * x_hi,
+               rtol=4 * np.finfo(float).eps)
+    kd = x / k0h
+    return float(max(np.sqrt(substrate_er - kd * kd), 1.0))
 
 
 def surface_wave_scan_angle(

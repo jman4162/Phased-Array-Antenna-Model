@@ -100,6 +100,22 @@ def export_pattern_csv(
     return csv_string
 
 
+def _looks_like_radian_grid(theta: np.ndarray, phi: np.ndarray) -> bool:
+    """True if a theta/phi grid is almost certainly in radians.
+
+    Requires every value to lie within the radian ranges and at least one
+    axis endpoint to equal a nonzero multiple of pi/2, which degree data
+    essentially never does.
+    """
+    if theta.size < 2 or phi.size < 2:
+        return False
+    if np.any(np.abs(theta) > np.pi + 1e-9) or np.any(np.abs(phi) > 2 * np.pi + 1e-9):
+        return False
+    ends = np.abs([theta.min(), theta.max(), phi.min(), phi.max()])
+    multiples = ends / (np.pi / 2)
+    return bool(np.any((ends > 0) & (np.abs(multiples - np.round(multiples)) < 1e-9)))
+
+
 def export_pattern_2d_csv(
     theta: np.ndarray,
     phi: np.ndarray,
@@ -143,18 +159,16 @@ def export_pattern_2d_csv(
     Warns
     -----
     UserWarning
-        If ``angle_unit='deg'`` but every theta is within [0, pi] and every
-        phi within [-2*pi, 2*pi], which suggests radians.
+        If ``angle_unit='deg'`` but the grid lies within the radian ranges
+        and ends on a multiple of pi/2 (for example the 0 to pi/2 and 0 to
+        2*pi axes of :func:`~phased_array.core.compute_full_pattern`).
     """
     if angle_unit not in ('deg', 'rad'):
         raise ValueError(f"angle_unit must be 'deg' or 'rad', got {angle_unit!r}")
 
-    theta = np.asarray(theta)
-    phi = np.asarray(phi)
-    if (angle_unit == 'deg' and theta.size > 1 and phi.size > 1
-            and np.ptp(phi) > 0
-            and np.all(np.abs(theta) <= np.pi + 1e-9)
-            and np.all(np.abs(phi) <= 2 * np.pi + 1e-9)):
+    theta = np.asarray(theta, dtype=float)
+    phi = np.asarray(phi, dtype=float)
+    if angle_unit == 'deg' and _looks_like_radian_grid(theta, phi):
         warnings.warn(
             "theta and phi look like radians but will be labeled degrees; "
             "convert with np.rad2deg or pass angle_unit='rad'.",

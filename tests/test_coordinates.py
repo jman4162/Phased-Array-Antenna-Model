@@ -181,3 +181,30 @@ class TestRotatePatternGrid:
     def test_1d_input_raises(self):
         with pytest.raises(ValueError, match="2D"):
             pa.rotate_pattern(np.linspace(0, 1, 5), np.zeros(5), np.ones(5), 0, 10, 0)
+
+
+class TestRotatePatternPhiRange:
+
+    @pytest.mark.parametrize("phi", [
+        np.linspace(-np.pi, np.pi, 181),
+        np.linspace(0, 2 * np.pi, 180, endpoint=False),
+    ])
+    def test_identity_rotation_keeps_whole_grid(self, phi):
+        theta = np.linspace(0, np.pi, 91)
+        T, P = np.meshgrid(theta, phi, indexing='ij')
+        _, _, pat = pa.rotate_pattern(T, P, np.ones_like(T), 0, 0, 0)
+        np.testing.assert_allclose(pat, 1.0, atol=1e-9)
+
+    def test_minus_pi_grid_rotation_matches_zero_based_grid(self):
+        theta = np.linspace(0, np.pi, 91)
+        phi_a = np.linspace(0, 2 * np.pi, 181)
+        phi_b = np.linspace(-np.pi, np.pi, 181)
+        f = lambda T, P: np.cos(T) ** 2 + 0.3 * np.sin(T) * np.cos(P)
+        Ta, Pa = np.meshgrid(theta, phi_a, indexing='ij')
+        Tb, Pb = np.meshgrid(theta, phi_b, indexing='ij')
+        _, _, ra = pa.rotate_pattern(Ta, Pa, f(Ta, Pa), 10, 20, 30)
+        _, _, rb = pa.rotate_pattern(Tb, Pb, f(Tb, Pb), 10, 20, 30)
+        # Same directions: phi_b[j] = phi_a[(j + 90) mod 180] (both grids
+        # repeat their first column at the end, so the period is 180)
+        cols = (np.arange(181) + 90) % 180
+        np.testing.assert_allclose(rb, ra[:, cols], atol=1e-9)

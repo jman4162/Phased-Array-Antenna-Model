@@ -522,3 +522,49 @@ class TestQuantizationAndCouplingEdgeCases:
         geom = pa.create_rectangular_array(2, 2, 0.5, 0.5)
         with pytest.raises(ValueError, match="coupling_model"):
             pa.mutual_coupling_matrix_theoretical(geom, 2 * np.pi, coupling_model='bogus')
+
+
+class TestSurfaceWaveThickSubstrates:
+    """TM0 solve stays on its branch for substrates of a wavelength or more."""
+
+    @pytest.mark.parametrize("er, h", [(10, 3.0), (12.8, 3.0), (50, 1.0),
+                                       (25, 1.2), (12.8, 2.0), (4, 50.0)])
+    def test_root_in_range_and_satisfies_dispersion(self, er, h):
+        from phased_array.impairments import _tm0_surface_wave_beta
+        b = _tm0_surface_wave_beta(er, h)
+        assert 1 < b < np.sqrt(er)
+        kd = np.sqrt(er - b * b)
+        x = 2 * np.pi * h * kd
+        assert 0 < x < np.pi / 2
+        # cos-multiplied form, well conditioned near the tan pole
+        assert abs(kd * np.sin(x) - er * np.sqrt(b * b - 1) * np.cos(x)) < 1e-9 * er
+
+    @pytest.mark.parametrize("er", [2.2, 4.0, 12.8, 50.0])
+    def test_monotone_from_thin_to_thick(self, er):
+        from phased_array.impairments import _tm0_surface_wave_beta
+        b = np.array([_tm0_surface_wave_beta(er, h) for h in np.geomspace(1e-7, 50, 300)])
+        assert np.all(np.diff(b) >= -1e-12)
+        assert np.all((b >= 1) & (b <= np.sqrt(er)))
+        assert b[-1] == pytest.approx(np.sqrt(er), rel=1e-5)
+
+
+class TestGracefulDegradationOffPlaneBeam:
+
+    def test_cut_passes_through_diagonal_beam(self):
+        # Separable uniform array steered to (45, 45): the cut in the
+        # phi = 45 plane has first sidelobes at 2 x -13.25 = -26.5 dB.
+        geom = pa.create_rectangular_array(40, 40, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        w = pa.steering_vector(k, geom.x, geom.y, 45, 45)
+        r = pa.analyze_graceful_degradation(w, geom, k, [0.0], n_trials=1)
+        assert r['sidelobe_ref_dB'] == pytest.approx(-26.5, abs=0.3)
+        assert r['gain_loss_mean_dB'][0] == pytest.approx(0.0, abs=1e-9)
+
+    def test_beam_direction_refined(self):
+        from phased_array.impairments import _beam_direction
+        geom = pa.create_rectangular_array(40, 40, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        w = pa.steering_vector(k, geom.x, geom.y, 37.3, 51.7)
+        theta, phi, _ = _beam_direction(geom.x, geom.y, geom.z, w, k)
+        assert np.rad2deg(theta) == pytest.approx(37.3, abs=0.01)
+        assert np.rad2deg(phi) == pytest.approx(51.7, abs=0.01)

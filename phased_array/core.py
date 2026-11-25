@@ -615,8 +615,12 @@ def compute_pattern_cuts(
     Notes
     -----
     Both cuts are power patterns normalized to a shared reference, the
-    larger of the two cut maxima. A cut that misses the beam therefore
-    shows its true level instead of being lifted to 0 dB.
+    larger of the two cut maxima. When ``(theta0_deg, phi0_deg)`` is the
+    beam direction, both cuts pass through the beam, the reference is the
+    beam peak, and every value is relative to it. If the beam lies in only
+    one cut, the other shows its true level below the peak (for example a
+    beam steered in phi = 0 with the default ``theta0_deg=0``). If neither
+    cut passes through the beam, the larger cut maximum is shown at 0 dB.
     """
     theta_deg = np.linspace(theta_range_deg[0], theta_range_deg[1], n_points)
     t = np.deg2rad(theta_deg)

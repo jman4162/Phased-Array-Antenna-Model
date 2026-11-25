@@ -786,17 +786,8 @@ def thin_array_genetic_algorithm(
         return np.random.choice(n_elements, n_target, replace=False)
 
     def evaluate(individual):
-        """Evaluate fitness of an individual."""
-        geom = ArrayGeometry(
-            x=geometry.x[individual],
-            y=geometry.y[individual],
-            z=geometry.z[individual] if geometry.z is not None else None,
-            nx=geometry.nx[individual] if geometry.nx is not None else None,
-            ny=geometry.ny[individual] if geometry.ny is not None else None,
-            nz=geometry.nz[individual] if geometry.nz is not None else None,
-            element_indices=individual
-        )
-        return objective_func(geom)
+        """Evaluate fitness on the same geometry the function returns."""
+        return objective_func(_subset(geometry, individual))
 
     def crossover(parent1, parent2):
         """Single-point crossover maintaining n_target elements."""

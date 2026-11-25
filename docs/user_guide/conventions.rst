@@ -120,8 +120,10 @@ Pattern cuts
 :func:`~phased_array.compute_pattern_cuts` returns two orthogonal cuts through
 the beam direction ``(theta0_deg, phi0_deg)``: the ``phi = phi0`` plane, and
 the great circle through the beam perpendicular to it. Pass the steering
-angles so the second cut passes through the beam peak. Both cuts share one
-normalization, so a cut that misses the beam shows its true level. The
+angles so both cuts pass through the beam peak; both are then relative to
+that peak. With the default ``theta0_deg=0``, a beam steered off broadside
+lies in at most one cut, and the other cut shows its true (low) level, so its
+beamwidth is meaningless. The
 ``E_plane``/``H_plane`` names are historical; they are E and H planes only when
 the element polarization lines up with ``phi0``.
 

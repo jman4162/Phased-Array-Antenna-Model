@@ -507,3 +507,14 @@ class TestSinrUsesZ:
             interference_directions=[], signal_power=1.0,
             interference_powers=[], noise_power=1.0)
         assert sinr == pytest.approx(10 * np.log10(geom.n_elements), abs=1e-6)
+
+
+class TestMonopulseNoDifferencePlane:
+
+    def test_linear_array_has_no_elevation_difference(self):
+        geom = pa.create_rectangular_array(8, 1, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        with pytest.raises(ValueError, match="delta_el"):
+            pa.monopulse_weights(geom, k, 0, 0, 'delta_el')
+        w = pa.monopulse_weights(geom, k, 0, 0, 'delta_az')
+        assert np.max(np.abs(w)) == pytest.approx(1.0)

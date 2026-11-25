@@ -456,3 +456,20 @@ class TestThinningMetadata:
             population_size=8, n_generations=3, seed=0)
         np.testing.assert_allclose(g.x[best.element_indices], best.x)
         assert best.tx is not None and best.tx.shape == (12,)
+
+
+class TestGeneticAlgorithmObjectiveGeometry:
+
+    def test_objective_sees_tangents_and_original_indices(self):
+        g = pa.create_rectangular_array(6, 6, 0.5, 0.5)
+        g.tx, g.ty, g.tz = np.ones(36), np.zeros(36), np.zeros(36)
+        seen = []
+
+        def objective(geo):
+            seen.append(geo.tx is not None and geo.tx.shape == (geo.n_elements,))
+            np.testing.assert_allclose(g.x[geo.element_indices], geo.x)
+            return float(np.ptp(geo.x))
+
+        pa.thin_array_genetic_algorithm(g, n_target=12, objective_func=objective,
+                                        population_size=6, n_generations=2, seed=0)
+        assert seen and all(seen)

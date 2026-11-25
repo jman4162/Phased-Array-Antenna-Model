@@ -427,16 +427,33 @@ def rotate_pattern(
                              np.cos(theta_flat)])
     vectors_src = R.T @ vectors_out
 
-    theta_src = np.arccos(np.clip(vectors_src[2], -1, 1))
-    phi_src = np.mod(np.arctan2(vectors_src[1], vectors_src[0]), 2 * np.pi)
-    points = np.column_stack([theta_src, phi_src])
-
     theta_1d = theta[:, 0]
     phi_1d = phi[0, :]
 
+    # Wrap source phi into the grid's own range, and close an open
+    # full-turn grid ([0, 2*pi) without the endpoint) at the seam.
+    two_pi = 2 * np.pi
+    phi_min = float(phi_1d[0])
+    grid_phi = phi_1d
+    close_seam = False
+    if phi_1d.size > 1:
+        span = float(phi_1d[-1] - phi_1d[0])
+        step = float(np.median(np.diff(phi_1d)))
+        tol = 1e-6 * two_pi
+        close_seam = span < two_pi - tol and span + step >= two_pi - tol
+        if close_seam:
+            grid_phi = np.append(phi_1d, phi_min + two_pi)
+
+    theta_src = np.arccos(np.clip(vectors_src[2], -1, 1))
+    phi_src = phi_min + np.mod(
+        np.arctan2(vectors_src[1], vectors_src[0]) - phi_min, two_pi)
+    points = np.column_stack([theta_src, phi_src])
+
     def sample(values):
+        if close_seam:
+            values = np.concatenate([values, values[:, :1]], axis=1)
         interp = interpolate.RegularGridInterpolator(
-            (theta_1d, phi_1d), values,
+            (theta_1d, grid_phi), values,
             method='linear', bounds_error=False, fill_value=0
         )
         return interp(points)

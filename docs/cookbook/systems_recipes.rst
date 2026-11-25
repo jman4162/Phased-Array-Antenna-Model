@@ -58,35 +58,29 @@ Scan Coverage Analysis
            weights = pa.steering_vector(k, geom.x, geom.y, theta, phi)
            weights *= pa.taylor_taper_2d(16, 16, sidelobe_dB=-30)
 
-           # Compute metrics
-           theta_arr, phi_arr, pattern = pa.compute_full_pattern(
-               geom.x, geom.y, weights, k
-           )
+           # Peak gain relative to broadside, with a cos(theta) element pattern
+           scan_loss = pa.compute_scan_loss(geom, weights, k, theta, phi,
+                                            element_pattern_func=pa.element_pattern)
 
-           # Peak gain (relative to broadside)
-           peak_gain = pattern.max()
-
-           # Approximate directivity
+           # Beamwidths in two orthogonal cuts through the beam
            theta_deg, E_plane, H_plane = pa.compute_pattern_cuts(
-               geom.x, geom.y, weights, k
+               geom.x, geom.y, weights, k,
+               theta0_deg=theta, phi0_deg=phi
            )
            hpbw_e = pa.compute_half_power_beamwidth(theta_deg, E_plane)
            hpbw_h = pa.compute_half_power_beamwidth(theta_deg, H_plane)
 
            results.append({
                'theta': theta, 'phi': phi,
-               'gain_dB': peak_gain,
+               'scan_loss_dB': scan_loss,
                'hpbw_e': hpbw_e, 'hpbw_h': hpbw_h
            })
 
-   # Analyze scan loss
-   broadside_gain = [r['gain_dB'] for r in results if r['theta'] == 0][0]
-   for r in results:
-       r['scan_loss'] = broadside_gain - r['gain_dB']
-
    # Report worst case
-   worst = max(results, key=lambda x: x['scan_loss'])
-   print(f"Worst scan loss: {worst['scan_loss']:.1f} dB at theta={worst['theta']}, phi={worst['phi']}")
+   worst = min(results, key=lambda r: r['scan_loss_dB'])
+   print(f"Worst scan loss: {worst['scan_loss_dB']:.1f} dB at "
+         f"theta={worst['theta']}, phi={worst['phi']}")
+   print(f"Beamwidth at that angle: {worst['hpbw_e']:.1f} x {worst['hpbw_h']:.1f} deg")
 
 Array Failure Analysis
 ----------------------
@@ -95,40 +89,21 @@ Array Failure Analysis
 
 .. code-block:: python
 
-   def analyze_failure_threshold(geom, k, weights, min_gain_loss_dB=3.0,
-                                  max_sll_increase_dB=6.0):
-       """Find failure rate where performance drops below threshold."""
-
+   def analyze_failure_threshold(geom, k, weights, max_gain_loss_dB=3.0,
+                                 max_sll_increase_dB=6.0, n_trials=20):
+       """Find the failure rate where performance drops below threshold."""
        failure_rates = np.arange(0.0, 0.31, 0.02)
 
-       for rate in failure_rates:
-           # Average over multiple trials
-           gain_losses = []
-           sll_increases = []
-
-           for trial in range(10):
-               w_failed, _ = pa.simulate_element_failures(
-                   weights, rate, mode='off', seed=trial
-               )
-
-               _, E_nom, _ = pa.compute_pattern_cuts(geom.x, geom.y, weights, k)
-               _, E_fail, _ = pa.compute_pattern_cuts(geom.x, geom.y, w_failed, k)
-
-               gain_loss = E_nom.max() - E_fail.max()
-               sll_nom = np.max(E_nom[90:])  # Outside main beam
-               sll_fail = np.max(E_fail[90:])
-               sll_increase = sll_fail - sll_nom
-
-               gain_losses.append(gain_loss)
-               sll_increases.append(sll_increase)
-
-           mean_gain_loss = np.mean(gain_losses)
-           mean_sll_increase = np.mean(sll_increases)
-
-           if mean_gain_loss > min_gain_loss_dB or mean_sll_increase > max_sll_increase_dB:
-               return rate - 0.02, rate
-
-       return failure_rates[-1], None
+       np.random.seed(0)  # analyze_graceful_degradation uses the global RNG
+       r = pa.analyze_graceful_degradation(
+           weights, geom, k, list(failure_rates), n_trials=n_trials
+       )
+       too_much = ((r['gain_loss_mean_dB'] > max_gain_loss_dB) |
+                   (r['sidelobe_increase_mean_dB'] > max_sll_increase_dB))
+       if not too_much.any():
+           return failure_rates[-1], None
+       i = int(np.argmax(too_much))
+       return (failure_rates[i - 1] if i > 0 else 0.0), failure_rates[i]
 
    weights = pa.steering_vector(k, geom.x, geom.y, 0, 0)
    weights *= pa.taylor_taper_2d(16, 16, sidelobe_dB=-30)
