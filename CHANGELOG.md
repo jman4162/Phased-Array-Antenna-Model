@@ -5,6 +5,80 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-11-25
+
+Maintenance release: supported Python versions, packaging metadata, a
+faster array factor, local random generators, and docs whose code runs
+in CI.
+
+### Changed
+
+- **Behavior change:** Python 3.10 or newer is required (3.9 reached end
+  of life in Oct 2025). Dependency floors move to the oldest releases
+  with Python 3.10 wheels: numpy>=1.21.3, scipy>=1.7.2,
+  matplotlib>=3.5.0. CI tests Python 3.10 through 3.14
+- **Behavior change:** `frequency_to_k()` and `frequency_to_wavelength()`
+  use the exact speed of light, 299792458 m/s, like the wideband module
+  (they used 3e8; 10 GHz is 2.998 cm, k changes by 0.07%)
+- **Behavior change:** `analyze_instantaneous_bandwidth()` bisects for
+  the bandwidth at which squint reaches the tolerance instead of
+  extrapolating linearly from the first failing bandwidth. Results rise
+  slightly in simple cases (16x16 phase-only, 2 deg tolerance:
+  23.8/11.7/6.9/4.0% at 15/30/45/60 deg, was 22.2/11.1/6.5/3.7%) and a
+  lot where a grating lobe makes squint jump (a hybrid case went from
+  5.4% to 35%)
+- `array_factor_vectorized()` and `array_factor_uv()` evaluate in angle
+  chunks with bounded memory (87 MiB peak for 4096 elements on a 181x361
+  grid instead of a 4 GiB intermediate) and factor the sum over x and y
+  when elements lie on a rectilinear lattice. Measured with
+  `benchmarks/bench_array_factor.py`: 3.7x, 7.0x and 14.8x faster than a
+  NumPy loop over elements for 8x8, 16x16 and 32x32 arrays; random
+  positions run at 0.9x. The previous "50-100x faster" claim was not
+  supported by measurement (the old code ran at 0.8-0.9x the element
+  loop) and has been replaced in the README, docs and notebook
+- `mutual_coupling_matrix_theoretical()` is vectorized (was an O(N^2)
+  Python loop); results are identical
+- Random functions (`thin_array_random`, `thin_array_density_tapered`,
+  `thin_array_genetic_algorithm`, `simulate_element_failures`) no longer
+  call `np.random.seed` or draw from NumPy's global generator. An int
+  seed uses a local `RandomState`, which reproduces the results of
+  earlier releases for the same seed; a `numpy.random.Generator` or
+  `RandomState` can be passed instead. `seed=None` no longer follows a
+  prior `np.random.seed()` call
+
+### Added
+
+- `analyze_graceful_degradation(..., seed=...)`
+- `quantization_lobes(..., element_spacing=...)` folds lobe positions by
+  the array's pattern period, so lobes that alias into visible space are
+  reported where they appear
+- `phased_array/py.typed`: type checkers now use the inline annotations
+- `benchmarks/bench_array_factor.py`
+
+### Fixed
+
+- `compute_beam_squint()` documented the squint sign backwards
+
+### Documentation
+
+- Every Python code block in the Sphinx docs runs in CI
+  (`tests/test_docs_snippets.py`, marker `docs`), as does
+  `Phased_Array_Demo.ipynb` (`tests/test_notebooks.py`); Sphinx and Read
+  the Docs build with warnings as errors
+- Fixed the remaining outdated examples (visualization, wideband,
+  geometry, polarization, quickstart, theory, troubleshooting) and the
+  cookbook recipes that printed wrong sidelobe numbers from fixed index
+  ranges; the scan-limit values for 0.6 and 0.7 wavelength spacing are
+  41.8 and 25.4 deg
+
+### Packaging
+
+- PEP 639 license metadata (`license = "MIT"`, `license-files`), which
+  needs setuptools>=77
+- ruff replaces the flake8 check; mypy runs as an informational CI job
+- The release workflow runs the tests and checks that the tag matches
+  the package version before building
+
 ## [1.6.0] - 2026-11-24
 
 Correctness release. A review against Balanis (*Antenna Theory*, 3rd ed.)
