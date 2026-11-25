@@ -14,24 +14,30 @@ patterns and the input impedance of each element.
 Theoretical Model
 ^^^^^^^^^^^^^^^^^
 
-Approximates coupling based on element spacing using a simple dipole model:
+A heuristic model that decays with element separation. The ``'sinc'``
+model is ``coupling_coeff * sin(kr)/kr * exp(-jkr)``; it is isotropic and is
+not an electromagnetic dipole model (it is exactly zero at r = lambda/2, where
+induced-EMF theory gives ``|Z21/Z11| = 0.38`` for side-by-side half-wave dipoles).
+Use it for qualitative studies and measured or simulated S-parameters for
+quantitative work.
 
 .. code-block:: python
 
    import phased_array as pa
    import numpy as np
 
-   geom = pa.create_rectangular_array(8, 8, dx=0.5, dy=0.5)
+   geom = pa.create_rectangular_array(16, 16, dx=0.5, dy=0.5)
+   k = pa.wavelength_to_k(1.0)
 
    # Create coupling matrix
    coupling_matrix = pa.mutual_coupling_matrix_theoretical(
-       geom.x, geom.y,
-       coupling_coefficient=0.3,  # Coupling at d=lambda/2
-       coupling_exponent=2.0      # Decay rate
+       geom, k,
+       coupling_model='exponential',  # or 'sinc'
+       coupling_coeff=0.3
    )
 
-   print(f"Matrix shape: {coupling_matrix.shape}")  # (64, 64)
-   print(f"Self-coupling: {coupling_matrix[0, 0]:.2f}")  # 1.0
+   print(f"Matrix shape: {coupling_matrix.shape}")  # (256, 256)
+   print(f"Self-coupling: {coupling_matrix[0, 0].real:.2f}")  # 1.0
    print(f"Neighbor coupling: {np.abs(coupling_matrix[0, 1]):.2f}")
 
 Measured Coupling
@@ -41,10 +47,16 @@ For more accurate modeling, import measured S-parameters:
 
 .. code-block:: python
 
-   # S-parameter data from measurement or EM simulation
-   s_params = np.load('measured_s_params.npy')  # (N, N) complex matrix
+   # S-parameter data from measurement or EM simulation, e.g.
+   # s_params = np.load('measured_s_params.npy')  # (N, N) complex matrix
+   s_params = 0.1 * np.exp(-1j * np.pi / 3) * (np.ones((4, 4)) - np.eye(4))
 
-   coupling_matrix = pa.mutual_coupling_matrix_measured(s_params)
+   # Normalized impedance form C = (I + S)(I - S)^-1 (the default)
+   coupling_measured = pa.mutual_coupling_matrix_measured(s_params)
+
+The active-impedance functions below take a ``formulation`` argument that must
+match how the matrix was built: ``'impedance'`` (default, as returned here) or
+``'voltage'`` for ``C = I + S``.
 
 Applying Coupling Effects
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -84,8 +96,10 @@ The element pattern when embedded in an array differs from an isolated element:
    phi = np.zeros_like(theta)
 
    aep = pa.active_element_pattern(
-       theta, phi, geom, coupling_matrix,
-       element_idx=32  # Center element
+       theta, phi, geom,
+       element_idx=136,  # near the center of the 16 x 16 array
+       C=coupling_matrix,
+       k=k
    )
 
 Phase Quantization
@@ -113,13 +127,32 @@ Basic Quantization
 Quantization Error Analysis
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Two regimes ([Haupt]_ Sec. 2.12.2):
+
+- **Uncorrelated error** (large scan angles, or phase dithering): the error
+  acts like random phase noise with RMS ``2*pi / (2**B * sqrt(12))`` and
+  raises the average sidelobe floor to
+  ``(exp(sigma**2) - 1) / (N * eta)``.
+- **Correlated error** (small scan angles): neighboring elements share a
+  quantized phase, the error is a periodic sawtooth, and quantization lobes
+  form at ``u_s * (1 + m * 2**B)`` with level ``1 / |1 + m * 2**B|``.
+
 .. code-block:: python
 
-   # RMS phase error
+   n_elements = geom.n_elements
    for bits in [3, 4, 5, 6]:
        rms_error = pa.quantization_rms_error(bits)
-       sll_increase = pa.quantization_sidelobe_increase(bits)
-       print(f"{bits}-bit: RMS error = {rms_error:.1f} deg, SLL increase ~ {sll_increase:.1f} dB")
+       floor = pa.quantization_sidelobe_level(bits, n_elements)
+       print(f"{bits}-bit: RMS error = {rms_error:.1f} deg, "
+             f"average sidelobe floor = {floor:.1f} dB")
+
+   # Quantization lobes for a beam steered to u = 0.05 with 4-bit shifters
+   u_lobes, level_dB = pa.quantization_lobes(4, 0.05)
+   for u_m, lvl in zip(u_lobes, level_dB):
+       print(f"lobe at u = {u_m:+.2f}: {lvl:.1f} dB")
+
+.. [Haupt] R. L. Haupt, *Antenna Arrays: A Computational Approach*,
+   Wiley-IEEE Press, 2010.
 
 Typical results:
 
@@ -153,6 +186,7 @@ Full Analysis
 
 .. code-block:: python
 
+   weights = pa.steering_vector(k, geom.x, geom.y, theta0_deg=20, phi0_deg=0)
    results = pa.analyze_quantization_effect(
        weights, geom, k,
        n_bits=4,
@@ -217,23 +251,31 @@ Analyze how pattern degrades with increasing failure rate:
 
 .. code-block:: python
 
+   weights = (pa.steering_vector(k, geom.x, geom.y, theta0_deg=30, phi0_deg=0)
+              * pa.taylor_taper_2d(16, 16, sidelobe_dB=-30))
+
+   np.random.seed(42)  # trials use NumPy's global random state
    results = pa.analyze_graceful_degradation(
-       geom, k, weights,
+       weights, geom, k,
        failure_rates=[0.0, 0.02, 0.05, 0.10, 0.20],
-       n_trials=10,  # Average over multiple random failures
-       seed=42
+       n_trials=50  # Average over multiple random failures
    )
 
-   # Results include:
-   # - Mean sidelobe level vs failure rate
-   # - Directivity loss
-   # - Beamwidth change
+   print(f"Nominal peak sidelobe: {results['sidelobe_ref_dB']:.1f} dB")
+   for rate, loss, dsll in zip(results['failure_rates'],
+                               results['gain_loss_mean_dB'],
+                               results['sidelobe_increase_mean_dB']):
+       print(f"{100 * rate:4.0f}% failed: gain loss {loss:.2f} dB, "
+             f"peak sidelobe +{dsll:.1f} dB")
 
-For a 256-element array, typical degradation:
+The sidelobe level is measured on a cut through the beam peak, outside the
+first nulls. For this 16 x 16 Taylor -30 dB array steered to 30 deg (50
+trials):
 
-- 5% failures: ~0.5 dB gain loss, 2-3 dB SLL increase
-- 10% failures: ~1 dB gain loss, 4-5 dB SLL increase
-- 20% failures: ~2 dB gain loss, pattern significantly degraded
+- 2% failures: 0.17 dB gain loss, peak sidelobe +1.9 dB
+- 5% failures: 0.44 dB gain loss, +3.3 dB
+- 10% failures: 0.91 dB gain loss, +4.6 dB
+- 20% failures: 1.93 dB gain loss, +7.1 dB
 
 Scan Blindness
 --------------
@@ -244,79 +286,64 @@ reflection coefficient to approach unity (scan blindness).
 Surface Wave Angle
 ^^^^^^^^^^^^^^^^^^
 
-Estimate the scan angle where blindness occurs:
+Blindness occurs where a grating-lobe (Floquet) mode of the scanned array
+matches the TM0 surface wave of the grounded substrate,
+``sin(theta_blind) = |lambda/d - beta_sw/k0|``. ``beta_sw`` comes from the
+grounded-slab TM0 dispersion relation, so thicker or higher-permittivity
+substrates move blindness toward broadside:
 
 .. code-block:: python
 
-   blind_angle = pa.surface_wave_scan_angle(
-       dx=0.5,  # Element spacing in wavelengths
-       substrate_er=2.2,  # Substrate dielectric constant
-       thickness=0.05  # Substrate thickness in wavelengths
+   theta_E, theta_H = pa.surface_wave_scan_angle(
+       dx=0.5, dy=0.5,      # Element spacing in wavelengths
+       substrate_er=12.8,   # Substrate dielectric constant
+       substrate_h=0.06     # Substrate thickness in wavelengths
    )
-   print(f"Expected blindness near {blind_angle:.1f} degrees")
+   print(f"Expected E-plane blindness near {theta_E:.1f} degrees")  # 45.6
+
+This case matches the roughly 46 degree E-plane blindness reported by Pozar
+and Schaubert (1984) for printed dipoles. A return value of 90 means no blind
+angle falls in visible space.
 
 Scan Blindness Model
 ^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: python
 
-   theta = np.linspace(0, 90, 181)
+   theta = np.deg2rad(np.linspace(0, 90, 181))
+   phi = np.zeros_like(theta)
 
-   # Get scan loss including blindness
-   loss = pa.scan_blindness_model(
-       theta_deg=theta,
-       dx=0.55,
-       substrate_er=3.0,
-       thickness=0.03,
-       bandwidth=0.1  # Blindness bandwidth in sin(theta)
+   # Multiplicative null (linear factor) around the blind angle
+   factor = pa.scan_blindness_model(
+       theta, phi,
+       theta_blind=theta_E,
+       null_width_deg=5.0,
+       null_depth_dB=-30.0
    )
 
-   # Apply to pattern
-   scan_loss = pa.compute_scan_loss(theta, geom, k)
+   # Scan loss of steered weights relative to broadside (element roll-off)
+   weights = pa.steering_vector(k, geom.x, geom.y, 40, 0)
+   scan_loss = pa.compute_scan_loss(geom, weights, k, 40, 0,
+                                    element_pattern_func=pa.element_pattern)
+   print(f"Scan loss at 40 deg: {scan_loss:.2f} dB")
 
 Applying to Patterns
 ^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: python
 
-   # Compute pattern at various scan angles
+   _, _, theta_g, phi_g = pa.create_theta_phi_grid((0, np.pi / 2), (0, 2 * np.pi), 91, 181)
+
    for scan_angle in [0, 30, 45, 60]:
        weights = pa.steering_vector(k, geom.x, geom.y, scan_angle, 0)
+       pattern = pa.array_factor_vectorized(theta_g, phi_g, geom.x, geom.y, weights, k)
 
-       # Apply scan blindness model
-       weights_blind = pa.apply_scan_blindness(
-           weights, geom, k,
-           scan_angle_deg=scan_angle,
-           substrate_er=2.5,
-           blind_angle_deg=65
+       # Impose the blindness nulls on the pattern
+       pattern_blind = pa.apply_scan_blindness(
+           pattern, theta_g, phi_g,
+           theta_blind_list=[theta_E],
+           null_depth_dB=-30.0
        )
-
-       # Compare patterns with and without blindness
-
-Combined Impairments
---------------------
-
-In practice, multiple impairments occur simultaneously:
-
-.. code-block:: python
-
-   # Start with ideal steering
-   weights = pa.steering_vector(k, geom.x, geom.y, theta0_deg=30, phi0_deg=0)
-   weights *= pa.taylor_taper_2d(16, 16, sidelobe_dB=-30)
-
-   # Apply impairments in order
-   # 1. Mutual coupling
-   coupling = pa.mutual_coupling_matrix_theoretical(geom.x, geom.y)
-   weights = pa.apply_mutual_coupling(weights, coupling)
-
-   # 2. Phase quantization
-   weights = pa.quantize_phase(weights, n_bits=5)
-
-   # 3. Element failures
-   weights, _ = pa.simulate_element_failures(weights, failure_rate=0.03, mode='off')
-
-   # Compute final pattern
-   theta, phi, pattern_dB = pa.compute_full_pattern(geom.x, geom.y, weights, k)
 
 Active Impedance and VSWR
 -------------------------
@@ -340,7 +367,8 @@ elements when the array is excited with given weights:
    geom = pa.create_rectangular_array(8, 8, dx=0.5, dy=0.5)
    k = pa.wavelength_to_k(1.0)
 
-   # Create coupling matrix
+   # Create coupling matrix (treated as a normalized impedance matrix;
+   # pass formulation='voltage' to treat it as I + S instead)
    C = pa.mutual_coupling_matrix_theoretical(geom, k, coupling_coeff=0.2)
 
    # Compute steering weights
@@ -467,13 +495,16 @@ In practice, multiple impairments occur simultaneously:
 
 .. code-block:: python
 
+   geom = pa.create_rectangular_array(16, 16, dx=0.5, dy=0.5)
+   k = pa.wavelength_to_k(1.0)
+
    # Start with ideal steering
    weights = pa.steering_vector(k, geom.x, geom.y, theta0_deg=30, phi0_deg=0)
    weights *= pa.taylor_taper_2d(16, 16, sidelobe_dB=-30)
 
    # Apply impairments in order
    # 1. Mutual coupling
-   coupling = pa.mutual_coupling_matrix_theoretical(geom.x, geom.y)
+   coupling = pa.mutual_coupling_matrix_theoretical(geom, k)
    weights = pa.apply_mutual_coupling(weights, coupling)
 
    # 2. Phase quantization

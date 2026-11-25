@@ -224,8 +224,8 @@ def create_rectangular_array(
     dy_m = dy * wavelength
 
     # Create grid
-    x_1d = np.arange(Nx) * dx_m
-    y_1d = np.arange(Ny) * dy_m
+    x_1d = np.arange(Nx, dtype=float) * dx_m
+    y_1d = np.arange(Ny, dtype=float) * dy_m
 
     if center:
         x_1d -= x_1d.mean()
@@ -312,8 +312,8 @@ def create_triangular_array(
             x_list.append(col * dx_m + offset)
             y_list.append(row * dy_m)
 
-    x = np.array(x_list)
-    y = np.array(y_list)
+    x = np.array(x_list, dtype=float)
+    y = np.array(y_list, dtype=float)
 
     if center:
         x -= x.mean()
@@ -349,9 +349,11 @@ def create_elliptical_array(
     dx : float
         Element spacing in x (in wavelengths)
     dy : float, optional
-        Element spacing in y (default: same as dx)
+        Element spacing in y (default: same as dx). Ignored for the
+        triangular grid, whose row pitch is ``dx * sqrt(3) / 2``.
     grid_type : str
-        'rectangular' or 'triangular'
+        'rectangular' or 'triangular' (equilateral lattice centred on the
+        ellipse)
     wavelength : float
         Wavelength in meters
 
@@ -365,36 +367,52 @@ def create_elliptical_array(
     a_m = a * wavelength
     b_m = b * wavelength
     dx_m = dx * wavelength
-    dy_m = dy * wavelength if grid_type == 'rectangular' else dx * np.sqrt(3) / 2 * wavelength
-
-    # Generate grid larger than ellipse
-    nx_max = int(np.ceil(2 * a / dx)) + 2
-    ny_max = int(np.ceil(2 * b / dy)) + 2
 
     x_list = []
     y_list = []
 
-    for row in range(ny_max):
-        if grid_type == 'triangular':
-            offset = (dx_m / 2) if (row % 2 == 1) else 0
-        else:
-            offset = 0
+    if grid_type == 'triangular':
+        # Equilateral lattice centred on the ellipse: rows at multiples of
+        # the sqrt(3)/2 pitch, odd rows offset by half a spacing. The
+        # lattice is symmetric about both axes, so no re-centering is
+        # needed and every element stays inside the boundary.
+        pitch_m = dx_m * np.sqrt(3) / 2
+        n_rows = int(np.floor(b_m / pitch_m + 1e-9))
+        n_cols = int(np.ceil(a_m / dx_m)) + 1
+        for row in range(-n_rows, n_rows + 1):
+            offset = 0.5 if (row % 2) else 0.0
+            y_pos = row * pitch_m
+            for col in range(-n_cols, n_cols + 1):
+                x_pos = (col + offset) * dx_m
+                if (x_pos / a_m) ** 2 + (y_pos / b_m) ** 2 <= 1.0 + 1e-12:
+                    x_list.append(x_pos)
+                    y_list.append(y_pos)
 
-        for col in range(nx_max):
-            x_pos = col * dx_m + offset - a_m
-            y_pos = row * dy_m - b_m
+        x = np.array(x_list, dtype=float)
+        y = np.array(y_list, dtype=float)
+    else:
+        dy_m = dy * wavelength
 
-            # Check if inside ellipse
-            if (x_pos / a_m) ** 2 + (y_pos / b_m) ** 2 <= 1.0:
-                x_list.append(x_pos)
-                y_list.append(y_pos)
+        # Generate grid larger than ellipse
+        nx_max = int(np.ceil(2 * a / dx)) + 2
+        ny_max = int(np.ceil(2 * b / dy)) + 2
 
-    x = np.array(x_list)
-    y = np.array(y_list)
+        for row in range(ny_max):
+            for col in range(nx_max):
+                x_pos = col * dx_m - a_m
+                y_pos = row * dy_m - b_m
 
-    # Center
-    x -= x.mean()
-    y -= y.mean()
+                # Check if inside ellipse
+                if (x_pos / a_m) ** 2 + (y_pos / b_m) ** 2 <= 1.0:
+                    x_list.append(x_pos)
+                    y_list.append(y_pos)
+
+        x = np.array(x_list, dtype=float)
+        y = np.array(y_list, dtype=float)
+
+        # Center
+        x -= x.mean()
+        y -= y.mean()
 
     return ArrayGeometry(
         x=x, y=y,
@@ -623,6 +641,38 @@ def create_spherical_array(
 
 # ============== Sparse/Thinned Arrays ==============
 
+def _subset(geometry: ArrayGeometry, keep: np.ndarray) -> ArrayGeometry:
+    """
+    Geometry restricted to the elements ``keep`` (indices into geometry).
+
+    Copies every per-element field, including the polarization tangents,
+    and maps ``element_indices`` back to the original array when the input
+    already carries them.
+    """
+    keep = np.asarray(keep, dtype=int)
+
+    def take(arr):
+        return None if arr is None else np.asarray(arr)[keep]
+
+    if geometry.element_indices is not None:
+        element_indices = np.asarray(geometry.element_indices)[keep]
+    else:
+        element_indices = keep.copy()
+
+    return ArrayGeometry(
+        x=geometry.x[keep],
+        y=geometry.y[keep],
+        z=take(geometry.z),
+        nx=take(geometry.nx),
+        ny=take(geometry.ny),
+        nz=take(geometry.nz),
+        element_indices=element_indices,
+        tx=take(geometry.tx),
+        ty=take(geometry.ty),
+        tz=take(geometry.tz),
+    )
+
+
 def thin_array_random(
     geometry: ArrayGeometry,
     thinning_factor: float,
@@ -643,7 +693,8 @@ def thin_array_random(
     Returns
     -------
     geometry : ArrayGeometry
-        Thinned array geometry
+        Thinned array geometry. ``element_indices`` index the original
+        (unthinned) array, also when thinning an already thinned geometry.
     """
     if seed is not None:
         np.random.seed(seed)
@@ -652,15 +703,7 @@ def thin_array_random(
     keep_indices = np.random.choice(geometry.n_elements, n_keep, replace=False)
     keep_indices = np.sort(keep_indices)
 
-    return ArrayGeometry(
-        x=geometry.x[keep_indices],
-        y=geometry.y[keep_indices],
-        z=geometry.z[keep_indices] if geometry.z is not None else None,
-        nx=geometry.nx[keep_indices] if geometry.nx is not None else None,
-        ny=geometry.ny[keep_indices] if geometry.ny is not None else None,
-        nz=geometry.nz[keep_indices] if geometry.nz is not None else None,
-        element_indices=keep_indices
-    )
+    return _subset(geometry, keep_indices)
 
 
 def thin_array_density_tapered(
@@ -683,7 +726,7 @@ def thin_array_density_tapered(
     Returns
     -------
     geometry : ArrayGeometry
-        Thinned geometry
+        Thinned geometry. ``element_indices`` index the original array.
     """
     if seed is not None:
         np.random.seed(seed)
@@ -696,15 +739,7 @@ def thin_array_density_tapered(
     keep_mask = np.random.random(geometry.n_elements) < keep_prob
     keep_indices = np.where(keep_mask)[0]
 
-    return ArrayGeometry(
-        x=geometry.x[keep_indices],
-        y=geometry.y[keep_indices],
-        z=geometry.z[keep_indices] if geometry.z is not None else None,
-        nx=geometry.nx[keep_indices] if geometry.nx is not None else None,
-        ny=geometry.ny[keep_indices] if geometry.ny is not None else None,
-        nz=geometry.nz[keep_indices] if geometry.nz is not None else None,
-        element_indices=keep_indices
-    )
+    return _subset(geometry, keep_indices)
 
 
 def thin_array_genetic_algorithm(
@@ -751,17 +786,8 @@ def thin_array_genetic_algorithm(
         return np.random.choice(n_elements, n_target, replace=False)
 
     def evaluate(individual):
-        """Evaluate fitness of an individual."""
-        geom = ArrayGeometry(
-            x=geometry.x[individual],
-            y=geometry.y[individual],
-            z=geometry.z[individual] if geometry.z is not None else None,
-            nx=geometry.nx[individual] if geometry.nx is not None else None,
-            ny=geometry.ny[individual] if geometry.ny is not None else None,
-            nz=geometry.nz[individual] if geometry.nz is not None else None,
-            element_indices=individual
-        )
-        return objective_func(geom)
+        """Evaluate fitness on the same geometry the function returns."""
+        return objective_func(_subset(geometry, individual))
 
     def crossover(parent1, parent2):
         """Single-point crossover maintaining n_target elements."""
@@ -815,15 +841,7 @@ def thin_array_genetic_algorithm(
     best_idx = np.argmin(fitness)
     best_individual = population[best_idx]
 
-    return ArrayGeometry(
-        x=geometry.x[best_individual],
-        y=geometry.y[best_individual],
-        z=geometry.z[best_individual] if geometry.z is not None else None,
-        nx=geometry.nx[best_individual] if geometry.nx is not None else None,
-        ny=geometry.ny[best_individual] if geometry.ny is not None else None,
-        nz=geometry.nz[best_individual] if geometry.nz is not None else None,
-        element_indices=best_individual
-    )
+    return _subset(geometry, best_individual)
 
 
 # ============== Subarray Architectures ==============
@@ -858,13 +876,20 @@ def create_rectangular_subarrays(
     Returns
     -------
     architecture : SubarrayArchitecture
+
+    Notes
+    -----
+    When ``Nx_total`` is not a multiple of ``Nx_sub`` (or likewise in y),
+    the leftover elements form smaller subarrays along the high-index
+    edge, each with its own center. Every element belongs to exactly one
+    subarray.
     """
     # Create full array
     geometry = create_rectangular_array(Nx_total, Ny_total, dx, dy, wavelength)
 
-    # Number of subarrays
-    n_sub_x = Nx_total // Nx_sub
-    n_sub_y = Ny_total // Ny_sub
+    # Number of subarrays; a remainder forms partial subarrays at the edge
+    n_sub_x = -(-Nx_total // Nx_sub)
+    n_sub_y = -(-Ny_total // Ny_sub)
     n_subarrays = n_sub_x * n_sub_y
 
     # Assign elements to subarrays

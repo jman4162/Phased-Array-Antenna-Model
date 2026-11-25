@@ -4,6 +4,7 @@ Realistic impairment models for phased arrays.
 Includes mutual coupling, phase quantization, element failures, and scan blindness.
 """
 
+import warnings
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -28,8 +29,10 @@ def mutual_coupling_matrix_theoretical(
     k : float
         Wavenumber (2*pi/wavelength)
     coupling_model : str
-        'sinc' - sinc function model (good for dipoles)
-        'exponential' - exponential decay model
+        'sinc' - heuristic ``coupling_coeff * sin(kr)/kr * exp(-jkr)``
+        decay. It is isotropic and is not an electromagnetic dipole model
+        (it is exactly zero at r = lambda/2).
+        'exponential' - heuristic exponential decay model
     coupling_coeff : float
         Coupling coefficient (typical: 0.1-0.5)
 
@@ -38,6 +41,12 @@ def mutual_coupling_matrix_theoretical(
     C : ndarray
         N x N complex mutual coupling matrix
     """
+    if coupling_model not in ('sinc', 'exponential'):
+        raise ValueError(
+            "coupling_model must be 'sinc' or 'exponential', got "
+            f"{coupling_model!r}"
+        )
+
     n = geometry.n_elements
     C = np.eye(n, dtype=complex)
 
@@ -60,11 +69,9 @@ def mutual_coupling_matrix_theoretical(
                         coupling = coupling_coeff * np.sin(kr) / kr
                     else:
                         coupling = coupling_coeff
-                elif coupling_model == 'exponential':
+                else:
                     # Exponential decay
                     coupling = coupling_coeff * np.exp(-kr / 2)
-                else:
-                    coupling = 0
 
                 # Add phase based on distance
                 C[i, j] = coupling * np.exp(-1j * kr)
@@ -307,7 +314,14 @@ def quantization_rms_error(n_bits: int) -> float:
 
 def quantization_sidelobe_increase(n_bits: int) -> float:
     """
-    Estimate sidelobe level increase due to phase quantization.
+    Deprecated: returns ``20*log10(2*sigma)``, which is not a sidelobe level.
+
+    .. deprecated:: 1.6.0
+        The returned value does not depend on the array size or taper and
+        disagrees with both textbook models by 10-25 dB. Use
+        :func:`quantization_sidelobe_level` for the average sidelobe floor
+        from uncorrelated quantization error, or :func:`quantization_lobes`
+        for the quantization lobes that form at small scan angles.
 
     Parameters
     ----------
@@ -316,14 +330,111 @@ def quantization_sidelobe_increase(n_bits: int) -> float:
 
     Returns
     -------
-    increase_dB : float
-        Expected sidelobe increase in dB
+    value_dB : float
+        ``20*log10(2*sigma)`` with sigma the RMS phase error in radians
     """
-    # Approximate formula: sidelobe ratio ~ -6*n_bits dB
-    # for uniformly distributed phase errors
+    warnings.warn(
+        "quantization_sidelobe_increase is deprecated and does not estimate a "
+        "sidelobe level; use quantization_sidelobe_level (uncorrelated error) "
+        "or quantization_lobes (correlated error at small scan angles).",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     rms_error_rad = np.deg2rad(quantization_rms_error(n_bits))
-    # Peak sidelobe from quantization noise ~ 2*sigma
     return 20 * np.log10(2 * rms_error_rad + 1e-10)
+
+
+def quantization_sidelobe_level(
+    n_bits: int,
+    n_elements: int,
+    taper_efficiency: float = 1.0
+) -> float:
+    """
+    Average sidelobe level from uncorrelated phase quantization error.
+
+    When the quantization error varies randomly from element to element
+    (large scan angles, or phase dithering), it acts like a random phase
+    error with standard deviation ``sigma = 2*pi / (2**n_bits * sqrt(12))``.
+    The average sidelobe level relative to the main-beam peak is
+    (Haupt, *Antenna Arrays*, eqs. 2.119 and 2.129)
+
+        SLL = (1 - exp(-sigma**2)) / (N * eta * exp(-sigma**2))
+
+    Parameters
+    ----------
+    n_bits : int
+        Number of phase-shifter bits
+    n_elements : int
+        Number of elements N
+    taper_efficiency : float
+        Aperture taper efficiency eta (1 for uniform), see
+        :func:`compute_taper_efficiency`
+
+    Returns
+    -------
+    sll_dB : float
+        Average sidelobe level in dB relative to the beam peak
+
+    Examples
+    --------
+    >>> import phased_array as pa
+    >>> round(pa.quantization_sidelobe_level(4, 100), 1)
+    -38.9
+    """
+    sigma = np.deg2rad(quantization_rms_error(n_bits))
+    sll = np.expm1(sigma**2) / (n_elements * taper_efficiency)
+    return float(10 * np.log10(sll))
+
+
+def quantization_lobes(
+    n_bits: int,
+    u_scan: float,
+    max_order: int = 1
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Positions and levels of phase-quantization lobes at small scan.
+
+    At small scan angles neighboring elements share the same quantized
+    phase, so the phase error is a periodic sawtooth across the aperture
+    and produces quantization lobes (Haupt, *Antenna Arrays*, eqs.
+    2.130-2.133). Lobe ``m`` lies at
+
+        u_m = u_scan * (1 + m * 2**n_bits)
+
+    with a field level of ``1 / |1 + m * 2**n_bits|`` relative to the main
+    beam, from the Fourier series of the sawtooth error. The model assumes
+    a large array and round-to-nearest quantization; lobes with
+    ``|u_m| > 1`` fall in invisible space.
+
+    Parameters
+    ----------
+    n_bits : int
+        Number of phase-shifter bits
+    u_scan : float
+        Scan direction cosine, ``sin(theta0)`` in the scan plane
+    max_order : int
+        Highest lobe order; orders ``-max_order..-1, 1..max_order`` are
+        returned
+
+    Returns
+    -------
+    u_positions : ndarray
+        Lobe positions in direction-cosine space, shape (2*max_order,)
+    levels_dB : ndarray
+        Lobe peak levels in dB relative to the main beam
+
+    Examples
+    --------
+    >>> import phased_array as pa
+    >>> u, lvl = pa.quantization_lobes(3, 0.05)
+    >>> [round(float(x), 2) for x in u], [round(float(x), 1) for x in lvl]
+    ([-0.35, 0.45], [-16.9, -19.1])
+    """
+    orders = np.r_[np.arange(-max_order, 0), np.arange(1, max_order + 1)]
+    factor = 1 + orders * 2.0**n_bits
+    u_positions = u_scan * factor
+    levels_dB = -20 * np.log10(np.abs(factor))
+    return u_positions, levels_dB
 
 
 def analyze_quantization_effect(
@@ -375,12 +486,12 @@ def analyze_quantization_effect(
 
     AF_ideal = array_factor_vectorized(
         theta_grid, phi_grid,
-        geometry.x, geometry.y, weights, k
+        geometry.x, geometry.y, weights, k, geometry.z
     ).ravel()
 
     AF_quant = array_factor_vectorized(
         theta_grid, phi_grid,
-        geometry.x, geometry.y, weights_q, k
+        geometry.x, geometry.y, weights_q, k, geometry.z
     ).ravel()
 
     # Convert to dB
@@ -485,6 +596,65 @@ def simulate_element_failures(
     return degraded_weights, failure_mask
 
 
+def _beam_direction(
+    x: np.ndarray,
+    y: np.ndarray,
+    z: Optional[np.ndarray],
+    weights: np.ndarray,
+    k: float
+) -> Tuple[float, float, float]:
+    """
+    Direction (theta, phi) of the array-factor peak in the front hemisphere.
+
+    A grid search with spacing below half a beamwidth (evaluated in chunks
+    to bound memory) is refined with Nelder-Mead. Returns
+    ``(theta, phi, beamwidth)`` in radians, where ``beamwidth`` is the
+    nominal ``lambda / aperture`` used to set the search resolution. A
+    beam within a quarter beamwidth of broadside reports ``phi = 0``.
+    """
+    from scipy.optimize import minimize
+
+    from .core import array_factor_vectorized
+
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    zz = np.zeros_like(x) if z is None else np.asarray(z, dtype=float)
+    pos = np.column_stack([x, y, zz])
+    aperture = 2 * float(np.max(np.linalg.norm(pos - pos.mean(axis=0), axis=1)))
+    wavelength = 2 * np.pi / k
+    beamwidth = wavelength / max(aperture, wavelength)
+
+    step = min(np.deg2rad(1.0), beamwidth / 2)
+    theta = np.linspace(0, np.pi / 2, int(np.ceil((np.pi / 2) / step)) + 1)
+    phi = np.linspace(0, 2 * np.pi, int(np.ceil(2 * np.pi / step)), endpoint=False)
+
+    rows = max(1, int(4e6 // (phi.size * x.size)))
+    best = (-1.0, 0.0, 0.0)
+    for i0 in range(0, theta.size, rows):
+        TH, PH = np.meshgrid(theta[i0:i0 + rows], phi, indexing='ij')
+        af = np.abs(array_factor_vectorized(TH, PH, x, y, weights, k, z))
+        j = int(np.argmax(af))
+        if af.flat[j] > best[0]:
+            best = (float(af.flat[j]), float(TH.flat[j]), float(PH.flat[j]))
+
+    def neg_af(p):
+        return -abs(array_factor_vectorized(
+            np.array([p[0]]), np.array([p[1]]), x, y, weights, k, z)[0])
+
+    x0 = np.array([best[1], best[2]])
+    simplex = np.array([x0, x0 + [step / 2, 0], x0 + [0, step / 2]])
+    res = minimize(neg_af, x0, method='Nelder-Mead',
+                   options={'initial_simplex': simplex, 'xatol': 1e-7,
+                            'fatol': 1e-12 * best[0], 'maxiter': 400})
+    theta_b, phi_b = (res.x if -res.fun >= best[0] else x0)
+    if theta_b < 0:  # theta < 0 is the same direction at phi + 180
+        theta_b, phi_b = -theta_b, phi_b + np.pi
+    phi_b = float(np.mod(phi_b, 2 * np.pi))
+    if theta_b < beamwidth / 4:
+        phi_b = 0.0
+    return float(theta_b), phi_b, beamwidth
+
+
 def analyze_graceful_degradation(
     weights: np.ndarray,
     geometry: ArrayGeometry,
@@ -515,28 +685,43 @@ def analyze_graceful_degradation(
     -------
     results : dict
         'failure_rates': input rates
-        'gain_loss_mean_dB': mean gain loss
+        'gain_loss_mean_dB': mean drop in beam peak power (positive = loss)
         'gain_loss_std_dB': std of gain loss
-        'sidelobe_increase_mean_dB': mean sidelobe increase
+        'sidelobe_increase_mean_dB': mean change in peak sidelobe level
+        'sidelobe_ref_dB': peak sidelobe level of the nominal weights
+
+    Notes
+    -----
+    Patterns are evaluated on a cut through the beam peak (the
+    ``phi`` plane of the beam, theta from -90 to 90 degrees), and the
+    sidelobe level is measured outside the first nulls with
+    :func:`~phased_array.core.compute_peak_sidelobe_level`. Trials use
+    NumPy's global random state; call ``np.random.seed`` first for
+    repeatable results.
     """
-    from .core import array_factor_vectorized, compute_half_power_beamwidth
+    from .core import array_factor_vectorized, compute_peak_sidelobe_level
     from .utils import linear_to_db
 
-    # Reference pattern (no failures)
-    theta = np.linspace(0, np.pi/2, 181)
-    phi = np.zeros_like(theta)
+    x, y, z = geometry.x, geometry.y, geometry.z
 
-    AF_ref = array_factor_vectorized(
-        theta.reshape(-1, 1), phi.reshape(-1, 1),
-        geometry.x, geometry.y, weights, k
-    ).ravel()
-    pattern_ref_dB = linear_to_db(np.abs(AF_ref)**2)
-    pattern_ref_dB -= np.max(pattern_ref_dB)
+    # Beam direction of the nominal weights, refined well below a beamwidth
+    theta_beam, phi_beam, beamwidth = _beam_direction(x, y, z, weights, k)
 
-    peak_ref = 0  # Normalized
-    # Find first sidelobe
-    main_beam_end = np.argmax(pattern_ref_dB < -3)
-    sidelobe_ref = np.max(pattern_ref_dB[main_beam_end:]) if main_beam_end > 0 else -20
+    # Cut through the beam: the phi_beam plane, theta from -90 to 90 deg,
+    # sampled finely enough to resolve the nulls next to the main lobe
+    spacing_deg = min(0.25, np.rad2deg(beamwidth) / 8)
+    angles_deg = np.linspace(-90, 90, int(np.ceil(180 / spacing_deg)) + 1)
+    t = np.deg2rad(angles_deg)
+    theta_cut = np.abs(t)
+    phi_cut = np.where(t >= 0, phi_beam, phi_beam + np.pi)
+
+    def cut_power_dB(w):
+        af = array_factor_vectorized(theta_cut, phi_cut, x, y, w, k, z)
+        return linear_to_db(np.abs(af)**2, min_db=-300.0)
+
+    ref_dB = cut_power_dB(weights)
+    peak_ref_dB = float(np.max(ref_dB))
+    sidelobe_ref = compute_peak_sidelobe_level(angles_deg, ref_dB)
 
     gain_loss_mean = []
     gain_loss_std = []
@@ -550,22 +735,13 @@ def analyze_graceful_degradation(
             degraded, _ = simulate_element_failures(
                 weights, rate, mode, seed=None
             )
+            pattern_dB = cut_power_dB(degraded)
 
-            AF = array_factor_vectorized(
-                theta.reshape(-1, 1), phi.reshape(-1, 1),
-                geometry.x, geometry.y, degraded, k
-            ).ravel()
+            # Gain loss: drop in peak power on the beam cut (positive = loss)
+            gain_losses.append(peak_ref_dB - float(np.max(pattern_dB)))
 
-            pattern_dB = linear_to_db(np.abs(AF)**2)
-            peak_degraded = np.max(pattern_dB)
-            pattern_dB -= peak_degraded
-
-            # Gain loss
-            gain_loss = peak_ref - (peak_degraded - np.max(linear_to_db(np.abs(AF_ref)**2)))
-            gain_losses.append(gain_loss)
-
-            # Sidelobe increase
-            sidelobe_degraded = np.max(pattern_dB[main_beam_end:]) if main_beam_end > 0 else -20
+            # Peak sidelobe level relative to the degraded beam peak
+            sidelobe_degraded = compute_peak_sidelobe_level(angles_deg, pattern_dB)
             sidelobe_increases.append(sidelobe_degraded - sidelobe_ref)
 
         gain_loss_mean.append(np.mean(gain_losses))
@@ -576,11 +752,55 @@ def analyze_graceful_degradation(
         'failure_rates': np.array(failure_rates),
         'gain_loss_mean_dB': np.array(gain_loss_mean),
         'gain_loss_std_dB': np.array(gain_loss_std),
-        'sidelobe_increase_mean_dB': np.array(sidelobe_increase_mean)
+        'sidelobe_increase_mean_dB': np.array(sidelobe_increase_mean),
+        'sidelobe_ref_dB': sidelobe_ref
     }
 
 
 # ============== Scan Blindness ==============
+
+def _tm0_surface_wave_beta(substrate_er: float, substrate_h: float) -> float:
+    """
+    Normalized TM0 surface-wave propagation constant of a grounded slab.
+
+    Solves the TM dispersion relation of a grounded dielectric slab
+    (normalized to k0, h in wavelengths)
+
+        sqrt(er - b**2) * tan(k0 h sqrt(er - b**2)) = er * sqrt(b**2 - 1)
+
+    for the TM0 root ``b = beta/k0`` in ``(1, sqrt(er))``. TM0 has no
+    cutoff, so the root exists for any ``er > 1`` and ``h > 0``; it lies
+    on the branch where ``k0 h sqrt(er - b**2) < pi/2``.
+    """
+    from scipy.optimize import brentq
+
+    if substrate_er <= 1:
+        raise ValueError(f"substrate_er must exceed 1, got {substrate_er}")
+    if substrate_h <= 0:
+        raise ValueError(f"substrate_h must be positive, got {substrate_h}")
+
+    k0h = 2 * np.pi * substrate_h
+
+    # Solve in the tan argument x = k0 h kd, kd = sqrt(er - b^2) / 1, on the
+    # TM0 branch 0 < x < min(pi/2, k0 h sqrt(er - 1)). Multiplying the
+    # dispersion relation by cos(x) removes the tan pole, so the bracket
+    # stays well conditioned for thick substrates.
+    def residual(x):
+        kd = x / k0h
+        alpha = np.sqrt(max(substrate_er - 1 - kd * kd, 0.0))
+        return kd * np.sin(x) - substrate_er * alpha * np.cos(x)
+
+    x_hi = min(np.pi / 2, k0h * np.sqrt(substrate_er - 1))
+    if x_hi < 1e-3 or residual(x_hi) <= 0:
+        # Thin slab: the root crowds the upper bracket edge, where the
+        # residual is ill-conditioned. The series below is accurate to a
+        # relative error of order x_hi**2 in b - 1.
+        return 1.0 + 0.5 * (k0h * (substrate_er - 1) / substrate_er)**2
+    x = brentq(residual, 0.0, x_hi, xtol=1e-16 * x_hi,
+               rtol=4 * np.finfo(float).eps)
+    kd = x / k0h
+    return float(max(np.sqrt(substrate_er - kd * kd), 1.0))
+
 
 def surface_wave_scan_angle(
     dx: float,
@@ -591,6 +811,12 @@ def surface_wave_scan_angle(
     """
     Estimate scan blindness angles due to surface wave excitation.
 
+    Blindness occurs where a Floquet (grating-lobe) mode of the scanned
+    array matches the TM0 surface wave of the grounded substrate:
+    ``|sin(theta) - lambda/d| = beta_sw / k0`` for scan in the plane of
+    spacing ``d``, so ``sin(theta_blind) = |lambda/d - beta_sw/k0|``.
+    ``beta_sw`` comes from the exact grounded-slab TM0 dispersion relation.
+
     Parameters
     ----------
     dx : float
@@ -598,36 +824,45 @@ def surface_wave_scan_angle(
     dy : float
         Element spacing in y (wavelengths)
     substrate_er : float
-        Substrate relative permittivity
+        Substrate relative permittivity (> 1)
     substrate_h : float
         Substrate height (wavelengths)
 
     Returns
     -------
     theta_blind_E : float
-        Blind angle in E-plane (degrees)
+        Blind scan angle in the x (E-) plane in degrees; 90.0 when no
+        blind angle falls in visible space
     theta_blind_H : float
-        Blind angle in H-plane (degrees)
+        Blind scan angle in the y (H-) plane in degrees; 90.0 when none
+
+    Notes
+    -----
+    This is the geometric matching condition only. How deep the blindness
+    is depends on element type and polarization: printed dipoles and
+    patches couple strongly to TM0 in the E-plane. The TE1 surface wave,
+    present on thicker substrates, is not modeled.
+
+    For er = 12.8, h = 0.06 lambda and d = 0.5 lambda this gives about
+    45.6 degrees, consistent with the E-plane blindness Pozar and
+    Schaubert report for printed dipoles (IEEE Trans. AP-32, 1984).
+
+    Examples
+    --------
+    >>> import phased_array as pa
+    >>> theta_e, theta_h = pa.surface_wave_scan_angle(0.5, 0.5, 12.8, 0.06)
+    >>> round(theta_e, 1)
+    45.6
     """
-    # Surface wave propagation constant (approximate)
-    # For thin substrates: beta_sw ~ k0 * sqrt(er) * (1 + some correction)
-    # Simplified model
-    n_eff = np.sqrt(substrate_er) * (1 + 0.5 * substrate_h * np.sqrt(substrate_er - 1))
-    n_eff = min(n_eff, np.sqrt(substrate_er))
+    beta = _tm0_surface_wave_beta(substrate_er, substrate_h)
 
-    # Blind angle occurs when grating lobe enters surface wave
-    # sin(theta_blind) = n_eff - 1/d
-    sin_theta_E = n_eff - 1 / dx
-    sin_theta_H = n_eff - 1 / dy
+    def blind_angle(d):
+        s_blind = abs(1.0 / d - beta)
+        if s_blind > 1.0:
+            return 90.0
+        return float(np.rad2deg(np.arcsin(s_blind)))
 
-    # Clamp to valid range
-    sin_theta_E = np.clip(sin_theta_E, -1, 1)
-    sin_theta_H = np.clip(sin_theta_H, -1, 1)
-
-    theta_blind_E = np.rad2deg(np.arcsin(sin_theta_E)) if abs(sin_theta_E) <= 1 else 90
-    theta_blind_H = np.rad2deg(np.arcsin(sin_theta_H)) if abs(sin_theta_H) <= 1 else 90
-
-    return abs(theta_blind_E), abs(theta_blind_H)
+    return blind_angle(dx), blind_angle(dy)
 
 
 def scan_blindness_model(
@@ -766,17 +1001,27 @@ def compute_scan_loss(
     -------
     scan_loss_dB : float
         Reduction in gain relative to broadside (negative or zero)
-    """
-    from .core import total_pattern
 
-    # Compute gain at broadside
+    Notes
+    -----
+    The reference is the same amplitude distribution, ``|weights|``,
+    steered to broadside, so an amplitude taper is not counted as scan
+    loss. The ratio is of the pattern power in the two directions; with
+    ``element_pattern_func=None`` a planar array shows no loss, because
+    the array-factor peak does not change with scan.
+    """
+    from .core import steering_vector, total_pattern
+
+    # Reference: the same amplitude distribution steered to broadside
     theta_bs = np.array([[0.0]])
     phi_bs = np.array([[0.0]])
-    weights_bs = np.ones_like(weights)
+    weights_bs = np.abs(weights) * steering_vector(
+        k, geometry.x, geometry.y, 0.0, 0.0, geometry.z
+    )
 
     pattern_bs = total_pattern(
         theta_bs, phi_bs, geometry.x, geometry.y,
-        weights_bs, k, element_pattern_func
+        weights_bs, k, element_pattern_func, geometry.z
     )
     gain_bs = np.abs(pattern_bs.item()) ** 2
 
@@ -786,7 +1031,7 @@ def compute_scan_loss(
 
     pattern_scan = total_pattern(
         theta_scan, phi_scan, geometry.x, geometry.y,
-        weights, k, element_pattern_func
+        weights, k, element_pattern_func, geometry.z
     )
     gain_scan = np.abs(pattern_scan.item()) ** 2
 
@@ -798,10 +1043,40 @@ def compute_scan_loss(
 
 # ============== Active Impedance and VSWR ==============
 
+def _coupling_to_s(C: np.ndarray, formulation: str) -> np.ndarray:
+    """Scattering matrix from a coupling matrix in the given formulation."""
+    C = np.asarray(C, dtype=complex)
+    identity = np.eye(C.shape[0], dtype=complex)
+    if formulation == 'impedance':
+        # C = (I + S)(I - S)^-1  =>  S = (C + I)^-1 (C - I)
+        return np.linalg.solve(C + identity, C - identity)
+    if formulation == 'voltage':
+        return C - identity
+    raise ValueError(
+        f"formulation must be 'impedance' or 'voltage', got {formulation!r}"
+    )
+
+
+def _active_gammas(
+    C: np.ndarray,
+    weights: np.ndarray,
+    formulation: str
+) -> np.ndarray:
+    """Active reflection coefficients of all elements, (S w)_n / w_n."""
+    S = _coupling_to_s(C, formulation)
+    weights = np.asarray(weights, dtype=complex)
+    reflected = S @ weights
+    gamma = np.zeros_like(reflected)
+    nonzero = weights != 0
+    gamma[nonzero] = reflected[nonzero] / weights[nonzero]
+    return gamma
+
+
 def active_reflection_coefficient(
     C: np.ndarray,
     weights: np.ndarray,
-    element_idx: int
+    element_idx: int,
+    formulation: str = 'impedance'
 ) -> complex:
     """
     Compute active reflection coefficient for an element.
@@ -814,9 +1089,22 @@ def active_reflection_coefficient(
     C : ndarray
         Mutual coupling matrix (N x N)
     weights : ndarray
-        Complex excitation weights (N,)
+        Complex excitation weights (N,), the incident waves at the ports
     element_idx : int
         Index of the element to compute reflection for
+    formulation : str
+        How ``C`` relates to the scattering matrix S. It must match how C
+        was built:
+
+        - ``'impedance'`` (default): ``C = (I + S)(I - S)^-1``, the
+          normalized impedance matrix returned by
+          :func:`mutual_coupling_matrix_measured` by default. The
+          unit-diagonal heuristic of
+          :func:`mutual_coupling_matrix_theoretical` is also treated this
+          way.
+        - ``'voltage'``: ``C = I + S`` (the pre-1.6 behavior of this
+          function, and ``mutual_coupling_matrix_measured(...,
+          formulation='voltage')``).
 
     Returns
     -------
@@ -837,31 +1125,28 @@ def active_reflection_coefficient(
 
     Notes
     -----
-    The active reflection coefficient is:
-        gamma_n = (sum_m(C_nm * w_m) / w_n) - 1
+    The active reflection coefficient is
 
-    This differs from the isolated reflection coefficient because
-    power couples from neighboring elements.
+        gamma_n = sum_m(S_nm * w_m) / w_n
+
+    with S obtained from C according to ``formulation``. It equals
+    ``(z_n - 1) / (z_n + 1)`` for the normalized active impedance ``z_n``.
+    It differs from the isolated reflection coefficient because power
+    couples from neighboring elements. Elements with zero weight return 0.
     """
-    n = len(weights)
-
+    weights = np.asarray(weights, dtype=complex)
+    S = _coupling_to_s(C, formulation)
     if weights[element_idx] == 0:
         return complex(0, 0)
-
-    # Compute coupled excitation at element_idx
-    coupled = np.sum(C[element_idx, :] * weights)
-
-    # Active reflection coefficient
-    gamma = coupled / weights[element_idx] - 1.0
-
-    return gamma
+    return complex(S[element_idx, :] @ weights / weights[element_idx])
 
 
 def active_impedance(
     C: np.ndarray,
     weights: np.ndarray,
     element_idx: int,
-    Z0: float = 50.0
+    Z0: float = 50.0,
+    formulation: str = 'impedance'
 ) -> complex:
     """
     Compute active impedance of an element.
@@ -876,6 +1161,9 @@ def active_impedance(
         Index of the element
     Z0 : float
         Reference impedance in ohms (default 50)
+    formulation : str
+        Form of ``C``: ``'impedance'`` (default) or ``'voltage'``; see
+        :func:`active_reflection_coefficient`
 
     Returns
     -------
@@ -902,7 +1190,7 @@ def active_impedance(
     This is the impedance seen looking into the element port when
     all elements are excited with the given weights.
     """
-    gamma = active_reflection_coefficient(C, weights, element_idx)
+    gamma = active_reflection_coefficient(C, weights, element_idx, formulation)
 
     # Avoid division by zero
     if np.abs(1 - gamma) < 1e-10:
@@ -919,7 +1207,8 @@ def vswr_vs_scan(
     k: float,
     theta_range: Tuple[float, float] = (0, 60),
     n_angles: int = 61,
-    phi_deg: float = 0.0
+    phi_deg: float = 0.0,
+    formulation: str = 'impedance'
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Compute VSWR for all elements versus scan angle.
@@ -938,6 +1227,9 @@ def vswr_vs_scan(
         Number of scan angles to compute
     phi_deg : float
         Phi scan plane in degrees
+    formulation : str
+        Form of ``C``: ``'impedance'`` (default) or ``'voltage'``; see
+        :func:`active_reflection_coefficient`
 
     Returns
     -------
@@ -965,7 +1257,8 @@ def vswr_vs_scan(
 
     Notes
     -----
-    VSWR is computed from reflection coefficient:
+    VSWR is computed from reflection coefficient::
+
         VSWR = (1 + |gamma|) / (1 - |gamma|)
 
     High VSWR at certain scan angles indicates potential scan blindness
@@ -985,16 +1278,12 @@ def vswr_vs_scan(
             theta, phi_deg, geometry.z
         )
 
-        # Compute VSWR for each element
-        for elem_idx in range(n_elements):
-            gamma = active_reflection_coefficient(C, weights, elem_idx)
-            gamma_mag = np.abs(gamma)
-
-            # Clamp to avoid division by zero
-            if gamma_mag >= 1.0:
-                vswr_per_element[i, elem_idx] = np.inf
-            else:
-                vswr_per_element[i, elem_idx] = (1 + gamma_mag) / (1 - gamma_mag)
+        # VSWR for each element; |gamma| >= 1 maps to inf
+        gamma_mag = np.abs(_active_gammas(C, weights, formulation))
+        with np.errstate(divide='ignore'):
+            vswr_per_element[i] = np.where(
+                gamma_mag >= 1.0, np.inf, (1 + gamma_mag) / (1 - gamma_mag)
+            )
 
     vswr_max = np.max(vswr_per_element, axis=1)
 
@@ -1033,7 +1322,8 @@ def mismatch_loss(gamma: np.ndarray) -> np.ndarray:
 
     Notes
     -----
-    Mismatch loss is:
+    Mismatch loss is::
+
         Loss_dB = 10 * log10(1 - |gamma|^2)
 
     This represents the power reflected back due to mismatch.
@@ -1057,7 +1347,8 @@ def active_scan_impedance_matrix(
     k: float,
     theta_deg: float,
     phi_deg: float,
-    Z0: float = 50.0
+    Z0: float = 50.0,
+    formulation: str = 'impedance'
 ) -> np.ndarray:
     """
     Compute active impedance for all elements at a given scan angle.
@@ -1076,6 +1367,9 @@ def active_scan_impedance_matrix(
         Scan angle phi in degrees
     Z0 : float
         Reference impedance
+    formulation : str
+        Form of ``C``: ``'impedance'`` (default) or ``'voltage'``; see
+        :func:`active_reflection_coefficient`
 
     Returns
     -------
@@ -1109,10 +1403,12 @@ def active_scan_impedance_matrix(
         theta_deg, phi_deg, geometry.z
     )
 
-    n_elements = geometry.n_elements
-    Z_active = np.zeros(n_elements, dtype=complex)
-
-    for elem_idx in range(n_elements):
-        Z_active[elem_idx] = active_impedance(C, weights, elem_idx, Z0)
+    gamma = _active_gammas(C, weights, formulation)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        Z_active = np.where(
+            np.abs(1 - gamma) < 1e-10,
+            complex(np.inf, 0),
+            Z0 * (1 + gamma) / (1 - gamma),
+        )
 
     return Z_active

@@ -4,6 +4,7 @@ Beamforming functions for phased arrays.
 Includes amplitude tapering, null steering, and multiple simultaneous beams.
 """
 
+import warnings
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
@@ -30,7 +31,8 @@ def taylor_taper_1d(
     n : int
         Number of elements
     sidelobe_dB : float
-        Desired peak sidelobe level in dB (negative)
+        Desired peak sidelobe level in dB. Either sign is accepted
+        (-30 and 30 both mean sidelobes 30 dB below the peak).
     nbar : int
         Number of nearly equal-level sidelobes
 
@@ -38,9 +40,18 @@ def taylor_taper_1d(
     -------
     taper : ndarray
         Amplitude taper weights (n,)
+
+    Notes
+    -----
+    The weights sample the continuous Taylor line-source distribution
+    (``scipy.signal.windows.taylor``), so the achieved peak sidelobe level
+    is close to, but not exactly, the design value. Choose
+    ``nbar >= 2*A**2 + 0.5`` with ``A = arccosh(10**(|sidelobe_dB|/20))/pi``
+    (about 7 for -40 dB). Small arrays with deep sidelobes fall short:
+    N = 16 designed for -40 dB reaches about -39.3 dB with nbar = 7.
     """
     # Use scipy's Taylor window
-    return signal.windows.taylor(n, nbar=nbar, sll=-sidelobe_dB, norm=True)
+    return signal.windows.taylor(n, nbar=nbar, sll=abs(sidelobe_dB), norm=True)
 
 
 def taylor_taper_2d(
@@ -107,14 +118,27 @@ def chebyshev_taper_1d(
     n : int
         Number of elements
     sidelobe_dB : float
-        Desired sidelobe level in dB (negative)
+        Desired sidelobe level in dB. Either sign is accepted.
 
     Returns
     -------
     taper : ndarray
         Amplitude taper weights
+
+    Notes
+    -----
+    For large arrays with modest sidelobe levels the edge elements carry
+    noticeably more weight than their neighbors (Haupt Fig. 3.11); prefer
+    a Taylor taper there.
     """
-    return signal.windows.chebwin(n, at=-sidelobe_dB)
+    with warnings.catch_warnings():
+        # SciPy warns that chebwin is unsuitable for spectral analysis
+        # above -45 dB; that concern does not apply to array tapers.
+        warnings.filterwarnings(
+            "ignore", message=".*not suitable for spectral analysis.*",
+            category=UserWarning,
+        )
+        return signal.windows.chebwin(n, at=abs(sidelobe_dB))
 
 
 def chebyshev_taper_2d(
@@ -723,13 +747,21 @@ def monopulse_weights(
         Nominal beam direction phi
     mode : str
         'sum' - sum pattern (normal beam)
-        'delta_az' - azimuth difference pattern
-        'delta_el' - elevation difference pattern
+        'delta_az' - azimuth difference pattern (split in x)
+        'delta_el' - elevation difference pattern (split in y)
 
     Returns
     -------
     weights : ndarray
         Complex weights for the specified mode
+
+    Notes
+    -----
+    The difference halves are split about the array centroid, and
+    elements lying on the split line (the center column or row of an
+    odd-sized array) get zero weight, giving an exact boresight null.
+    The difference weights are amplitude-uniform; multiply by a taper
+    for lower difference-pattern sidelobes.
     """
     # Base steering vector
     sv = steering_vector(
@@ -740,16 +772,22 @@ def monopulse_weights(
     if mode == 'sum':
         return sv
 
-    elif mode == 'delta_az':
-        # Difference in azimuth: flip sign for half the array in x
-        sign = np.sign(geometry.x)
-        sign[sign == 0] = 1  # Handle elements at x=0
-        return sv * sign
-
-    elif mode == 'delta_el':
-        # Difference in elevation: flip sign for half the array in y
-        sign = np.sign(geometry.y)
-        sign[sign == 0] = 1
+    elif mode in ('delta_az', 'delta_el'):
+        # Difference pattern: opposite signs on the two halves of the
+        # aperture, split about the array centroid. Elements on the split
+        # line get zero weight so the halves cancel exactly on boresight.
+        coord = np.asarray(geometry.x if mode == 'delta_az' else geometry.y,
+                           dtype=float)
+        if np.ptp(coord) == 0:
+            axis = 'x' if mode == 'delta_az' else 'y'
+            raise ValueError(
+                f"{mode} needs element positions that vary in {axis}; this "
+                "array has no extent in that direction, so it has no "
+                "difference pattern in that plane"
+            )
+        offset = coord - coord.mean()
+        tol = 1e-9 * max(float(np.ptp(coord)), 1e-30)
+        sign = np.where(np.abs(offset) <= tol, 0.0, np.sign(offset))
         return sv * sign
 
     else:
@@ -1037,8 +1075,10 @@ def adaptive_weights_smi(
     phi_desired_deg : float
         Desired signal direction phi in degrees
     interference_data : ndarray
-        Interference-plus-noise data matrix (n_snapshots x n_elements)
-        Each row is a snapshot of received signals
+        Interference-plus-noise data matrix (n_snapshots x n_elements).
+        Each row is a snapshot of received signals. A plane wave from
+        direction u contributes ``amplitude * array_manifold(...)``
+        (``exp(+j k r . u)``), not ``steering_vector``.
     diagonal_loading : float
         Diagonal loading factor for robustness.
         Adds diagonal_loading * I to the covariance matrix.
@@ -1046,7 +1086,10 @@ def adaptive_weights_smi(
     Returns
     -------
     weights : ndarray
-        Adaptive complex weights
+        Adaptive complex weights, applied without conjugation: the array
+        output is ``weights @ x`` and the pattern is
+        ``array_factor_vectorized(..., weights, ...)``. The look-direction
+        response ``weights @ array_manifold(look)`` equals 1.
 
     Examples
     --------
@@ -1068,9 +1111,12 @@ def adaptive_weights_smi(
     Notes
     -----
     The SMI weight vector is:
-        w = R^(-1) @ s / (s^H @ R^(-1) @ s)
+        w = R~^(-1) @ s / (s^H @ R~^(-1) @ s)
 
-    where R is the sample covariance matrix and s is the steering vector.
+    where ``s = steering_vector(...)`` and ``R~ = X^H X / K`` for the
+    snapshot matrix X (rows are snapshots). ``R~`` is the conjugate of the
+    usual covariance ``E[x x^H]``, so ``w`` is the conjugate of the
+    textbook MVDR weight and is applied as ``w @ x``.
     Diagonal loading improves robustness when snapshots are limited.
     """
     n = geometry.n_elements
@@ -1115,14 +1161,15 @@ def adaptive_weights_gsc(
     phi_desired_deg: float,
     interference_data: np.ndarray,
     n_blocking_vectors: Optional[int] = None,
-    mu: float = 0.01
+    mu: float = 0.1
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Compute adaptive weights using Generalized Sidelobe Canceller (GSC).
 
     GSC provides a constrained adaptive filter structure that maintains
     distortionless response in the look direction while minimizing
-    interference and noise.
+    interference and noise. The adaptive branch uses normalized LMS
+    (NLMS) over one pass through the snapshots.
 
     Parameters
     ----------
@@ -1135,18 +1182,23 @@ def adaptive_weights_gsc(
     phi_desired_deg : float
         Desired signal direction phi in degrees
     interference_data : ndarray
-        Interference-plus-noise data (n_snapshots x n_elements)
+        Interference-plus-noise data (n_snapshots x n_elements). A plane
+        wave from direction u contributes ``amplitude * array_manifold``.
     n_blocking_vectors : int, optional
         Number of blocking matrix columns. Default: n_elements - 1
     mu : float
-        Adaptation step size for LMS algorithm
+        Normalized LMS step size, stable for ``0 < mu < 2``. Each update
+        is scaled by ``1 / ||x_b||^2``, so the step does not depend on the
+        input power. Larger values adapt faster with more misadjustment.
 
     Returns
     -------
     weights : ndarray
-        Adaptive weights (n_elements,)
+        Adaptive weights (n_elements,), applied without conjugation like
+        :func:`adaptive_weights_smi`; the look-direction response is 1.
     blocking_matrix : ndarray
-        Blocking matrix used (n_elements x n_blocking_vectors)
+        Blocking matrix used (n_elements x n_blocking_vectors), with
+        ``B.T @ array_manifold(look) = 0``
 
     Examples
     --------
@@ -1169,59 +1221,50 @@ def adaptive_weights_gsc(
         w = w_q - B @ w_a
 
     where:
-        - w_q is the quiescent (non-adaptive) steering weight
-        - B is a blocking matrix orthogonal to the steering vector
-        - w_a are adaptive weights that minimize output power
+        - ``w_q = s / ||s||^2`` is the quiescent steering weight (unit
+          look-direction response), with ``s = steering_vector(...)``
+        - B is a blocking matrix with ``s^H @ B = 0``, equivalently
+          ``B.T @ a0 = 0`` for the look-direction manifold ``a0``
+        - ``w_a`` minimizes the output power ``|w.T @ x|^2``
 
-    The blocking matrix satisfies: s^H @ B = 0 (nulls the look direction)
+    With ``y_q = w_q @ x``, ``x_b = B.T @ x`` and ``e = y_q - w_a @ x_b``,
+    the NLMS update is ``w_a += mu * e * conj(x_b) / (eps + ||x_b||^2)``.
     """
     n = geometry.n_elements
 
     if n_blocking_vectors is None:
         n_blocking_vectors = n - 1
 
-    # Quiescent steering vector
+    # Quiescent steering vector, scaled for unit look-direction response
     s = steering_vector(
         k, geometry.x, geometry.y,
         theta_desired_deg, phi_desired_deg, geometry.z
     )
-    w_q = s / np.sqrt(np.sum(np.abs(s)**2))  # Normalize
+    w_q = s / np.sum(np.abs(s)**2)
 
-    # Construct blocking matrix B orthogonal to s
-    # Use SVD of s to get orthogonal complement
-    s_normalized = s / np.linalg.norm(s)
-    s_col = s_normalized.reshape(-1, 1)
-
-    # Create orthonormal basis for null space of s^H
-    # Using Householder or Gram-Schmidt
+    # Blocking matrix: orthonormal columns orthogonal to s (s^H B = 0),
+    # which is B.T @ conj(s) = 0, i.e. the look-direction manifold is
+    # rejected by the w.T convention used here.
+    s_col = (s / np.linalg.norm(s)).reshape(-1, 1)
     Q, _ = np.linalg.qr(np.hstack([s_col, np.eye(n)[:, :n_blocking_vectors]]))
-    B = Q[:, 1:n_blocking_vectors + 1]  # Take columns orthogonal to s
+    B = Q[:, 1:n_blocking_vectors + 1]
 
-    # Process data through GSC
     interference_data = np.asarray(interference_data, dtype=complex)
     n_snapshots = interference_data.shape[0]
 
-    # Initialize adaptive weights
     w_a = np.zeros(n_blocking_vectors, dtype=complex)
+    eps = 1e-12
 
-    # LMS adaptation through data
+    # NLMS adaptation, output y = w.T @ x (no conjugation)
     for snapshot_idx in range(n_snapshots):
         x = interference_data[snapshot_idx, :]
 
-        # Upper path output (reference)
-        y_q = w_q.conj() @ x
+        y_q = w_q @ x            # upper (quiescent) branch
+        x_b = B.T @ x            # blocked branch
+        e = y_q - w_a @ x_b      # GSC output
 
-        # Lower path (blocking matrix output)
-        x_b = B.conj().T @ x
+        w_a = w_a + (mu / (eps + np.vdot(x_b, x_b).real)) * e * x_b.conj()
 
-        # Error signal
-        y_a = w_a.conj() @ x_b
-        e = y_q - y_a
-
-        # LMS update
-        w_a = w_a + mu * e.conj() * x_b
-
-    # Final weights
     weights = w_q - B @ w_a
 
     return weights, B
@@ -1300,7 +1343,7 @@ def compute_sinr_improvement(
         phi_s = np.array([[np.deg2rad(signal_direction[1])]])
         AF_signal = array_factor_vectorized(
             theta_s, phi_s,
-            geometry.x, geometry.y, weights, k
+            geometry.x, geometry.y, weights, k, geometry.z
         )
         signal_out = signal_power * np.abs(AF_signal.item())**2
 
@@ -1311,7 +1354,7 @@ def compute_sinr_improvement(
             phi_int = np.array([[np.deg2rad(phi_i)]])
             AF_int = array_factor_vectorized(
                 theta_int, phi_int,
-                geometry.x, geometry.y, weights, k
+                geometry.x, geometry.y, weights, k, geometry.z
             )
             interference_out += power_i * np.abs(AF_int.item())**2
 
@@ -1390,19 +1433,21 @@ def plot_adapted_pattern(
 
     # Compute patterns
     theta = np.linspace(-np.pi/2, np.pi/2, n_points)
-    phi = np.full_like(theta, np.deg2rad(phi_cut_deg))
+    # Negative theta is the opposite side of the cut plane (phi + 180)
+    phi = np.where(theta >= 0, np.deg2rad(phi_cut_deg),
+                   np.deg2rad(phi_cut_deg) + np.pi)
 
-    theta_grid = theta.reshape(-1, 1)
+    theta_grid = np.abs(theta).reshape(-1, 1)
     phi_grid = phi.reshape(-1, 1)
 
     AF_quiescent = array_factor_vectorized(
         theta_grid, phi_grid,
-        geometry.x, geometry.y, weights_quiescent, k
+        geometry.x, geometry.y, weights_quiescent, k, geometry.z
     ).ravel()
 
     AF_adapted = array_factor_vectorized(
         theta_grid, phi_grid,
-        geometry.x, geometry.y, weights_adapted, k
+        geometry.x, geometry.y, weights_adapted, k, geometry.z
     ).ravel()
 
     # Convert to dB

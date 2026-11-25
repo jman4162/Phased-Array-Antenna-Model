@@ -331,3 +331,70 @@ class TestSubarrayDelaysTTD:
         )
 
         np.testing.assert_array_almost_equal(delays, 0.0)
+
+
+class TestHybridSquintPhysics:
+    """Phase shifters are set at the centre frequency; only TTD scales."""
+
+    F0 = 10e9
+
+    def _setup(self, n, sub):
+        wavelength = 3e8 / self.F0
+        geom = pa.create_rectangular_array(n, n, 0.5, 0.5, wavelength=wavelength)
+        arch = pa.create_rectangular_subarrays(n, n, sub, sub, 0.5, 0.5, wavelength=wavelength)
+        return geom, arch
+
+    def test_hybrid_squint_between_ttd_and_phase(self):
+        geom, arch = self._setup(32, 8)
+        freqs = np.array([0.9, 1.0, 1.1]) * self.F0
+        kw = dict(n_points=6001)
+        sq = {}
+        for mode in ('phase', 'hybrid', 'ttd'):
+            r = pa.compute_beam_squint(geom.x, geom.y, 45, 0, self.F0, freqs,
+                                       steering_mode=mode, architecture=arch, **kw)
+            sq[mode] = np.max(np.abs(r['squint']))
+        assert sq['ttd'] < 0.02
+        assert sq['ttd'] < sq['hybrid'] < sq['phase']
+
+    def test_single_element_subarrays_match_ttd(self):
+        geom, arch = self._setup(8, 1)
+        f = 1.15 * self.F0
+        w_h = pa.steering_vector_hybrid(geom, arch, 30, 0, f, center_frequency=self.F0)
+        w_t = pa.steering_vector_ttd(geom.x, geom.y, 30, 0, f)
+        # Equal up to a common phase
+        ratio = w_h / w_t
+        np.testing.assert_allclose(ratio, ratio[0], atol=1e-9)
+
+    def test_single_subarray_matches_phase_only(self):
+        geom, arch = self._setup(8, 8)
+        f = 1.15 * self.F0
+        w_h = pa.steering_vector_hybrid(geom, arch, 30, 0, f, c=3e8,
+                                        center_frequency=self.F0)
+        k0 = 2 * np.pi * self.F0 / 3e8
+        w_p = pa.steering_vector(k0, geom.x, geom.y, 30, 0)
+        ratio = w_h / w_p
+        np.testing.assert_allclose(ratio, ratio[0], atol=1e-9)
+
+    def test_default_center_frequency_is_frequency(self):
+        geom, arch = self._setup(8, 4)
+        w1 = pa.steering_vector_hybrid(geom, arch, 20, 10, self.F0)
+        w2 = pa.steering_vector_hybrid(geom, arch, 20, 10, self.F0, center_frequency=self.F0)
+        np.testing.assert_allclose(w1, w2)
+
+    def test_pattern_vs_frequency_hybrid_differs_from_ttd(self):
+        geom, arch = self._setup(16, 8)
+        freqs = np.array([0.8, 1.0, 1.2]) * self.F0
+        r_h = pa.compute_pattern_vs_frequency(geom.x, geom.y, 40, 0, self.F0, freqs,
+                                              steering_mode='hybrid', architecture=arch)
+        r_t = pa.compute_pattern_vs_frequency(geom.x, geom.y, 40, 0, self.F0, freqs,
+                                              steering_mode='ttd')
+        np.testing.assert_allclose(r_h['patterns'][1], r_t['patterns'][1], atol=1e-6)
+        assert not np.allclose(r_h['patterns'][0], r_t['patterns'][0], atol=1e-3)
+
+    def test_ibw_fallback_ratio_matches_search_range(self):
+        geom, arch = self._setup(8, 1)
+        r = pa.analyze_instantaneous_bandwidth(geom.x, geom.y, 30, 0, self.F0,
+                                               squint_tolerance_deg=0.5,
+                                               steering_mode='hybrid', architecture=arch)
+        assert 'note' in r
+        assert r['ibw_ratio'] == pytest.approx(3.0)

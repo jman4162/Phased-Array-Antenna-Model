@@ -8,6 +8,7 @@ best practices.
 .. toctree::
    :maxdepth: 2
 
+   conventions
    geometry
    beamforming
    impairments

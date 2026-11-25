@@ -6,6 +6,7 @@ Supports CSV, JSON, NumPy, and MATLAB formats.
 
 import io
 import json
+import warnings
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, Union
@@ -99,23 +100,45 @@ def export_pattern_csv(
     return csv_string
 
 
+def _looks_like_radian_grid(theta: np.ndarray, phi: np.ndarray) -> bool:
+    """True if a theta/phi grid is almost certainly in radians.
+
+    Requires every value to lie within the radian ranges and at least one
+    axis endpoint to equal a nonzero multiple of pi/2, which degree data
+    essentially never does.
+    """
+    if theta.size < 2 or phi.size < 2:
+        return False
+    if np.any(np.abs(theta) > np.pi + 1e-9) or np.any(np.abs(phi) > 2 * np.pi + 1e-9):
+        return False
+    ends = np.abs([theta.min(), theta.max(), phi.min(), phi.max()])
+    multiples = ends / (np.pi / 2)
+    return bool(np.any((ends > 0) & (np.abs(multiples - np.round(multiples)) < 1e-9)))
+
+
 def export_pattern_2d_csv(
     theta: np.ndarray,
     phi: np.ndarray,
     pattern_dB: np.ndarray,
     filename: Optional[str] = None,
     include_header: bool = True,
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None,
+    angle_unit: str = 'deg'
 ) -> str:
     """
     Export 2D pattern data to CSV format.
 
+    Angles are written exactly as given; ``angle_unit`` only sets the
+    column labels. :func:`~phased_array.core.compute_full_pattern` returns
+    radians, so either convert with ``np.rad2deg`` or pass
+    ``angle_unit='rad'``.
+
     Parameters
     ----------
     theta : ndarray
-        Theta values (1D or meshgrid)
+        Theta values (1D or meshgrid), in ``angle_unit``
     phi : ndarray
-        Phi values (1D or meshgrid)
+        Phi values (1D or meshgrid), in ``angle_unit``
     pattern_dB : ndarray
         2D pattern in dB
     filename : str, optional
@@ -124,12 +147,35 @@ def export_pattern_2d_csv(
         Whether to include column headers
     metadata : dict, optional
         Additional metadata as comments
+    angle_unit : str
+        'deg' (default; columns ``theta_deg,phi_deg``) or 'rad' (columns
+        ``theta_rad,phi_rad``)
 
     Returns
     -------
     csv_string : str
         CSV formatted string
+
+    Warns
+    -----
+    UserWarning
+        If ``angle_unit='deg'`` but the grid lies within the radian ranges
+        and ends on a multiple of pi/2 (for example the 0 to pi/2 and 0 to
+        2*pi axes of :func:`~phased_array.core.compute_full_pattern`).
     """
+    if angle_unit not in ('deg', 'rad'):
+        raise ValueError(f"angle_unit must be 'deg' or 'rad', got {angle_unit!r}")
+
+    theta = np.asarray(theta, dtype=float)
+    phi = np.asarray(phi, dtype=float)
+    if angle_unit == 'deg' and _looks_like_radian_grid(theta, phi):
+        warnings.warn(
+            "theta and phi look like radians but will be labeled degrees; "
+            "convert with np.rad2deg or pass angle_unit='rad'.",
+            UserWarning,
+            stacklevel=2,
+        )
+
     buffer = io.StringIO()
 
     # Write metadata
@@ -142,7 +188,7 @@ def export_pattern_2d_csv(
 
     # Write header
     if include_header:
-        buffer.write("theta_deg,phi_deg,pattern_dB\n")
+        buffer.write(f"theta_{angle_unit},phi_{angle_unit},pattern_dB\n")
 
     # Handle meshgrid or 1D arrays
     if theta.ndim == 1 and phi.ndim == 1:
@@ -515,14 +561,16 @@ def load_pattern_npz(filename: str) -> Dict[str, Any]:
     data : dict
         Dictionary with loaded arrays and metadata
     """
-    loaded = np.load(filename, allow_pickle=True)
-    data = {key: loaded[key] for key in loaded.files}
+    # Pickle is never needed (metadata is stored as a string array), and
+    # allowing it would let a crafted file run code on load.
+    with np.load(filename, allow_pickle=False) as loaded:
+        data = {key: loaded[key] for key in loaded.files}
 
     # Parse metadata if present
     if 'metadata' in data:
         try:
             data['metadata'] = json.loads(str(data['metadata'][0]))
-        except:
+        except (json.JSONDecodeError, IndexError, TypeError):
             pass
 
     return data

@@ -180,7 +180,12 @@ def ideal_patch_element(pol: str = 'x', cos_exp: float = 1.0) -> Callable:
     pol : str
         Co-polar direction, 'x' or 'y'.
     cos_exp : float
-        Cosine exponent of the theta roll-off.
+        Cosine exponent of the theta roll-off of the **field**:
+        ``|E| = cos(theta)**cos_exp``, so the power pattern is
+        ``cos(theta)**(2*cos_exp)``. This differs from
+        :func:`~phased_array.core.element_pattern`, whose ``cos_exp_theta``
+        is a power exponent; ``cos_exp=0.5`` here matches
+        ``cos_exp_theta=1`` there.
 
     Returns
     -------
@@ -224,7 +229,10 @@ def cos_q_polarized_element(
     Parameters
     ----------
     q_theta : float
-        Cosine exponent for the theta roll-off.
+        Cosine exponent of the theta roll-off of the **field**,
+        ``|E| ~ cos(theta)**q_theta`` (power ``cos(theta)**(2*q_theta)``).
+        :func:`~phased_array.core.element_pattern` instead takes a power
+        exponent, so ``q_theta = cos_exp_theta / 2`` gives the same pattern.
     jones : ndarray, optional
         Jones vector [E_x, E_y] defining the polarization state
         (normalized internally). Default [1, 0] (x-linear).
@@ -305,6 +313,15 @@ class GriddedElementPattern:
         Complex phi component, same shape
     method : str
         Interpolation method for `scipy.interpolate.RegularGridInterpolator`
+
+    Notes
+    -----
+    The phi grid may start anywhere, e.g. ``[-pi, pi]`` or ``[0, 2*pi)``.
+    Query angles are wrapped into ``[phi_grid[0], phi_grid[0] + 2*pi)``.
+    A grid that covers a full turn without repeating its first sample
+    (``[0, 2*pi)`` with uniform spacing) is closed periodically, so
+    queries between the last sample and 2*pi interpolate across the
+    seam. Directions outside a partial grid return zero field.
     """
 
     def __init__(
@@ -317,20 +334,34 @@ class GriddedElementPattern:
     ):
         from scipy.interpolate import RegularGridInterpolator
 
-        points = (np.asarray(theta_grid, dtype=float),
-                  np.asarray(phi_grid, dtype=float))
+        theta_grid = np.asarray(theta_grid, dtype=float)
+        phi_grid = np.asarray(phi_grid, dtype=float)
+        E_theta = np.asarray(E_theta, dtype=complex)
+        E_phi = np.asarray(E_phi, dtype=complex)
+
+        two_pi = 2 * np.pi
+        self._phi_min = float(phi_grid[0])
+        if phi_grid.size > 1:
+            span = float(phi_grid[-1] - phi_grid[0])
+            step = float(np.median(np.diff(phi_grid)))
+            tol = 1e-6 * two_pi
+            if span < two_pi - tol and span + step >= two_pi - tol:
+                # Full turn without the closing sample: append it so the
+                # 2*pi seam interpolates instead of falling outside.
+                phi_grid = np.append(phi_grid, phi_grid[0] + two_pi)
+                E_theta = np.concatenate([E_theta, E_theta[:, :1]], axis=1)
+                E_phi = np.concatenate([E_phi, E_phi[:, :1]], axis=1)
+
+        points = (theta_grid, phi_grid)
         common = dict(method=method, bounds_error=False, fill_value=0.0)
-        self._interp_theta = RegularGridInterpolator(
-            points, np.asarray(E_theta, dtype=complex), **common
-        )
-        self._interp_phi = RegularGridInterpolator(
-            points, np.asarray(E_phi, dtype=complex), **common
-        )
+        self._interp_theta = RegularGridInterpolator(points, E_theta, **common)
+        self._interp_phi = RegularGridInterpolator(points, E_phi, **common)
 
     def __call__(self, theta, phi, **kwargs):
         theta = np.asarray(theta, dtype=float)
         phi = np.asarray(phi, dtype=float)
-        pts = np.stack([theta.ravel(), np.mod(phi.ravel(), 2 * np.pi)], axis=-1)
+        phi_wrapped = self._phi_min + np.mod(phi.ravel() - self._phi_min, 2 * np.pi)
+        pts = np.stack([theta.ravel(), phi_wrapped], axis=-1)
         E_theta = self._interp_theta(pts).reshape(theta.shape)
         E_phi = self._interp_phi(pts).reshape(theta.shape)
         return E_theta, E_phi

@@ -381,3 +381,140 @@ class TestAdaptiveBeamforming:
         )
 
         assert imp > 0  # Should improve SINR
+
+
+def _physical_snapshots(geom, k, theta_deg, phi_deg, inr_db, n_snap, seed=0):
+    """Plane-wave interferer + unit noise, using the physical manifold."""
+    rng = np.random.default_rng(seed)
+    a = pa.array_manifold(k, geom.x, geom.y, theta_deg, phi_deg, geom.z)
+    amp = 10 ** (inr_db / 20)
+    s = amp * (rng.standard_normal(n_snap) + 1j * rng.standard_normal(n_snap)) / np.sqrt(2)
+    noise = (rng.standard_normal((n_snap, geom.n_elements))
+             + 1j * rng.standard_normal((n_snap, geom.n_elements))) / np.sqrt(2)
+    return np.outer(s, a) + noise
+
+
+def _response(geom, k, w, theta_deg, phi_deg):
+    """Array response w^T a(theta, phi)."""
+    a = pa.array_manifold(k, geom.x, geom.y, theta_deg, phi_deg, geom.z)
+    return w @ a
+
+
+class TestSnapshotConvention:
+
+    def test_array_manifold_is_conjugate_steering_vector(self):
+        geom = pa.create_cylindrical_array(8, 4, 2.0, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        a = pa.array_manifold(k, geom.x, geom.y, 25, 40, geom.z)
+        s = pa.steering_vector(k, geom.x, geom.y, 25, 40, geom.z)
+        np.testing.assert_allclose(a, np.conj(s))
+
+    def test_manifold_matches_array_factor(self):
+        geom = pa.create_rectangular_array(6, 5, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        rng = np.random.default_rng(1)
+        w = rng.standard_normal(geom.n_elements) + 1j * rng.standard_normal(geom.n_elements)
+        a = pa.array_manifold(k, geom.x, geom.y, 33, 70)
+        af = pa.array_factor_vectorized(np.array([np.deg2rad(33)]), np.array([np.deg2rad(70)]),
+                                        geom.x, geom.y, w, k)
+        assert w @ a == pytest.approx(af[0])
+
+
+class TestAdaptiveNullDirection:
+    """SMI and GSC must null the interferer, not its mirror image."""
+
+    @pytest.fixture
+    def scenario(self):
+        geom = pa.create_rectangular_array(8, 1, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        X = _physical_snapshots(geom, k, 35, 0, inr_db=20, n_snap=400)
+        return geom, k, X
+
+    def test_smi_nulls_interferer(self, scenario):
+        geom, k, X = scenario
+        w = pa.adaptive_weights_smi(geom, k, 0, 0, X, diagonal_loading=0.01)
+        assert abs(_response(geom, k, w, 0, 0)) == pytest.approx(1.0)
+        assert 20 * np.log10(abs(_response(geom, k, w, 35, 0))) < -40
+
+    def test_gsc_nulls_interferer(self, scenario):
+        geom, k, X = scenario
+        w, B = pa.adaptive_weights_gsc(geom, k, 0, 0, X)
+        assert np.all(np.isfinite(w))
+        assert abs(_response(geom, k, w, 0, 0)) == pytest.approx(1.0)
+        # Single-pass NLMS null depth is noise-limited (SMI gets ~-54 dB);
+        # the point is that the null is at +35 deg, not the mirror -35 deg.
+        null_db = 20 * np.log10(abs(_response(geom, k, w, 35, 0)))
+        mirror_db = 20 * np.log10(abs(_response(geom, k, w, 35, 180)))
+        assert null_db < -30
+        assert mirror_db - null_db > 15
+        # Blocking matrix rejects the look direction: B^T a0 = 0
+        a0 = pa.array_manifold(k, geom.x, geom.y, 0, 0)
+        np.testing.assert_allclose(B.T @ a0, 0, atol=1e-10)
+
+    def test_gsc_stable_for_strong_interference(self):
+        geom = pa.create_rectangular_array(8, 8, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        X = _physical_snapshots(geom, k, 35, 20, inr_db=40, n_snap=200, seed=4)
+        w, _ = pa.adaptive_weights_gsc(geom, k, 0, 0, X, mu=0.01)
+        assert np.all(np.isfinite(w))
+        w, _ = pa.adaptive_weights_gsc(geom, k, 0, 0, X)
+        assert 20 * np.log10(abs(_response(geom, k, w, 35, 20))) < -40
+
+
+class TestMonopulseNull:
+
+    @pytest.mark.parametrize("mode", ["delta_az", "delta_el"])
+    @pytest.mark.parametrize("n", [5, 6])
+    def test_boresight_null_odd_and_even(self, mode, n):
+        geom = pa.create_rectangular_array(n, n, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        w_sum = pa.monopulse_weights(geom, k, 0, 0, 'sum')
+        w_d = pa.monopulse_weights(geom, k, 0, 0, mode)
+        ratio = abs(_response(geom, k, w_d, 0, 0)) / abs(_response(geom, k, w_sum, 0, 0))
+        assert ratio < 1e-10
+
+    def test_uncentred_array_is_split_about_centroid(self):
+        geom = pa.create_rectangular_array(6, 6, 0.5, 0.5, center=False)
+        k = pa.wavelength_to_k(1.0)
+        w_d = pa.monopulse_weights(geom, k, 20, 0, 'delta_az')
+        w_sum = pa.monopulse_weights(geom, k, 20, 0, 'sum')
+        assert abs(_response(geom, k, w_d, 20, 0)) < 1e-9 * abs(_response(geom, k, w_sum, 20, 0))
+        assert not np.allclose(w_d, w_sum)
+
+
+class TestTaperInputs:
+
+    def test_taylor_accepts_either_sign(self):
+        np.testing.assert_allclose(pa.taylor_taper_1d(16, 30), pa.taylor_taper_1d(16, -30))
+        assert np.all(np.isfinite(pa.taylor_taper_1d(16, 30)))
+
+    def test_chebyshev_no_spectral_analysis_warning(self):
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            pa.chebyshev_taper_1d(16, -20)
+            pa.chebyshev_taper_2d(8, 8, -25)
+
+
+class TestSinrUsesZ:
+
+    def test_matched_weights_give_array_gain_for_3d_array(self):
+        geom = pa.create_cylindrical_array(8, 3, 1.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        w = pa.steering_vector(k, geom.x, geom.y, 40, 30, geom.z)
+        sinr, _, _ = pa.compute_sinr_improvement(
+            w, w, geom, k, signal_direction=(40, 30),
+            interference_directions=[], signal_power=1.0,
+            interference_powers=[], noise_power=1.0)
+        assert sinr == pytest.approx(10 * np.log10(geom.n_elements), abs=1e-6)
+
+
+class TestMonopulseNoDifferencePlane:
+
+    def test_linear_array_has_no_elevation_difference(self):
+        geom = pa.create_rectangular_array(8, 1, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        with pytest.raises(ValueError, match="delta_el"):
+            pa.monopulse_weights(geom, k, 0, 0, 'delta_el')
+        w = pa.monopulse_weights(geom, k, 0, 0, 'delta_az')
+        assert np.max(np.abs(w)) == pytest.approx(1.0)

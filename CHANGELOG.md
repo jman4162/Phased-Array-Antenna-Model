@@ -5,6 +5,151 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-11-24
+
+Correctness release. A review against Balanis (*Antenna Theory*, 3rd ed.)
+and Haupt (*Antenna Arrays: A Computational Approach*) found the core
+pattern, directivity and taper math correct, and these defects in the
+surrounding modules. `tests/test_textbook_benchmarks.py` now pins the
+package to textbook values.
+
+### Changed
+
+- **Behavior change:** `array_factor_fft()` used the opposite sign from
+  the `exp(+j k r.u)` array-factor convention, so a steered beam appeared
+  at the mirror angle, and its u/v axes were off by half a bin. It now
+  equals `array_factor_uv()` on the returned grid (FFT bin centers,
+  `u[n_u // 2] == 0`) and raises `ValueError` when `n_u < Nx` or
+  `n_v < Ny` instead of silently returning fewer points
+- **Behavior change:** `compute_pattern_cuts()` takes its second cut on
+  the great circle through the beam direction, orthogonal to the
+  `phi0` plane (unchanged when `theta0_deg=0`), and normalizes both cuts
+  to one shared peak. Before, the second cut passed through broadside and
+  was normalized to its own maximum, so for a 10x10 array scanned to
+  30 deg it was drawn at 0 dB although it peaked 17 dB below the beam.
+  Values below -100 dB relative to the peak are now clipped at -100 dB
+- **Behavior change:** `adaptive_weights_gsc()` adapted on `y = w^H x`
+  while its weights are applied as `w^T a`, so it nulled the mirror image
+  of the interferer. It now uses `y = w^T x` like `adaptive_weights_smi()`,
+  scales the quiescent weights for unit look-direction response (was
+  `sqrt(N)`), and uses normalized LMS with default `mu=0.1`. The previous
+  raw LMS step diverged to NaN for the documented example
+- **Behavior change:** `active_reflection_coefficient()`,
+  `active_impedance()`, `vswr_vs_scan()` and
+  `active_scan_impedance_matrix()` assumed `C = I + S`, while
+  `mutual_coupling_matrix_measured()` returns the impedance form
+  `(I + S)(I - S)^-1` by default (|Gamma| 0.895 instead of 0.517 on a
+  random 4-port). They take a `formulation` argument (default
+  `'impedance'`) and compute `(S w)_n / w_n`. Results for matrices from
+  `mutual_coupling_matrix_theoretical()` change; pass
+  `formulation='voltage'` for the previous numbers
+- **Behavior change:** `rotate_pattern()` returns the input grid with the
+  rotated pattern. It used to return the input points rotated forward,
+  which did not match the returned pattern, and it now raises
+  `ValueError` for non-2D input instead of returning 1D data unrotated.
+  Phi grids such as `[-pi, pi]` are handled; they used to lose half the
+  sphere to zero fill
+- **Behavior change:** `create_rectangular_subarrays()` puts elements
+  left over by a non-divisible split into partial edge subarrays. They
+  were silently added to subarray 0 (10x10 with 4x4 subarrays: 52
+  elements in subarray 0; a beam steered to 10 deg peaked at 1.4 deg)
+- **Behavior change:** `create_elliptical_array(grid_type='triangular')`
+  uses an equilateral lattice centered on the ellipse. It sized rows with
+  `dy` instead of the `sqrt(3)/2` pitch and stopped short of `+b`
+  (9.09 of 10 wavelengths). The rectangular grid is unchanged
+- `monopulse_weights()` splits the difference halves about the array
+  centroid and gives elements on the split line zero weight: odd-sized
+  arrays now have an exact boresight null (5x5 was -14 dB), and an
+  uncentred array no longer returns the sum pattern for `delta_az`. It
+  raises `ValueError` when the array has no extent in the split direction
+  (e.g. `delta_el` on a linear array along x) instead of returning zeros
+- `compute_half_power_beamwidth()` uses the exact `10*log10(0.5)`
+  threshold instead of -3.0 dB
+
+### Fixed
+
+- `compute_beam_squint()` and `compute_pattern_vs_frequency()` reported
+  zero squint for `'hybrid'` steering because the element phase shifts
+  were recomputed at every frequency. `steering_vector_hybrid()` gains
+  `center_frequency` (default: `frequency`); phase shifts are set there
+  and only the subarray delays scale. 32x32 array, 8x8 subarrays, 45 deg,
+  20% band: phase 6.83 deg, hybrid 0.33 deg (was 0.0), TTD 0.0
+- `surface_wave_scan_angle()` always returned `sqrt(er)` as the surface
+  wave index, so it put blindness at broadside for any substrate height.
+  It now solves the grounded-slab TM0 dispersion relation; er = 12.8,
+  h = 0.06, d = 0.5 gives 45.6 deg, consistent with Pozar and Schaubert
+  (1984), and stays valid for substrates many wavelengths thick. Returns
+  90 when no blind angle falls in visible space
+- `compute_scan_loss()` used unit weights as the broadside reference, so
+  an amplitude taper counted as scan loss (-8.8 dB at broadside for a
+  Taylor -35 dB taper); it now uses `|weights|` steered to broadside and
+  includes `geometry.z`
+- `analyze_graceful_degradation()` measured the -3 dB main-beam skirt as
+  the "sidelobe" (-3.7 dB for a uniform 16x16 array) and reported no
+  change for steered weights. It now takes a cut through the beam,
+  measures the peak sidelobe outside the first nulls, and returns
+  `sidelobe_ref_dB`. The beam direction is refined below a beamwidth, so
+  large arrays steered off the principal planes are cut through the beam
+- `GriddedElementPattern` returned zero field for half of a
+  `[-pi, pi]` phi grid; queries now wrap into the grid's own range and an
+  open full-turn grid is closed at the 2*pi seam
+- Thinning functions set `element_indices` relative to the input
+  geometry and dropped `tx`/`ty`/`tz`; indices now map to the original
+  array and tangents are kept
+- `create_rectangular_array()`, `create_triangular_array()` and
+  `create_elliptical_array()` raised `UFuncTypeError` for integer spacing
+  and wavelength
+- `taylor_taper_1d()` returned NaN for a positive `sidelobe_dB`; both
+  signs are accepted, as in `chebyshev_taper_1d()`
+- `chebyshev_taper_1d()` no longer emits SciPy's spectral-analysis
+  warning
+- `compute_sinr_improvement()`, `plot_adapted_pattern()` and
+  `analyze_quantization_effect()` ignored `geometry.z`
+- `plot_pattern_uv_space()` raised `UnboundLocalError` with grating
+  circles but no visible-region circle
+- `analyze_instantaneous_bandwidth()` reported `ibw_ratio` 1.5 when the
+  bandwidth exceeded the search range; at the +/-50% limit it is 3.0
+- `mutual_coupling_matrix_theoretical()` raises `ValueError` for an
+  unknown `coupling_model` instead of returning zero coupling
+
+### Added
+
+- `array_manifold()`: the received signal vector `exp(+j k r.u)` (the
+  conjugate of `steering_vector()`), for building snapshots
+- `compute_peak_sidelobe_level()` for 1D cuts
+- `quantization_sidelobe_level()` (average sidelobe floor from
+  uncorrelated phase quantization, Haupt eq. 2.119) and
+  `quantization_lobes()` (positions `u_s (1 + m 2^B)` and levels
+  `1 / |1 + m 2^B|`, within 0.6 dB of simulation)
+- `export_pattern_2d_csv(angle_unit=...)`, with a warning when
+  degree-labelled values look like radians
+- `tests/test_textbook_benchmarks.py` and regression tests for each fix
+  (308 -> 458 tests)
+- Docs: new Conventions page (units, sign convention, snapshot rule,
+  field vs power, hemisphere vs full-sphere directivity, coupling forms)
+
+### Deprecated
+
+- `quantization_sidelobe_increase()`: it returns `20*log10(2*sigma)`,
+  which does not depend on array size or taper and is 10-25 dB off both
+  textbook models. Use `quantization_sidelobe_level()` or
+  `quantization_lobes()`
+
+### Security
+
+- `load_pattern_npz()` loads with `allow_pickle=False`; a crafted `.npz`
+  could previously run code on load
+
+### Documentation
+
+- Getting Started (`concepts.rst`): fixed calls with wrong argument names
+  and order, dB conversion of field magnitude with `10*log10` (halving
+  every dB value), the grating-lobe scan table (0.55/0.60/0.70 lambda give
+  54.9/41.8/25.4 deg, not 65/56/46), and positions described as
+  wavelengths instead of meters
+- Beamforming and Impairments guides: snapshots built with
+  `array_manifold()`, and every example matches the current signatures
+
 ## [1.5.0] - 2026-09-26
 
 ### Changed

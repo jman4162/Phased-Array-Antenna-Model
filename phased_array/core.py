@@ -15,6 +15,9 @@ from .utils import create_theta_phi_grid, linear_to_db, theta_phi_to_uv
 
 ArrayLike = Union[np.ndarray, float]
 
+# Exact half-power level, 10*log10(0.5) ~ -3.0103 dB
+_HALF_POWER_DB = float(10 * np.log10(0.5))
+
 
 def steering_vector(
     k: float,
@@ -46,6 +49,15 @@ def steering_vector(
     -------
     weights : ndarray
         Complex steering weights (unit magnitude, appropriate phases)
+
+    Notes
+    -----
+    The array factor convention is ``AF(u) = sum_n w_n exp(+j k r_n . u)``
+    (see :func:`array_factor_vectorized`), so the weights are
+    ``exp(-j k r_n . u0)``, the conjugate of the array manifold returned
+    by :func:`array_manifold`. A plane wave arriving from ``u0`` produces
+    element signals proportional to the manifold, not to these weights;
+    build received snapshots with :func:`array_manifold`.
 
     Examples
     --------
@@ -81,6 +93,57 @@ def steering_vector(
         phase = k * (x * u0 + y * v0 + z * w0)
 
     return np.exp(-1j * phase)
+
+
+def array_manifold(
+    k: float,
+    x: np.ndarray,
+    y: np.ndarray,
+    theta_deg: float,
+    phi_deg: float,
+    z: Optional[np.ndarray] = None
+) -> np.ndarray:
+    """
+    Array manifold (received signal vector) for a plane wave.
+
+    A plane wave arriving from direction ``(theta, phi)`` produces the
+    element signals ``a_n = exp(+j k r_n . u)``, with ``u`` the unit vector
+    toward the source. In this package the array output for weights ``w``
+    is ``w @ a`` (no conjugation), which equals
+    :func:`array_factor_vectorized` evaluated in that direction. Use this
+    function to synthesize snapshots for :func:`adaptive_weights_smi` and
+    :func:`adaptive_weights_gsc`.
+
+    Parameters
+    ----------
+    k : float
+        Wavenumber (2*pi/wavelength) in rad/m
+    x, y : ndarray
+        Element positions in meters
+    theta_deg : float
+        Arrival direction theta in degrees (from z-axis)
+    phi_deg : float
+        Arrival direction phi in degrees
+    z : ndarray, optional
+        Element z-positions in meters
+
+    Returns
+    -------
+    a : ndarray
+        Complex manifold vector, ``np.conj(steering_vector(...))``
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> geom = pa.create_rectangular_array(8, 1, 0.5, 0.5)
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> w = pa.steering_vector(k, geom.x, geom.y, 30, 0)
+    >>> a = pa.array_manifold(k, geom.x, geom.y, 30, 0)
+    >>> round(abs(w @ a), 6)  # matched beam: full array gain N
+    8.0
+    """
+    return np.conj(steering_vector(k, x, y, theta_deg, phi_deg, z))
 
 
 def array_factor_vectorized(
@@ -236,60 +299,81 @@ def array_factor_fft(
     Compute array factor using 2D FFT for uniform rectangular arrays.
 
     This is O(N log N) instead of O(N * M) and is fastest for large
-    uniform rectangular arrays.
+    uniform rectangular arrays. The result equals
+    :func:`array_factor_uv` evaluated on the returned (u, v) grid for an
+    array centered at the origin, as built by
+    ``create_rectangular_array(Nx, Ny, dx, dy, center=True)`` with weights
+    reshaped to ``(Nx, Ny)``.
 
     Parameters
     ----------
     weights_2d : ndarray
-        Complex weights on 2D grid, shape (Nx, Ny)
+        Complex weights on 2D grid, shape (Nx, Ny); axis 0 runs along x
     dx : float
-        Element spacing in x (in wavelengths)
+        Element spacing in x, in the same length unit as ``wavelength``
+        (with the default ``wavelength=1`` this is spacing in wavelengths)
     dy : float
-        Element spacing in y (in wavelengths)
+        Element spacing in y, same unit as ``dx``
     n_u : int
-        Number of output points in u direction
+        Number of output points in u (FFT length along x); must be at
+        least Nx
     n_v : int
-        Number of output points in v direction
+        Number of output points in v (FFT length along y); must be at
+        least Ny
     wavelength : float
-        Wavelength (for normalizing spacing, default=1 means dx, dy in wavelengths)
+        Wavelength, in the same unit as ``dx`` and ``dy``
 
     Returns
     -------
     u : ndarray
-        Direction cosine u values, shape (n_u,)
+        Direction cosine u at the FFT bin centers, shape (n_u,).
+        ``u[n_u // 2] == 0``; the step is ``wavelength / (n_u * dx)``.
     v : ndarray
-        Direction cosine v values, shape (n_v,)
+        Direction cosine v at the FFT bin centers, shape (n_v,)
     AF : ndarray
-        Complex array factor, shape (n_u, n_v)
+        Complex array factor, shape (n_u, n_v). Points with
+        ``u**2 + v**2 > 1`` lie in the invisible region.
+
+    Raises
+    ------
+    ValueError
+        If ``weights_2d`` is not 2D, a spacing is not positive, or
+        ``n_u < Nx`` or ``n_v < Ny``.
+
+    Notes
+    -----
+    The array factor convention is ``AF(u, v) = sum w_n exp(+j k (x_n u +
+    y_n v))``, the same as :func:`array_factor_vectorized`, so the inverse
+    DFT kernel applies: ``AF(u_m) = M * ifft(w)[m]`` at
+    ``u_m = m * wavelength / (M * dx)``. The phase is referenced to the
+    array center.
     """
+    weights_2d = np.asarray(weights_2d)
+    if weights_2d.ndim != 2:
+        raise ValueError(
+            f"weights_2d must be 2D (Nx, Ny), got shape {weights_2d.shape}"
+        )
+    if dx <= 0 or dy <= 0:
+        raise ValueError(f"dx and dy must be positive, got {dx} and {dy}")
     Nx, Ny = weights_2d.shape
+    if n_u < Nx or n_v < Ny:
+        raise ValueError(
+            f"n_u and n_v must be at least the array size ({Nx}, {Ny}), got "
+            f"({n_u}, {n_v}). The FFT length sets the number of output points."
+        )
 
-    # Zero-pad for desired resolution
-    pad_x = max(0, n_u - Nx)
-    pad_y = max(0, n_v - Ny)
+    # Inverse DFT matches the exp(+j k r.u) array-factor sign convention.
+    AF = np.fft.fftshift(np.fft.ifft2(weights_2d, s=(n_u, n_v))) * (n_u * n_v)
 
-    weights_padded = np.pad(
-        weights_2d,
-        ((pad_x // 2, pad_x - pad_x // 2), (pad_y // 2, pad_y - pad_y // 2)),
-        mode='constant'
-    )
+    u = (np.arange(n_u) - n_u // 2) * wavelength / (n_u * dx)
+    v = (np.arange(n_v) - n_v // 2) * wavelength / (n_v * dy)
 
-    # 2D FFT
-    AF = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(weights_padded)))
-
-    # UV coordinates from FFT frequencies
-    # For element spacing d, maximum unambiguous u is lambda/(2*d)
-    # FFT gives spatial frequencies, need to scale to direction cosines
-    n_u_actual, n_v_actual = weights_padded.shape
-
-    # Spatial frequency to direction cosine: u = lambda * f_x
-    # FFT frequency spacing: df = 1/(N*d) where d is element spacing
-    # So u spacing = lambda * df = lambda / (N * d)
-    u_max = wavelength / (2 * dx) if dx > 0 else 1.0
-    v_max = wavelength / (2 * dy) if dy > 0 else 1.0
-
-    u = np.linspace(-u_max, u_max, n_u_actual)
-    v = np.linspace(-v_max, v_max, n_v_actual)
+    # Element 0 sits at index 0 of the FFT input; shift the phase reference
+    # to the array center, where create_rectangular_array places the origin.
+    k = 2 * np.pi / wavelength
+    cx = (Nx - 1) / 2 * dx
+    cy = (Ny - 1) / 2 * dy
+    AF = AF * np.exp(-1j * k * cx * u)[:, None] * np.exp(-1j * k * cy * v)[None, :]
 
     return u, v, AF
 
@@ -475,10 +559,23 @@ def compute_pattern_cuts(
     n_points: int = 361,
     theta_range_deg: Tuple[float, float] = (-90, 90),
     element_pattern_func: Optional[callable] = None,
+    z: Optional[np.ndarray] = None,
     **element_kwargs
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Compute principal plane pattern cuts (E-plane and H-plane).
+    Compute two orthogonal principal cuts through the beam direction.
+
+    The first cut lies in the ``phi = phi0`` plane and is swept in theta
+    (negative angles fall at ``phi0 + 180``). It contains the beam at
+    ``(theta0, phi0)``. The second cut is the great circle through the
+    beam direction perpendicular to the first: the direction at angle
+    ``t`` is ``cos(t) * b + sin(t) * phi_hat``, where ``b`` is the beam
+    direction and ``phi_hat`` the azimuthal unit vector there. At
+    ``theta0 = 0`` it reduces to the ``phi0 + 90`` plane.
+
+    The returned names keep the historical E-plane/H-plane labels. They
+    are E and H planes only when the element polarization lines up with
+    ``phi0``.
 
     Parameters
     ----------
@@ -489,55 +586,78 @@ def compute_pattern_cuts(
     k : float
         Wavenumber in rad/m
     theta0_deg : float
-        Beam steering theta angle
+        Beam direction theta in degrees. Pass the steering angle so that
+        the second cut passes through the beam peak.
     phi0_deg : float
-        Beam steering phi angle
+        Beam direction phi in degrees; sets the plane of the first cut
     n_points : int
         Number of points in each cut
     theta_range_deg : tuple
         Angular range in degrees
     element_pattern_func : callable, optional
-        Element pattern function
+        Element pattern function (field amplitude)
+    z : ndarray, optional
+        Element z-positions in meters, for 3D arrays
     **element_kwargs
         Arguments for element pattern
 
     Returns
     -------
     theta_deg : ndarray
-        Angle values in degrees
+        Cut angle in degrees. For the first cut this is theta (signed);
+        for the second it is the angle from the beam direction along the
+        orthogonal great circle.
     E_plane_dB : ndarray
-        E-plane pattern in dB (phi = phi0)
+        First cut (``phi = phi0`` plane) in dB
     H_plane_dB : ndarray
-        H-plane pattern in dB (phi = phi0 + 90)
+        Second cut (orthogonal great circle through the beam) in dB
+
+    Notes
+    -----
+    Both cuts are power patterns normalized to a shared reference, the
+    larger of the two cut maxima. When ``(theta0_deg, phi0_deg)`` is the
+    beam direction, both cuts pass through the beam, the reference is the
+    beam peak, and every value is relative to it. If the beam lies in only
+    one cut, the other shows its true level below the peak (for example a
+    beam steered in phi = 0 with the default ``theta0_deg=0``). If neither
+    cut passes through the beam, the larger cut maximum is shown at 0 dB.
     """
     theta_deg = np.linspace(theta_range_deg[0], theta_range_deg[1], n_points)
-    theta_rad = np.deg2rad(theta_deg)
+    t = np.deg2rad(theta_deg)
+    theta0 = np.deg2rad(theta0_deg)
+    phi0 = np.deg2rad(phi0_deg)
 
-    # For theta range including negative values, map to standard coordinates
-    # theta < 0 means scanning on opposite side
-    theta_positive = np.abs(theta_rad)
-    phi_e = np.where(theta_rad >= 0, np.deg2rad(phi0_deg), np.deg2rad(phi0_deg + 180))
-    phi_h = np.where(theta_rad >= 0, np.deg2rad(phi0_deg + 90), np.deg2rad(phi0_deg + 270))
+    # First cut: phi0 plane; theta < 0 means the opposite side (phi0 + 180)
+    theta_e = np.abs(t)
+    phi_e = np.where(t >= 0, phi0, phi0 + np.pi)
 
-    # E-plane cut
+    # Second cut: great circle through the beam direction b, orthogonal to
+    # the first cut, swept by the angle t from b toward phi_hat(theta0, phi0)
+    b = np.array([np.sin(theta0) * np.cos(phi0),
+                  np.sin(theta0) * np.sin(phi0),
+                  np.cos(theta0)])
+    phi_hat = np.array([-np.sin(phi0), np.cos(phi0), 0.0])
+    dirs = np.outer(b, np.cos(t)) + np.outer(phi_hat, np.sin(t))
+    theta_h = np.arccos(np.clip(dirs[2], -1.0, 1.0))
+    phi_h = np.mod(np.arctan2(dirs[1], dirs[0]), 2 * np.pi)
+
     pattern_e = total_pattern(
-        theta_positive, phi_e, x, y, weights, k,
-        element_pattern_func, **element_kwargs
+        theta_e, phi_e, x, y, weights, k,
+        element_pattern_func, z, **element_kwargs
     )
-
-    # H-plane cut
     pattern_h = total_pattern(
-        theta_positive, phi_h, x, y, weights, k,
-        element_pattern_func, **element_kwargs
+        theta_h, phi_h, x, y, weights, k,
+        element_pattern_func, z, **element_kwargs
     )
 
-    # Convert to dB
-    E_plane_dB = linear_to_db(np.abs(pattern_e)**2)
-    H_plane_dB = linear_to_db(np.abs(pattern_h)**2)
+    power_e = np.abs(pattern_e)**2
+    power_h = np.abs(pattern_h)**2
+    peak = max(float(np.max(power_e)), float(np.max(power_h)))
+    if peak <= 0:
+        peak = 1.0
 
-    # Normalize to peak
-    E_plane_dB -= np.max(E_plane_dB)
-    H_plane_dB -= np.max(H_plane_dB)
+    E_plane_dB = linear_to_db(power_e / peak)
+    H_plane_dB = linear_to_db(power_h / peak)
 
     return theta_deg, E_plane_dB, H_plane_dB
 
@@ -877,10 +997,11 @@ def compute_half_power_beamwidth(
     Returns
     -------
     hpbw : float
-        Half-power beamwidth in degrees
+        Half-power beamwidth in degrees, measured between the
+        ``10*log10(0.5)`` (about -3.0103 dB) crossings
     """
-    # Find points at -3 dB
-    above_3dB = pattern_dB >= -3.0
+    half_power_dB = _HALF_POWER_DB
+    above_3dB = pattern_dB >= half_power_dB
 
     if not np.any(above_3dB):
         return 180.0
@@ -899,15 +1020,87 @@ def compute_half_power_beamwidth(
     # Linearly interpolate the -3 dB crossings; fall back to the sample
     # position when the crossing lies outside the sampled range
     left_angle = angles_deg[left_idx]
-    if left_idx > 0 and pattern_dB[left_idx - 1] < -3.0:
+    if left_idx > 0 and pattern_dB[left_idx - 1] < half_power_dB:
         a0, a1 = angles_deg[left_idx - 1], angles_deg[left_idx]
         p0, p1 = pattern_dB[left_idx - 1], pattern_dB[left_idx]
-        left_angle = a0 + (-3.0 - p0) * (a1 - a0) / (p1 - p0)
+        left_angle = a0 + (half_power_dB - p0) * (a1 - a0) / (p1 - p0)
 
     right_angle = angles_deg[right_idx]
-    if right_idx < len(pattern_dB) - 1 and pattern_dB[right_idx + 1] < -3.0:
+    if right_idx < len(pattern_dB) - 1 and pattern_dB[right_idx + 1] < half_power_dB:
         a0, a1 = angles_deg[right_idx], angles_deg[right_idx + 1]
         p0, p1 = pattern_dB[right_idx], pattern_dB[right_idx + 1]
-        right_angle = a0 + (-3.0 - p0) * (a1 - a0) / (p1 - p0)
+        right_angle = a0 + (half_power_dB - p0) * (a1 - a0) / (p1 - p0)
 
     return abs(right_angle - left_angle)
+
+
+def compute_peak_sidelobe_level(
+    angles_deg: np.ndarray,
+    pattern_dB: np.ndarray,
+    return_angle: bool = False
+) -> Union[float, Tuple[float, float]]:
+    """
+    Compute the peak sidelobe level of a 1D pattern cut.
+
+    The main lobe extends from the pattern maximum out to the first local
+    minimum (null) on each side. The peak sidelobe is the largest value
+    outside that region, relative to the maximum. Grating lobes count as
+    sidelobes, so a grating lobe as tall as the main beam gives 0 dB.
+
+    Parameters
+    ----------
+    angles_deg : ndarray
+        Cut angles in degrees, shape (n,)
+    pattern_dB : ndarray
+        Power pattern in dB on the same samples; it need not be
+        normalized
+    return_angle : bool
+        If True, also return the angle of the peak sidelobe
+
+    Returns
+    -------
+    level_dB : float
+        Peak sidelobe level relative to the main-beam peak in dB, or
+        ``-inf`` if the cut has no sidelobe
+    angle_deg : float
+        Angle of the peak sidelobe (only if ``return_angle``); NaN when
+        there is no sidelobe
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import phased_array as pa
+    >>> geom = pa.create_rectangular_array(32, 1, 0.5, 0.5)
+    >>> k = pa.wavelength_to_k(1.0)
+    >>> angles, cut, _ = pa.compute_pattern_cuts(
+    ...     geom.x, geom.y, np.ones(32), k, n_points=4001)
+    >>> round(pa.compute_peak_sidelobe_level(angles, cut), 1)
+    -13.2
+    """
+    angles_deg = np.asarray(angles_deg, dtype=float)
+    pattern_dB = np.asarray(pattern_dB, dtype=float)
+    if angles_deg.ndim != 1 or angles_deg.shape != pattern_dB.shape:
+        raise ValueError(
+            "angles_deg and pattern_dB must be 1D arrays of the same length, "
+            f"got shapes {angles_deg.shape} and {pattern_dB.shape}"
+        )
+
+    n = pattern_dB.size
+    peak_idx = int(np.argmax(pattern_dB))
+
+    left = peak_idx
+    while left > 0 and pattern_dB[left - 1] <= pattern_dB[left]:
+        left -= 1
+    right = peak_idx
+    while right < n - 1 and pattern_dB[right + 1] <= pattern_dB[right]:
+        right += 1
+
+    outside = np.r_[np.arange(0, left), np.arange(right + 1, n)].astype(int)
+    if outside.size == 0:
+        return (-np.inf, np.nan) if return_angle else -np.inf
+
+    sl_idx = outside[np.argmax(pattern_dB[outside])]
+    level = float(pattern_dB[sl_idx] - pattern_dB[peak_idx])
+    if return_angle:
+        return level, float(angles_deg[sl_idx])
+    return level

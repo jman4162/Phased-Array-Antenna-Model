@@ -352,3 +352,124 @@ class TestOverlappedSubarrays:
                 overlap_x=4, overlap_y=4,  # Invalid: overlap == subarray size
                 dx=0.5, dy=0.5
             )
+
+
+class TestIntegerInputs:
+
+    @pytest.mark.parametrize("build", [
+        lambda: pa.create_rectangular_array(4, 4, 1, 1, wavelength=1),
+        lambda: pa.create_triangular_array(4, 4, 1, 1, wavelength=1),
+        lambda: pa.create_elliptical_array(3, 3, 1, wavelength=1),
+        lambda: pa.create_elliptical_array(3, 3, 1, grid_type='triangular', wavelength=1),
+    ])
+    def test_integer_spacing_and_wavelength(self, build):
+        geom = build()
+        assert geom.x.dtype.kind == 'f'
+        assert abs(geom.x.mean()) < 1e-12 and abs(geom.y.mean()) < 1e-12
+
+
+class TestEllipticalTriangular:
+
+    def test_triangular_fills_whole_ellipse(self):
+        a = b = 5.0
+        dx = 0.5
+        geom = pa.create_elliptical_array(a, b, dx, grid_type='triangular')
+        pitch = dx * np.sqrt(3) / 2
+        expected = np.pi * a * b / (dx * pitch)
+        assert abs(geom.n_elements - expected) / expected < 0.02
+        assert geom.y.max() > b - pitch and geom.y.min() < -b + pitch
+        assert geom.y.max() == pytest.approx(-geom.y.min())
+        # All elements inside the ellipse, rows on the triangular pitch
+        assert np.all((geom.x / a) ** 2 + (geom.y / b) ** 2 <= 1 + 1e-12)
+        rows = np.unique(np.round(geom.y / pitch, 9))
+        np.testing.assert_allclose(rows, np.round(rows))
+
+    def test_rectangular_unchanged(self):
+        geom = pa.create_elliptical_array(5, 3, 0.5)
+        assert geom.n_elements == 185  # v1.5.0 value; rectangular branch is unchanged
+        assert np.all((geom.x / 5) ** 2 + (geom.y / 3) ** 2 <= 1 + 1e-12)
+
+
+class TestSubarrayRemainder:
+
+    def test_remainder_gets_partial_subarrays(self):
+        arch = pa.create_rectangular_subarrays(10, 10, 4, 4, 0.5, 0.5)
+        counts = np.bincount(arch.subarray_assignments, minlength=arch.n_subarrays)
+        assert arch.n_subarrays == 9
+        assert counts.sum() == 100
+        assert counts.max() == 16
+        assert sorted(counts) == sorted([16, 16, 8, 16, 16, 8, 8, 8, 4])
+        # Each centre is the mean of its own elements
+        g = arch.geometry
+        for s in range(arch.n_subarrays):
+            m = arch.subarray_assignments == s
+            np.testing.assert_allclose(arch.subarray_centers[s], [g.x[m].mean(), g.y[m].mean()])
+
+    def test_remainder_steers_correctly(self):
+        k = pa.wavelength_to_k(1.0)
+        arch = pa.create_rectangular_subarrays(10, 10, 4, 4, 0.5, 0.5)
+        g = arch.geometry
+        w = pa.compute_subarray_weights(arch, k, 10, 0)
+        # Each element carries the phase of its own subarray centre
+        u0 = np.sin(np.deg2rad(10))
+        c = arch.subarray_centers[arch.subarray_assignments]
+        np.testing.assert_allclose(w, np.exp(-1j * k * c[:, 0] * u0))
+        # One phase shifter per 2-lambda subarray pulls the beam toward
+        # broadside (8x8 divisible case peaks at 7.55 deg); with the
+        # remainder lumped into subarray 0 it peaked at 1.4 deg.
+        angles, cut, _ = pa.compute_pattern_cuts(g.x, g.y, w, k, n_points=3601)
+        assert angles[np.argmax(cut)] == pytest.approx(10.0, abs=2.0)
+
+    def test_divisible_case_unchanged(self):
+        arch = pa.create_rectangular_subarrays(8, 8, 4, 4, 0.5, 0.5)
+        assert arch.n_subarrays == 4
+        assert np.all(np.bincount(arch.subarray_assignments) == 16)
+
+
+class TestThinningMetadata:
+
+    def test_element_indices_chain_to_original(self):
+        g = pa.create_rectangular_array(8, 8, 0.5, 0.5)
+        t1 = pa.thin_array_random(g, 0.5, seed=1)
+        t2 = pa.thin_array_random(t1, 0.5, seed=2)
+        np.testing.assert_allclose(g.x[t2.element_indices], t2.x)
+        np.testing.assert_allclose(g.y[t2.element_indices], t2.y)
+        t3 = pa.thin_array_density_tapered(t1, lambda x, y: np.full_like(x, 0.6), seed=3)
+        np.testing.assert_allclose(g.x[t3.element_indices], t3.x)
+
+    def test_tangents_preserved(self):
+        g = pa.create_cylindrical_array(16, 4, 2.0, 0.5)
+        g.tx, g.ty, g.tz = np.ones(g.n_elements), np.zeros(g.n_elements), np.zeros(g.n_elements)
+        for t in (pa.thin_array_random(g, 0.5, seed=0),
+                  pa.thin_array_density_tapered(g, lambda x, y: np.full_like(x, 0.5), seed=0)):
+            assert t.tx is not None and t.tx.shape == (t.n_elements,)
+            assert t.ty is not None and t.tz is not None
+
+    def test_genetic_algorithm_preserves_metadata(self):
+        g = pa.create_rectangular_array(6, 6, 0.5, 0.5)
+        t1 = pa.thin_array_random(g, 0.75, seed=0)
+        t1.tx = np.arange(t1.n_elements, dtype=float)
+        t1.ty = np.zeros(t1.n_elements)
+        t1.tz = np.zeros(t1.n_elements)
+        best = pa.thin_array_genetic_algorithm(
+            t1, n_target=12, objective_func=lambda geo: float(np.ptp(geo.x)),
+            population_size=8, n_generations=3, seed=0)
+        np.testing.assert_allclose(g.x[best.element_indices], best.x)
+        assert best.tx is not None and best.tx.shape == (12,)
+
+
+class TestGeneticAlgorithmObjectiveGeometry:
+
+    def test_objective_sees_tangents_and_original_indices(self):
+        g = pa.create_rectangular_array(6, 6, 0.5, 0.5)
+        g.tx, g.ty, g.tz = np.ones(36), np.zeros(36), np.zeros(36)
+        seen = []
+
+        def objective(geo):
+            seen.append(geo.tx is not None and geo.tx.shape == (geo.n_elements,))
+            np.testing.assert_allclose(g.x[geo.element_indices], geo.x)
+            return float(np.ptp(geo.x))
+
+        pa.thin_array_genetic_algorithm(g, n_target=12, objective_func=objective,
+                                        population_size=6, n_generations=2, seed=0)
+        assert seen and all(seen)

@@ -365,8 +365,9 @@ def plot_pattern_uv_space(
     cf = ax.contourf(u_grid, v_grid, pattern_clipped, levels=20, cmap=cmap)
     plt.colorbar(cf, ax=ax, label='Gain (dB)')
 
+    theta_circle = np.linspace(0, 2*np.pi, 100)
+
     if show_visible_region:
-        theta_circle = np.linspace(0, 2*np.pi, 100)
         ax.plot(np.cos(theta_circle), np.sin(theta_circle), 'w--', linewidth=2,
                 label='Visible region')
 

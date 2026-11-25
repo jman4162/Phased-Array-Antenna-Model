@@ -100,7 +100,7 @@ with col1:
     plt.close()
 
 with col2:
-    st.subheader(f"H-Plane Cut (φ = {phi0 + 90}°)")
+    st.subheader("Orthogonal Cut Through Beam")
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.plot(angles, H_plane, 'b-', linewidth=1.5)
     ax.axhline(-3, color='r', linestyle='--', alpha=0.5, label='-3 dB')
@@ -151,7 +151,7 @@ with col2:
     fig, ax = plt.subplots(figsize=(6, 6), subplot_kw={'projection': 'polar'})
     r = H_plane - H_plane.min()
     ax.plot(np.deg2rad(angles), r)
-    ax.set_title(f"H-Plane (φ = {phi0 + 90}°)")
+    ax.set_title("Orthogonal cut through beam")
     ax.set_theta_zero_location('N')
     ax.set_theta_direction(-1)
     st.pyplot(fig)
@@ -190,9 +190,9 @@ with col2:
             angle_label="angle_deg",
             pattern_label="H_plane_dB",
             metadata={
-                'cut': 'H-plane',
+                'cut': 'orthogonal great circle through beam',
                 'theta': theta0,
-                'phi': phi0 + 90,
+                'phi': phi0,
                 'n_elements': geom.n_elements
             }
         )

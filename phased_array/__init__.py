@@ -33,7 +33,7 @@ Example
 >>> theta, phi, pattern_dB = pa.compute_full_pattern(geom.x, geom.y, weights, k)
 """
 
-__version__ = "1.5.0"
+__version__ = "1.6.0"
 
 # Beamforming functions
 from .beamforming import (  # Amplitude tapers; Null steering; Multiple beams; Beam spoiling; Adaptive
@@ -55,10 +55,11 @@ from .coordinates import (antenna_to_cone, antenna_to_radar, cone_to_antenna,
                           rotation_matrix_yaw)
 # Core computation functions
 from .core import (array_factor_fft, array_factor_uv, array_factor_vectorized,
-                   compute_directivity, compute_full_pattern,
+                   array_manifold, compute_directivity, compute_full_pattern,
                    compute_half_power_beamwidth, compute_pattern_cuts,
-                   element_pattern, element_pattern_cosine_tapered,
-                   steering_vector, total_pattern)
+                   compute_peak_sidelobe_level, element_pattern,
+                   element_pattern_cosine_tapered, steering_vector,
+                   total_pattern)
 # Export functions
 from .export import (export_array_config_json, export_coupling_matrix_csv,
                      export_geometry_csv, export_pattern_2d_csv,
@@ -81,8 +82,9 @@ from .impairments import (  # Mutual coupling; Phase quantization; Element failu
     active_scan_impedance_matrix, analyze_graceful_degradation,
     analyze_quantization_effect, apply_mutual_coupling, apply_scan_blindness,
     compute_scan_loss, mismatch_loss, mutual_coupling_matrix_measured,
-    mutual_coupling_matrix_theoretical, quantization_rms_error,
-    quantization_sidelobe_increase, quantize_phase, scan_blindness_model,
+    mutual_coupling_matrix_theoretical, quantization_lobes,
+    quantization_rms_error, quantization_sidelobe_increase,
+    quantization_sidelobe_level, quantize_phase, scan_blindness_model,
     simulate_element_failures, surface_wave_scan_angle, vswr_vs_scan)
 # Polarization functions
 from .polarization import (axial_ratio, co_pol_pattern,
@@ -127,6 +129,7 @@ __all__ = [
     "__version__",
     # Core
     "steering_vector",
+    "array_manifold",
     "array_factor_vectorized",
     "array_factor_uv",
     "array_factor_fft",
@@ -137,6 +140,7 @@ __all__ = [
     "compute_full_pattern",
     "compute_directivity",
     "compute_half_power_beamwidth",
+    "compute_peak_sidelobe_level",
     # Utils
     "deg2rad",
     "rad2deg",
@@ -218,6 +222,8 @@ __all__ = [
     "quantize_phase",
     "quantization_rms_error",
     "quantization_sidelobe_increase",
+    "quantization_sidelobe_level",
+    "quantization_lobes",
     "analyze_quantization_effect",
     "simulate_element_failures",
     "analyze_graceful_degradation",
