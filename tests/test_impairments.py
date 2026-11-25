@@ -790,3 +790,31 @@ class TestDipoleImpedanceMatrix:
         geom = pa.create_rectangular_array(3, 1, 0.5, 0.5)
         with pytest.raises(ValueError, match="overlap"):
             pa.dipole_impedance_matrix(geom, length=0.5, orientation='x')
+
+
+class TestDipoleUnitsAndChecks:
+
+    def test_physical_wavelength_matches_normalized(self):
+        lam = 0.03
+        g_norm = pa.create_rectangular_array(3, 2, 0.6, 0.5)
+        g_phys = pa.create_rectangular_array(3, 2, 0.6, 0.5, wavelength=lam)
+        Z_norm = pa.dipole_impedance_matrix(g_norm, length=0.5, radius=1e-3)
+        Z_phys = pa.dipole_impedance_matrix(g_phys, length=0.5, radius=1e-3, wavelength=lam)
+        np.testing.assert_allclose(Z_phys, Z_norm, rtol=1e-9)
+        assert pa.dipole_mutual_impedance(0.5 * lam, 0.0, 0.5, wavelength=lam) == \
+            pytest.approx(pa.dipole_mutual_impedance(0.5))
+
+    def test_near_collinear_overlap_raises(self):
+        geom = pa.ArrayGeometry(x=np.array([0.0, 0.3]), y=np.array([0.0, 1e-17]))
+        with pytest.raises(ValueError, match="overlap"):
+            pa.dipole_impedance_matrix(geom, orientation='x')
+        close = pa.ArrayGeometry(x=np.array([0.0, 0.0]), y=np.array([0.0, 5e-4]))
+        with pytest.raises(ValueError, match="overlap"):
+            pa.dipole_impedance_matrix(close, radius=1e-3, orientation='x')
+
+    def test_radius_and_empty(self):
+        geom = pa.create_rectangular_array(1, 2, 0.5, 0.5)
+        with pytest.raises(ValueError, match="radius"):
+            pa.dipole_impedance_matrix(geom, radius=0.0)
+        empty = pa.ArrayGeometry(x=np.array([]), y=np.array([]))
+        assert pa.dipole_impedance_matrix(empty).shape == (0, 0)

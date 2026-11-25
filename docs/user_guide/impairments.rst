@@ -63,11 +63,18 @@ impedance to use it with the active-impedance functions:
    center = 27                            # an interior element
    for scan in (0, 30, 60):
        w = pa.steering_vector(k, dip_geom.x, dip_geom.y, scan, 90)  # H-plane scan
-       za = pa.active_impedance(C_dipole, w, center, Z0=Z0)
-       print(f"H-plane scan {scan:2d} deg: active impedance {za.real:.1f} {za.imag:+.1f}j ohm")
+       z_current = (Z @ w)[center] / w[center]          # current excitation
+       z_wave = pa.active_impedance(C_dipole, w, center, Z0=Z0)  # incident waves
+       print(f"H-plane scan {scan:2d} deg: current-driven {z_current.real:.1f} "
+             f"{z_current.imag:+.1f}j ohm, wave-driven {z_wave.real:.1f} "
+             f"{z_wave.imag:+.1f}j ohm")
 
-The dipoles are in free space; a ground plane or substrate changes the
-coupling and is outside this model.
+The two columns differ because :func:`~phased_array.active_impedance` treats
+the weights as incident waves on ``Z0`` ports, so the element currents are
+not the weights themselves; with current excitation the active impedance is
+``(Z @ I)[m] / I[m]`` (Balanis eq. 8-64 generalized). The dipoles are in free
+space; a ground plane or substrate changes the coupling and is outside this
+model.
 
 Measured Coupling
 ^^^^^^^^^^^^^^^^^

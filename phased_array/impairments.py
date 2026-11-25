@@ -117,14 +117,14 @@ def dipole_mutual_impedance(
     Parameters
     ----------
     lateral : float
-        Separation perpendicular to the dipole axes, same unit as
+        Separation perpendicular to the dipole axes, in the unit of
         ``wavelength`` (the wire radius for the self-impedance)
     axial : float
-        Center offset along the dipole axes, same unit
+        Center offset along the dipole axes, in the unit of ``wavelength``
     length : float
-        Dipole length, same unit
+        Dipole length in wavelengths
     wavelength : float
-        Wavelength
+        Wavelength (meters, or 1.0 to work in wavelengths)
 
     Returns
     -------
@@ -159,8 +159,8 @@ def dipole_mutual_impedance(
     lateral = abs(float(lateral))
     axial = float(axial)
     k = 2 * np.pi / wavelength
-    l = float(length)
-    if lateral == 0.0 and abs(axial) <= l:
+    l = float(length) * wavelength
+    if lateral <= 1e-9 * wavelength and abs(axial) <= l:
         raise ValueError(
             "collinear dipoles overlap: need |axial| > length when lateral = 0, "
             f"got axial={axial}, length={l}"
@@ -204,13 +204,15 @@ def dipole_impedance_matrix(
     geometry : ArrayGeometry
         Element (feed-point) positions, same unit as ``wavelength``
     length : float
-        Dipole length
+        Dipole length in wavelengths
     radius : float
-        Wire radius, used for the self-impedance on the diagonal
+        Wire radius in wavelengths, used for the self-impedance on the
+        diagonal
     orientation : str
         Common dipole axis: 'x', 'y' or 'z'
     wavelength : float
-        Wavelength
+        Wavelength in the unit of the positions (meters, or 1.0 when the
+        positions are in wavelengths)
 
     Returns
     -------
@@ -221,11 +223,22 @@ def dipole_impedance_matrix(
         :func:`active_impedance` and :func:`vswr_vs_scan` with
         ``formulation='impedance'``.
 
+    Raises
+    ------
+    ValueError
+        For a non-positive radius, or two dipoles whose wires overlap
+        (closer than two radii laterally while overlapping axially)
+
     Notes
     -----
     Each distinct (lateral, axial) separation is integrated once, so
     regular arrays cost far fewer integrals than N**2. The dipoles are in
     free space (no ground plane or substrate).
+
+    :func:`active_impedance` and :func:`vswr_vs_scan` treat the weights
+    as incident waves on ports of reference impedance ``Z0``, so their
+    result for a steered array depends on ``Z0``. For current excitation
+    ``I``, the active impedance of element m is ``(Z @ I)[m] / I[m]``.
 
     Examples
     --------
@@ -233,7 +246,8 @@ def dipole_impedance_matrix(
     >>> import phased_array as pa
     >>> geom = pa.create_rectangular_array(1, 2, 0.5, 0.5)  # two y-spaced elements
     >>> Z = pa.dipole_impedance_matrix(geom, orientation='x')
-    >>> # In-phase pair: active impedance Z11 + Z12 (Balanis eq. 8-64)
+    >>> # In-phase pair: by symmetry the currents are equal, so the active
+    >>> # impedance is Z11 + Z12 (Balanis eq. 8-64) for any reference Z0
     >>> C = Z / 50.0
     >>> z_active = pa.active_impedance(C, np.ones(2), 0, Z0=50.0)
     >>> bool(np.isclose(z_active, Z[0, 0] + Z[0, 1]))
@@ -242,15 +256,21 @@ def dipole_impedance_matrix(
     axes = {'x': 0, 'y': 1, 'z': 2}
     if orientation not in axes:
         raise ValueError(f"orientation must be 'x', 'y' or 'z', got {orientation!r}")
+    if not radius > 0:
+        raise ValueError(f"radius must be positive, got {radius}")
     x = np.asarray(geometry.x, dtype=float)
     y = np.asarray(geometry.y, dtype=float)
     z = np.zeros_like(x) if geometry.z is None else np.asarray(geometry.z, dtype=float)
     pos = np.column_stack([x, y, z])
     n = pos.shape[0]
+    if n == 0:
+        return np.empty((0, 0), dtype=complex)
     a = axes[orientation]
     others = [i for i in range(3) if i != a]
+    length_abs = length * wavelength
+    radius_abs = radius * wavelength
 
-    z_self = dipole_mutual_impedance(radius, 0.0, length, wavelength)
+    z_self = dipole_mutual_impedance(radius_abs, 0.0, length, wavelength)
     Z = np.empty((n, n), dtype=complex)
     np.fill_diagonal(Z, z_self)
 
@@ -261,6 +281,12 @@ def dipole_impedance_matrix(
         axial = np.abs(d[:, a])
         lateral = np.hypot(d[:, others[0]], d[:, others[1]])
         for jj, (lat, ax) in enumerate(zip(lateral, axial)):
+            if lat < 2 * radius_abs and ax <= length_abs:
+                raise ValueError(
+                    f"dipoles {i} and {i + 1 + jj} overlap: lateral separation "
+                    f"{lat:.3g} is under two wire radii and axial offset {ax:.3g} "
+                    f"is within the dipole length"
+                )
             key = (round(lat / scale), round(ax / scale))
             if key not in cache:
                 cache[key] = dipole_mutual_impedance(lat, ax, length, wavelength)
