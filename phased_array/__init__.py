@@ -94,7 +94,8 @@ from .impairments import (  # Mutual coupling; Phase quantization; Element failu
     active_element_pattern, active_impedance, active_reflection_coefficient,
     active_scan_impedance_matrix, analyze_graceful_degradation,
     analyze_quantization_effect, apply_mutual_coupling, apply_scan_blindness,
-    compute_scan_loss, mismatch_loss, mutual_coupling_matrix_measured,
+    compute_scan_loss, dipole_impedance_matrix, dipole_mutual_impedance,
+    mismatch_loss, mutual_coupling_matrix_measured,
     mutual_coupling_matrix_theoretical, quantization_lobes,
     quantization_rms_error, quantization_sidelobe_increase,
     quantization_sidelobe_level, quantize_phase, random_error_sidelobe_level,
@@ -255,6 +256,8 @@ __all__ = [
     # Impairments
     "mutual_coupling_matrix_theoretical",
     "mutual_coupling_matrix_measured",
+    "dipole_mutual_impedance",
+    "dipole_impedance_matrix",
     "apply_mutual_coupling",
     "active_element_pattern",
     "quantize_phase",
