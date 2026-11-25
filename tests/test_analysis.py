@@ -79,3 +79,73 @@ class TestPatternSummary:
         cos = pa.pattern_summary(geom.x, geom.y, w, K, theta0_deg=40, phi0_deg=0,
                                  element_pattern_func=pa.element_pattern, cos_exp_theta=1.5)
         assert cos['directivity_dBi'] != pytest.approx(iso['directivity_dBi'], abs=0.1)
+
+
+class TestPatternSummaryReviewCases:
+
+    @pytest.mark.parametrize("theta0", [40.3, 42.7])
+    def test_grating_lobe_as_tall_as_beam_not_confused(self, theta0):
+        geom = pa.create_rectangular_array(12, 12, 0.8, 0.8)
+        w = pa.steering_vector(K, geom.x, geom.y, theta0, 0)
+        s = pa.pattern_summary(geom.x, geom.y, w, K, theta0_deg=theta0, phi0_deg=0)
+        assert len(s['grating_lobes']) == 1
+        theta_gl, phi_gl, _ = s['grating_lobes'][0]
+        assert phi_gl == pytest.approx(180.0, abs=1.5)
+        expected = np.rad2deg(np.arcsin(1 / 0.8 - np.sin(np.deg2rad(theta0))))
+        assert theta_gl == pytest.approx(expected, abs=1.5)
+
+    def test_fan_beam_ridge_is_one_lobe(self):
+        # Linear array: the beam is a cone; grid ripple along it must not
+        # split it into many "grating lobes"
+        geom = pa.create_rectangular_array(4, 1, 0.9, 0.9)
+        w = pa.steering_vector(K, geom.x, geom.y, 30, 175)
+        s = pa.pattern_summary(geom.x, geom.y, w, K, theta0_deg=30, phi0_deg=175)
+        # 0.9 lambda spacing steered to u0 = -0.498: a real grating cone at
+        # u = 0.613; it is one lobe, and the main ridge is not listed
+        assert len(s['grating_lobes']) <= 2
+        for theta_gl, phi_gl, _ in s['grating_lobes']:
+            u = np.sin(np.deg2rad(theta_gl)) * np.cos(np.deg2rad(phi_gl))
+            assert u > 0.3
+
+    def test_full_sphere_does_not_report_mirror_lobe(self):
+        geom = pa.create_rectangular_array(16, 16, 0.5, 0.5)
+        w = pa.steering_vector(K, geom.x, geom.y, 20, 0)
+        hemi = pa.pattern_summary(geom.x, geom.y, w, K, theta0_deg=20, phi0_deg=0)
+        full = pa.pattern_summary(geom.x, geom.y, w, K, theta0_deg=20, phi0_deg=0,
+                                  hemisphere=False)
+        assert full['grating_lobes'] == []
+        # same front hemisphere, sampled at 1 deg instead of 0.5 deg in theta
+        assert full['peak_sidelobe_dB'] == pytest.approx(hemi['peak_sidelobe_dB'], abs=0.1)
+
+    def test_lobe_across_phi_seam_counted_once(self):
+        geom = pa.create_rectangular_array(3, 3, 0.9, 0.9)
+        w = pa.steering_vector(K, geom.x, geom.y, 35, 184)
+        s = pa.pattern_summary(geom.x, geom.y, w, K, theta0_deg=35, phi0_deg=184)
+        assert len(s['grating_lobes']) == 1
+
+    def test_off_grid_beam_uses_beam_peak(self):
+        geom = pa.create_rectangular_array(40, 40, 0.5, 0.5)
+        w = pa.steering_vector(K, geom.x, geom.y, 30.5, 45.5)
+        coarse = pa.pattern_summary(geom.x, geom.y, w, K, theta0_deg=30.5, phi0_deg=45.5)
+        fine = pa.pattern_summary(geom.x, geom.y, w, K, theta0_deg=30.5, phi0_deg=45.5,
+                                  n_theta=721, n_phi=1441)
+        assert coarse['directivity_dBi'] == pytest.approx(fine['directivity_dBi'], abs=0.03)
+        assert coarse['peak_sidelobe_dB'] <= fine['peak_sidelobe_dB'] + 0.02
+
+    def test_element_pattern_moves_beam_direction(self):
+        geom = pa.create_rectangular_array(8, 8, 0.5, 0.5)
+        w = pa.steering_vector(K, geom.x, geom.y, 50, 0)
+        s = pa.pattern_summary(geom.x, geom.y, w, K,
+                               element_pattern_func=pa.element_pattern, cos_exp_theta=1.5)
+        # Total-pattern peak: maximize |EP * AF| along the phi = 0 cut
+        theta = np.deg2rad(np.linspace(30, 60, 30001))
+        tp = pa.total_pattern(theta, np.zeros_like(theta), geom.x, geom.y, w, K,
+                              pa.element_pattern, cos_exp_theta=1.5)
+        expected = np.rad2deg(theta[np.argmax(np.abs(tp))])
+        assert expected < 50
+        assert s['theta0_deg'] == pytest.approx(expected, abs=0.01)
+
+    def test_values_are_plain_floats(self):
+        geom = pa.create_rectangular_array(8, 8, 0.5, 0.5)
+        s = pa.pattern_summary(geom.x, geom.y, np.ones(64), K)
+        assert all(type(v) is float for v in s['hpbw_deg'] + s['fnbw_deg'] + s['sll_dB'])

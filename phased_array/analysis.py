@@ -8,7 +8,8 @@ visible hemisphere, and directions where a grating lobe reaches the
 main-beam level.
 """
 
-from typing import Any, Callable, Dict, Optional
+import heapq
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -81,11 +82,20 @@ def pattern_summary(
 
     Notes
     -----
-    On the grid, the main lobe is every direction reachable from the
-    pattern peak without climbing, so it ends at the surrounding null
-    valleys whatever its shape. Sidelobes and grating lobes are searched
-    outside it. The grid must resolve those nulls: for arrays more than
-    about 60 wavelengths across, raise ``n_theta`` and ``n_phi``.
+    Sidelobes and grating lobes are searched over the front hemisphere
+    (theta <= 90 deg) whatever ``hemisphere`` says, so the mirror image of
+    the beam behind a planar array is not reported. On that grid the main
+    lobe is grown from the beam direction through cells that rise no more
+    than 1 dB above the lowest level on the path, so it follows the null
+    valleys around a pencil beam and the whole ridge of a fan beam. Each
+    group of connected cells above the threshold outside it is one
+    grating lobe. Levels and directivity are referred to the pattern at
+    ``(theta0_deg, phi0_deg)`` when that exceeds the grid maximum. The grid
+    must resolve the nulls: for arrays more than about 60 wavelengths
+    across, raise ``n_theta`` and ``n_phi``.
+
+    Without a beam direction, the array-factor peak is located and, when
+    an element pattern is given, refined on the total pattern.
 
     Examples
     --------
@@ -104,7 +114,13 @@ def pattern_summary(
     weights = np.broadcast_to(np.asarray(weights), x.shape)
 
     if theta0_deg is None or phi0_deg is None:
-        theta_b, phi_b, _ = _beam_direction(x, y, z, weights, k)
+        theta_b, phi_b, beamwidth = _beam_direction(x, y, z, weights, k)
+        if element_pattern_func is not None:
+            # The element pattern pulls the total-pattern peak off the
+            # array-factor peak; refine on the total pattern
+            theta_b, phi_b = _refine_total_peak(
+                x, y, z, weights, k, element_pattern_func, element_kwargs,
+                theta_b, phi_b, beamwidth)
         theta0_deg = float(np.rad2deg(theta_b)) if theta0_deg is None else theta0_deg
         phi0_deg = float(np.rad2deg(phi_b)) if phi0_deg is None else phi0_deg
 
@@ -115,44 +131,53 @@ def pattern_summary(
         n_points=18001, element_pattern_func=element_pattern_func, z=z,
         **element_kwargs
     )
-    hpbw = (compute_half_power_beamwidth(angles, cut1),
-            compute_half_power_beamwidth(angles, cut2))
-    fnbw = (compute_first_null_beamwidth(angles, cut1),
-            compute_first_null_beamwidth(angles, cut2))
-    sll = (compute_peak_sidelobe_level(angles, cut1),
-           compute_peak_sidelobe_level(angles, cut2))
+    hpbw = (float(compute_half_power_beamwidth(angles, cut1)),
+            float(compute_half_power_beamwidth(angles, cut2)))
+    fnbw = (float(compute_first_null_beamwidth(angles, cut1)),
+            float(compute_first_null_beamwidth(angles, cut2)))
+    sll = (float(compute_peak_sidelobe_level(angles, cut1)),
+           float(compute_peak_sidelobe_level(angles, cut2)))
 
-    # Directivity and the hemisphere-wide sidelobe search on one grid
+    # Reference peak: the beam direction itself, which a coarse grid can
+    # miss by a fraction of a beamwidth
+    th0, ph0 = np.deg2rad(theta0_deg), np.deg2rad(phi0_deg)
+    beam_field = total_pattern(np.array([th0]), np.array([ph0]), x, y, weights,
+                               k, element_pattern_func, z, **element_kwargs)
+    beam_power = float(np.abs(beam_field[0]) ** 2)
+
+    # Directivity on the hemisphere or full-sphere grid
     theta_range = (0, np.pi / 2) if hemisphere else (0, np.pi)
     _, _, theta, phi = create_theta_phi_grid(theta_range, (0, 2 * np.pi),
                                              n_theta, n_phi)
     field = total_pattern(theta, phi, x, y, weights, k, element_pattern_func,
                           z, **element_kwargs)
-    directivity = compute_directivity(theta, phi, field)
-
     power = np.abs(field) ** 2
-    peak = power.max()
-    level_dB = 10 * np.log10(np.maximum(power / peak, 1e-30))
+    grid_peak = float(power.max())
+    reference = max(grid_peak, beam_power)
+    directivity = compute_directivity(theta, phi, field) * reference / grid_peak
 
-    # Main lobe on the grid: every cell reachable from the peak by moving
-    # downhill (or level), which stops at the null valleys around it
-    main_lobe = _downhill_region(level_dB, np.unravel_index(np.argmax(power), power.shape))
+    # Sidelobe and grating-lobe search over the front hemisphere, without
+    # the phi = 2*pi column that repeats phi = 0
+    front = theta[:, 0] <= np.pi / 2 + 1e-12
+    s_theta, s_phi = theta[front, :-1], phi[front, :-1]
+    level_dB = 10 * np.log10(np.maximum(power[front, :-1] / reference, 1e-30))
+
+    start = _climb(level_dB, _nearest_cell(s_theta, s_phi, th0, ph0))
+    main_lobe = _main_lobe_region(level_dB, start)
     outside = ~main_lobe
 
     peak_sidelobe = float(level_dB[outside].max()) if np.any(outside) else -np.inf
 
-    # Grating lobes: local maxima outside the main lobe above the threshold
+    # Grating lobes: one entry per connected group of cells outside the
+    # main lobe at or above the threshold, at its highest cell
     grating = []
     candidates = outside & (level_dB >= grating_lobe_threshold_dB)
-    if np.any(candidates):
-        is_max = _local_maxima(level_dB)
-        found = [(float(np.rad2deg(theta[i, j])), float(np.rad2deg(phi[i, j])),
-                  float(level_dB[i, j]))
-                 for i, j in zip(*np.nonzero(candidates & is_max))]
-        # One entry per lobe: merge duplicates at the pole and the phi seam
-        for g in sorted(found, key=lambda t: -t[2]):
-            if all(_angular_distance_deg(g, u) > 2.0 for u in grating):
-                grating.append(g)
+    for cells in _components(candidates):
+        i, j = max(cells, key=lambda c: level_dB[c])
+        grating.append((float(np.rad2deg(s_theta[i, j])),
+                        float(np.rad2deg(s_phi[i, j])),
+                        float(level_dB[i, j])))
+    grating.sort(key=lambda g: -g[2])
 
     return {
         'theta0_deg': float(theta0_deg),
@@ -166,50 +191,103 @@ def pattern_summary(
     }
 
 
-def _downhill_region(level: np.ndarray, start) -> np.ndarray:
-    """Cells reachable from ``start`` through non-increasing levels.
+def _neighbours(i: int, j: int, n_theta: int, n_phi: int) -> List[Tuple[int, int]]:
+    """8-neighbors on a theta/phi grid, periodic in phi; row 0 is the pole."""
+    if i == 0:
+        cells = [(0, jj) for jj in range(n_phi)]
+        cells += [(1, jj) for jj in range(n_phi)] if n_theta > 1 else []
+        return cells
+    cells = [(i + di, (j + dj) % n_phi)
+             for di in (-1, 0, 1) for dj in (-1, 0, 1) if di or dj]
+    return [(a, b) for a, b in cells if 0 <= a < n_theta]
 
-    The grid is periodic in phi (axis 1); the theta = 0 row is a single
-    point, so all of its cells are neighbors of each other.
+
+def _nearest_cell(theta: np.ndarray, phi: np.ndarray, th0: float, ph0: float):
+    """Grid cell closest in angle to the direction (th0, ph0)."""
+    cos_d = (np.sin(theta) * np.sin(th0) * np.cos(phi - ph0)
+             + np.cos(theta) * np.cos(th0))
+    return np.unravel_index(int(np.argmax(cos_d)), theta.shape)
+
+
+def _climb(level: np.ndarray, start) -> Tuple[int, int]:
+    """Steepest ascent from ``start`` to a local maximum."""
+    n_theta, n_phi = level.shape
+    i, j = (int(v) for v in start)
+    while True:
+        best = max(_neighbours(i, j, n_theta, n_phi), key=lambda c: level[c])
+        if level[best] <= level[i, j]:
+            return i, j
+        i, j = best
+
+
+def _main_lobe_region(level: np.ndarray, start, tolerance_dB: float = 1.0) -> np.ndarray:
+    """Cells reachable from ``start`` without rising more than
+    ``tolerance_dB`` above the lowest level met on the path.
+
+    Processing cells in order of decreasing path minimum gives every cell
+    its most permissive path; grid ripple along a ridge is crossed, a null
+    valley is not.
     """
     n_theta, n_phi = level.shape
-    mask = np.zeros(level.shape, dtype=bool)
-    stack = [tuple(int(v) for v in start)]
-    mask[stack[0]] = True
-    tol = 1e-9
-    while stack:
-        i, j = stack.pop()
-        current = level[i, j]
-        neighbours = [(i + di, (j + dj) % n_phi)
-                      for di in (-1, 0, 1) for dj in (-1, 0, 1) if di or dj]
-        if i == 0:
-            neighbours += [(0, jj) for jj in range(n_phi)]
-        for a, b in neighbours:
-            if 0 <= a < n_theta and not mask[a, b] and level[a, b] <= current + tol:
-                mask[a, b] = True
-                stack.append((a, b))
-    return mask
-
-
-def _local_maxima(level: np.ndarray) -> np.ndarray:
-    """Cells at least as high as their 8 neighbors (phi periodic)."""
-    padded = np.pad(level, ((1, 1), (0, 0)), mode='edge')
-    padded = np.concatenate([padded[:, -1:], padded, padded[:, :1]], axis=1)
-    centre = padded[1:-1, 1:-1]
-    is_max = np.ones(level.shape, dtype=bool)
-    for di in (-1, 0, 1):
-        for dj in (-1, 0, 1):
-            if di == 0 and dj == 0:
+    region = np.zeros(level.shape, dtype=bool)
+    best = np.full(level.shape, -np.inf)
+    i0, j0 = (int(v) for v in start)
+    best[i0, j0] = level[i0, j0]
+    heap = [(-level[i0, j0], i0, j0)]
+    while heap:
+        neg_min, i, j = heapq.heappop(heap)
+        if region[i, j]:
+            continue
+        region[i, j] = True
+        path_min = -neg_min
+        for a, b in _neighbours(i, j, n_theta, n_phi):
+            if region[a, b] or level[a, b] > path_min + tolerance_dB:
                 continue
-            neighbour = padded[1 + di:padded.shape[0] - 1 + di,
-                               1 + dj:padded.shape[1] - 1 + dj]
-            is_max &= centre >= neighbour
-    return is_max
+            new_min = min(path_min, level[a, b])
+            if new_min > best[a, b]:
+                best[a, b] = new_min
+                heapq.heappush(heap, (-new_min, a, b))
+    return region
 
 
-def _angular_distance_deg(a, b) -> float:
-    """Great-circle angle between (theta, phi) directions given in degrees."""
-    ta, pa_, tb, pb = np.deg2rad([a[0], a[1], b[0], b[1]])
-    cos_d = (np.sin(ta) * np.sin(tb) * np.cos(pa_ - pb) + np.cos(ta) * np.cos(tb))
-    return float(np.rad2deg(np.arccos(np.clip(cos_d, -1.0, 1.0))))
+def _components(mask: np.ndarray) -> List[List[Tuple[int, int]]]:
+    """Connected groups of True cells (8-connected, phi periodic, pole)."""
+    n_theta, n_phi = mask.shape
+    seen = np.zeros(mask.shape, dtype=bool)
+    groups = []
+    for i, j in zip(*np.nonzero(mask)):
+        if seen[i, j]:
+            continue
+        stack, cells = [(int(i), int(j))], []
+        seen[i, j] = True
+        while stack:
+            a, b = stack.pop()
+            cells.append((a, b))
+            for c in _neighbours(a, b, n_theta, n_phi):
+                if mask[c] and not seen[c]:
+                    seen[c] = True
+                    stack.append(c)
+        groups.append(cells)
+    return groups
 
+
+def _refine_total_peak(x, y, z, weights, k, element_pattern_func,
+                       element_kwargs, theta_b, phi_b, beamwidth):
+    """Nelder-Mead on the total pattern, starting at the array-factor peak."""
+    from scipy.optimize import minimize
+
+    def neg_power(p):
+        return -float(np.abs(total_pattern(
+            np.array([abs(p[0])]),
+            np.array([p[1] + (np.pi if p[0] < 0 else 0.0)]),
+            x, y, weights, k, element_pattern_func, z, **element_kwargs)[0]) ** 2)
+
+    step = beamwidth / 4
+    x0 = np.array([theta_b, phi_b])
+    res = minimize(neg_power, x0, method='Nelder-Mead',
+                   options={'initial_simplex': [x0, x0 + [step, 0], x0 + [0, step]],
+                            'xatol': 1e-7, 'fatol': 1e-12, 'maxiter': 400})
+    theta_r, phi_r = res.x
+    if theta_r < 0:
+        theta_r, phi_r = -theta_r, phi_r + np.pi
+    return float(theta_r), float(np.mod(phi_r, 2 * np.pi))
