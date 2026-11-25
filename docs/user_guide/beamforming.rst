@@ -156,7 +156,8 @@ directions. Simple and effective for a few nulls.
 
    # Verify null depth
    for theta_null, phi_null in null_directions:
-       depth = pa.compute_null_depth(geom, k, weights, (theta_null, phi_null))
+       depth = pa.compute_null_depth(weights, geom, k, theta_null, phi_null,
+                                     theta_main_deg=20, phi_main_deg=0)
        print(f"Null at {theta_null} deg: {depth:.1f} dB")
 
 LCMV Beamformer
@@ -217,9 +218,10 @@ Minimizes inter-beam coupling using orthogonalization.
    # Returns list of weight vectors, one per beam
    # Beams are designed to be orthogonal to each other
 
-   # Check beam isolation
-   isolation = pa.compute_beam_isolation(geom, k, weights_list, beam_directions)
-   print(f"Beam isolation: {isolation:.1f} dB")
+   # Check beam isolation: matrix of each beam's response (dB) in the
+   # other beams' directions
+   isolation = pa.compute_beam_isolation(weights_list, geom, k, beam_directions)
+   print(np.round(isolation, 1))
 
 Monopulse Patterns
 ------------------
@@ -228,15 +230,14 @@ Sum and difference patterns for angle tracking.
 
 .. code-block:: python
 
-   weights_sum, weights_diff = pa.monopulse_weights(
-       geom, k,
-       theta0_deg=20,
-       phi0_deg=0,
-       plane='azimuth'  # or 'elevation'
-   )
+   weights_sum = pa.monopulse_weights(geom, k, theta0_deg=20, phi0_deg=0, mode='sum')
+   weights_diff = pa.monopulse_weights(geom, k, theta0_deg=20, phi0_deg=0,
+                                       mode='delta_az')  # or 'delta_el'
 
    # Sum pattern: conventional beam
-   # Difference pattern: null on axis, used for tracking
+   # Difference pattern: exact null on the beam axis, used for tracking.
+   # The halves are split about the array centroid; elements on the split
+   # line (odd-sized arrays) get zero weight.
 
 Applying Tapers to Arbitrary Geometries
 ---------------------------------------
@@ -251,7 +252,7 @@ For non-rectangular arrays, use ``apply_taper_to_geometry``:
    # Apply taper based on position
    weights = pa.apply_taper_to_geometry(
        geom,
-       taper_type='taylor',
+       taper_func='taylor',
        sidelobe_dB=-30
    )
 
@@ -370,16 +371,19 @@ SMI directly computes the optimal MVDR weights from sample covariance:
    k = pa.wavelength_to_k(1.0)
 
    # Simulate interference data (in practice, from receiver)
+   rng = np.random.default_rng(0)
    n_snapshots = 100
    n_elements = geom.n_elements
 
-   # Create interference scenario: jammer at 35 deg + noise
-   jammer_sv = pa.steering_vector(k, geom.x, geom.y, 35, 0)
-   noise = (np.random.randn(n_snapshots, n_elements) +
-            1j * np.random.randn(n_snapshots, n_elements)) / np.sqrt(2)
-   jammer = 10 * np.outer(np.random.randn(n_snapshots) +
-                          1j * np.random.randn(n_snapshots), jammer_sv)
-   interference_data = jammer + noise
+   # Jammer at 35 deg (20 dB INR) + unit noise. A plane wave from a direction
+   # induces array_manifold(...) at the elements, the conjugate of the
+   # steering weights for that direction.
+   jammer_manifold = pa.array_manifold(k, geom.x, geom.y, 35, 0)
+   noise = (rng.standard_normal((n_snapshots, n_elements)) +
+            1j * rng.standard_normal((n_snapshots, n_elements))) / np.sqrt(2)
+   jammer_amp = 10 * (rng.standard_normal(n_snapshots) +
+                      1j * rng.standard_normal(n_snapshots)) / np.sqrt(2)
+   interference_data = np.outer(jammer_amp, jammer_manifold) + noise
 
    # Compute adaptive weights for signal at 0 deg
    weights_adapted = pa.adaptive_weights_smi(
@@ -392,6 +396,10 @@ SMI directly computes the optimal MVDR weights from sample covariance:
 
    # Compare with quiescent (non-adaptive) weights
    weights_quiescent = pa.steering_vector(k, geom.x, geom.y, 0, 0)
+
+   # Response toward the jammer: weights are applied as w @ x
+   response = abs(weights_adapted @ jammer_manifold)
+   print(f"Response at 35 deg: {20 * np.log10(response):.1f} dB (look direction = 0 dB)")
 
 **Diagonal loading** adds robustness when:
 
@@ -414,7 +422,7 @@ response in the look direction:
        phi_desired_deg=0,
        interference_data=interference_data,
        n_blocking_vectors=None,  # Auto: n_elements - 1
-       mu=0.01  # LMS step size
+       mu=0.1  # normalized LMS step size, 0 < mu < 2
    )
 
    # GSC structure:

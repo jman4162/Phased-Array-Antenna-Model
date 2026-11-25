@@ -193,10 +193,11 @@ def steering_vector_hybrid(
     Notes
     -----
     For each element:
+
     1. TTD is computed based on subarray center position and evaluated at
-       ``frequency`` (phase ``2*pi*frequency*tau``)
+       ``frequency`` (phase ``2*pi*frequency*tau``).
     2. Phase shift compensates for element offset from subarray center;
-       it is a phase, fixed at ``center_frequency``
+       it is a phase, fixed at ``center_frequency``.
 
     This reduces beam squint compared to phase-only steering,
     with squint now determined by subarray size rather than array size.

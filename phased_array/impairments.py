@@ -1197,7 +1197,8 @@ def vswr_vs_scan(
 
     Notes
     -----
-    VSWR is computed from reflection coefficient:
+    VSWR is computed from reflection coefficient::
+
         VSWR = (1 + |gamma|) / (1 - |gamma|)
 
     High VSWR at certain scan angles indicates potential scan blindness
@@ -1261,7 +1262,8 @@ def mismatch_loss(gamma: np.ndarray) -> np.ndarray:
 
     Notes
     -----
-    Mismatch loss is:
+    Mismatch loss is::
+
         Loss_dB = 10 * log10(1 - |gamma|^2)
 
     This represents the power reflected back due to mismatch.
