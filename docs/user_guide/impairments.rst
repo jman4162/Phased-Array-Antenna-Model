@@ -203,6 +203,42 @@ Full Analysis
    plt.legend()
    plt.grid(True)
 
+Random Error Budget
+-------------------
+
+Calibration residuals, phase-shifter errors and failed elements each scatter
+power evenly into the sidelobe region. :func:`~phased_array.random_error_sidelobe_level`
+gives the expected average sidelobe level for any mix of them, so an error
+budget can be checked before running a Monte Carlo
+([Haupt]_ eqs. 2.118-2.122):
+
+.. code-block:: python
+
+   taper = pa.taylor_taper_2d(16, 16, sidelobe_dB=-40)
+   eta = pa.compute_taper_efficiency(taper)
+
+   # 0.5 dB amplitude and 4 deg phase residuals (1-sigma), 2% failed elements
+   floor = pa.random_error_sidelobe_level(
+       n_elements=256,
+       amplitude_std=0.5 * np.log(10) / 20,
+       phase_std_deg=4.0,
+       failure_rate=0.02,
+       taper_efficiency=eta,
+   )
+   print(f"Average sidelobe floor from errors: {floor:.1f} dB")
+
+   # Which term dominates?
+   for label, kwargs in [("amplitude", dict(amplitude_std=0.5 * np.log(10) / 20)),
+                         ("phase", dict(phase_std_deg=4.0)),
+                         ("failures", dict(failure_rate=0.02))]:
+       level = pa.random_error_sidelobe_level(256, taper_efficiency=eta, **kwargs)
+       print(f"  {label:>9}: {level:.1f} dB")
+
+The result is an average over the sidelobe region; individual peaks rise
+several dB above it. If the floor sits within about 10 dB of the design
+sidelobe level, the design level will not be reached in practice. Position
+errors enter through ``position_std`` and grow toward endfire.
+
 Element Failures
 ----------------
 

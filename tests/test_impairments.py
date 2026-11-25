@@ -701,3 +701,67 @@ class TestSeedNoneUsesGlobalGenerator:
         np.random.seed(7)
         pa.simulate_element_failures(np.ones(50), 0.2, seed=123)
         np.testing.assert_array_equal(np.random.random(4), expected)
+
+
+class TestRandomErrorSidelobeLevel:
+
+    @staticmethod
+    def _monte_carlo(n, sa, sp_deg, fail, pos=0.0, u_region=0.25, trials=120, seed=1):
+        rng = np.random.default_rng(seed)
+        w0 = pa.taylor_taper_1d(n, -45, nbar=8)  # design floor far below errors
+        x = (np.arange(n) - (n - 1) / 2) * 0.5
+        u = np.linspace(-1, 1, 801)
+        far = np.abs(u) > u_region
+        side, peak = [], []
+        for _ in range(trials):
+            w = (w0 * (1 + sa * rng.standard_normal(n))
+                 * np.exp(1j * np.deg2rad(sp_deg) * rng.standard_normal(n)))
+            w = w * (rng.random(n) >= fail)
+            xe = x + pos * rng.standard_normal(n)
+            af = np.exp(2j * np.pi * np.outer(u, xe)) @ w
+            side.append(np.mean(np.abs(af[far]) ** 2))
+            peak.append(np.abs(np.sum(w)) ** 2)
+        return 10 * np.log10(np.mean(side) / np.mean(peak)), pa.compute_taper_efficiency(w0)
+
+    @pytest.mark.parametrize("n, sa, sp, fail", [
+        (400, 0.1, 0, 0), (400, 0, 6, 0), (400, 0, 0, 0.1), (200, 0.1, 10, 0.1),
+    ])
+    def test_matches_monte_carlo(self, n, sa, sp, fail):
+        mc, eta = self._monte_carlo(n, sa, sp, fail)
+        assert pa.random_error_sidelobe_level(n, sa, sp, fail, eta) == pytest.approx(mc, abs=0.3)
+
+    def test_haupt_limits(self):
+        n, eta = 256, 0.85
+        # eq. 2.121: failures alone
+        P = 0.9
+        assert pa.random_error_sidelobe_level(n, failure_rate=0.1, taper_efficiency=eta) == \
+            pytest.approx(10 * np.log10((1 - P) / (P * eta * n)), abs=1e-9)
+        # eqs. 2.118 + 2.119 for small errors
+        sa, sp = 0.02, np.deg2rad(1.0)
+        approx = 10 * np.log10((sa ** 2 + sp ** 2) / ((1 - sp ** 2) * eta * n))
+        assert pa.random_error_sidelobe_level(n, sa, 1.0, taper_efficiency=eta) == \
+            pytest.approx(approx, abs=0.01)
+
+    def test_matches_quantization_floor(self):
+        rms = pa.quantization_rms_error(4)
+        assert pa.random_error_sidelobe_level(100, phase_std_deg=rms) == pytest.approx(
+            pa.quantization_sidelobe_level(4, 100), abs=1e-9)
+
+    def test_position_errors_grow_toward_endfire(self):
+        lo = pa.random_error_sidelobe_level(200, position_std=0.05, u=0.2)
+        hi = pa.random_error_sidelobe_level(200, position_std=0.05, u=0.9)
+        assert hi > lo
+        assert pa.random_error_sidelobe_level(200, position_std=0.05, u=0.0) == -np.inf
+
+    def test_position_errors_monte_carlo_near_endfire(self):
+        n, pos = 400, 0.03
+        mc, eta = self._monte_carlo(n, 0, 0, 0, pos=pos, u_region=0.8, trials=120)
+        # average of (2 pi u pos)^2 over 0.8 < |u| < 1
+        u = np.linspace(0.8, 1.0, 201)
+        expected = 10 * np.log10(np.mean([10 ** (pa.random_error_sidelobe_level(
+            n, position_std=pos, u=uu, taper_efficiency=eta) / 10) for uu in u]))
+        assert expected == pytest.approx(mc, abs=0.5)
+
+    def test_invalid(self):
+        with pytest.raises(ValueError):
+            pa.random_error_sidelobe_level(100, failure_rate=1.0)
