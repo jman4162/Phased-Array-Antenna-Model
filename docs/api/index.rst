@@ -36,6 +36,8 @@ Modules
      - Utility functions: coordinate transforms, unit conversions
    * - :doc:`export`
      - Data export: CSV, JSON, NPZ formats
+   * - :doc:`io`
+     - Data import: Touchstone S-parameter files, tabulated element patterns
 
 Quick Reference
 ---------------
@@ -81,3 +83,4 @@ Most Commonly Used Functions
    wideband
    utils
    export
+   io

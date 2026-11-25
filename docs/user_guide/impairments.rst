@@ -43,12 +43,14 @@ quantitative work.
 Measured Coupling
 ^^^^^^^^^^^^^^^^^
 
-For more accurate modeling, import measured S-parameters:
+For more accurate modeling, import measured S-parameters. To read them from
+a Touchstone (``.sNp``) file, use :func:`~phased_array.read_touchstone` and
+take one frequency slice of ``data['s']``; see :doc:`data_import`.
 
 .. code-block:: python
 
    # S-parameter data from measurement or EM simulation, e.g.
-   # s_params = np.load('measured_s_params.npy')  # (N, N) complex matrix
+   # s_params = pa.read_touchstone('array.s4p')['s'][0]  # (N, N) complex
    s_params = 0.1 * np.exp(-1j * np.pi / 3) * (np.ones((4, 4)) - np.eye(4))
 
    # Normalized impedance form C = (I + S)(I - S)^-1 (the default)

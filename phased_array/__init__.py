@@ -12,6 +12,7 @@ antenna radiation patterns, including:
 - Direction-of-arrival estimation (Bartlett, Capon, MUSIC, root-MUSIC, ESPRIT)
 - Realistic impairments (mutual coupling, quantization, failures, scan blindness)
 - Vector (polarized) patterns: co/cross-pol, axial ratio, XPD, conformal
+- Data import: Touchstone S-parameter files and tabulated element patterns
 - Interactive 3D visualization with Plotly
 - UV-space pattern representation
 
@@ -98,6 +99,8 @@ from .impairments import (  # Mutual coupling; Phase quantization; Element failu
     quantization_sidelobe_level, quantize_phase, random_error_sidelobe_level,
     scan_blindness_model, simulate_element_failures, surface_wave_scan_angle,
     vswr_vs_scan)
+# Data import (Touchstone, tabulated element patterns)
+from .io import load_element_pattern_csv, read_touchstone, write_touchstone
 # Polarization functions
 from .polarization import (axial_ratio, co_pol_pattern,
                            cross_pol_discrimination, cross_pol_pattern,
@@ -289,6 +292,10 @@ __all__ = [
     "load_pattern_npz",
     "export_coupling_matrix_csv",
     "export_summary_report",
+    # Data import
+    "read_touchstone",
+    "write_touchstone",
+    "load_element_pattern_csv",
     # Wideband / TTD
     "steering_vector_ttd",
     "steering_delays_ttd",
