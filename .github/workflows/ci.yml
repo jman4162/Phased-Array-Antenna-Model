@@ -8,7 +8,8 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # ubuntu-latest (26.04) has no Python 3.9 build; 3.9 runs on 24.04
+    runs-on: ${{ matrix.python-version == '3.9' && 'ubuntu-24.04' || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -47,13 +48,14 @@ jobs:
     # Exercise the declared minimums, NumPy 1.x, and modern NumPy 2.x
     # explicitly instead of relying on the default dependency resolution.
     name: deps (py${{ matrix.python-version }}, ${{ matrix.label }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - python-version: "3.9"
             label: "oldest supported"
+            os: ubuntu-24.04  # no Python 3.9 build for ubuntu-latest (26.04)
             numpy: "numpy==1.20.0"
             scipy: "scipy==1.7.0"
             matplotlib: "matplotlib==3.5.0"
