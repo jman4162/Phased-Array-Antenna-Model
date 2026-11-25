@@ -9,8 +9,11 @@ antenna radiation patterns, including:
 - FFT-based pattern computation for uniform rectangular arrays
 - Various array geometries (rectangular, circular, conformal, sparse)
 - Beamforming techniques (tapering, null steering, multi-beam)
+- Direction-of-arrival estimation (Bartlett, Capon, MUSIC, root-MUSIC, ESPRIT)
+- Linear array factor synthesis (binomial, Woodward-Lawson, least squares)
 - Realistic impairments (mutual coupling, quantization, failures, scan blindness)
 - Vector (polarized) patterns: co/cross-pol, axial ratio, XPD, conformal
+- Data import: Touchstone S-parameter files and tabulated element patterns
 - Interactive 3D visualization with Plotly
 - UV-space pattern representation
 
@@ -65,6 +68,11 @@ from .core import (array_factor_fft, array_factor_uv, array_factor_vectorized,
                    compute_peak_sidelobe_level, element_pattern,
                    element_pattern_cosine_tapered, steering_vector,
                    total_pattern)
+# Direction-of-arrival estimation
+from .doa import (bartlett_spectrum, capon_spectrum, crb_ula_single_source,
+                  esprit, estimate_num_sources, find_spectrum_peaks,
+                  generate_snapshots, music_spectrum, root_music,
+                  sample_covariance)
 # Export functions
 from .export import (export_array_config_json, export_coupling_matrix_csv,
                      export_geometry_csv, export_pattern_2d_csv,
@@ -86,18 +94,24 @@ from .impairments import (  # Mutual coupling; Phase quantization; Element failu
     active_element_pattern, active_impedance, active_reflection_coefficient,
     active_scan_impedance_matrix, analyze_graceful_degradation,
     analyze_quantization_effect, apply_mutual_coupling, apply_scan_blindness,
-    compute_scan_loss, mismatch_loss, mutual_coupling_matrix_measured,
+    compute_scan_loss, dipole_impedance_matrix, dipole_mutual_impedance,
+    mismatch_loss, mutual_coupling_matrix_measured,
     mutual_coupling_matrix_theoretical, quantization_lobes,
     quantization_rms_error, quantization_sidelobe_increase,
     quantization_sidelobe_level, quantize_phase, random_error_sidelobe_level,
     scan_blindness_model, simulate_element_failures, surface_wave_scan_angle,
     vswr_vs_scan)
+# Data import (Touchstone, tabulated element patterns)
+from .io import load_element_pattern_csv, read_touchstone, write_touchstone
 # Polarization functions
 from .polarization import (axial_ratio, co_pol_pattern,
                            cross_pol_discrimination, cross_pol_pattern,
                            jones_vector, ludwig3_decomposition,
                            polarization_loss_factor, stokes_parameters,
                            tilt_angle)
+# Array factor synthesis
+from .synthesis import (binomial_taper_1d, least_squares_weights,
+                        woodward_lawson_weights)
 # Utility functions
 from .utils import (azel_to_thetaphi, create_theta_phi_grid, create_uv_grid,
                     db_to_linear, deg2rad, frequency_to_k,
@@ -225,9 +239,26 @@ __all__ = [
     "adaptive_weights_gsc",
     "compute_sinr_improvement",
     "plot_adapted_pattern",
+    # Direction-of-arrival estimation
+    "generate_snapshots",
+    "sample_covariance",
+    "bartlett_spectrum",
+    "capon_spectrum",
+    "music_spectrum",
+    "root_music",
+    "esprit",
+    "estimate_num_sources",
+    "find_spectrum_peaks",
+    "crb_ula_single_source",
+    # Synthesis
+    "binomial_taper_1d",
+    "woodward_lawson_weights",
+    "least_squares_weights",
     # Impairments
     "mutual_coupling_matrix_theoretical",
     "mutual_coupling_matrix_measured",
+    "dipole_mutual_impedance",
+    "dipole_impedance_matrix",
     "apply_mutual_coupling",
     "active_element_pattern",
     "quantize_phase",
@@ -273,6 +304,10 @@ __all__ = [
     "load_pattern_npz",
     "export_coupling_matrix_csv",
     "export_summary_report",
+    # Data import
+    "read_touchstone",
+    "write_touchstone",
+    "load_element_pattern_csv",
     # Wideband / TTD
     "steering_vector_ttd",
     "steering_delays_ttd",

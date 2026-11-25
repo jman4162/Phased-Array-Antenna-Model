@@ -15,6 +15,10 @@ Mutual Coupling
 
 .. autofunction:: phased_array.mutual_coupling_matrix_measured
 
+.. autofunction:: phased_array.dipole_mutual_impedance
+
+.. autofunction:: phased_array.dipole_impedance_matrix
+
 .. autofunction:: phased_array.apply_mutual_coupling
 
 .. autofunction:: phased_array.active_element_pattern

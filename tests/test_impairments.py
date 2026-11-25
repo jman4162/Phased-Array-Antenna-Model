@@ -703,6 +703,123 @@ class TestSeedNoneUsesGlobalGenerator:
         np.testing.assert_array_equal(np.random.random(4), expected)
 
 
+class TestDipoleMutualImpedance:
+    """Induced-EMF impedances against Balanis' closed forms (Ch. 8)."""
+
+    ETA = 376.730313668
+
+    def _side_by_side(self, d, l=0.5):
+        from scipy.special import sici
+        k = 2 * np.pi
+        u0, u1, u2 = k * d, k * (np.hypot(d, l) + l), k * (np.hypot(d, l) - l)
+        (s0, c0), (s1, c1), (s2, c2) = sici(u0), sici(u1), sici(u2)
+        return self.ETA / (4 * np.pi) * ((2 * c0 - c1 - c2) - 1j * (2 * s0 - s1 - s2))
+
+    def _collinear(self, h, l=0.5):
+        from scipy.special import sici
+        k = 2 * np.pi
+        v0, v1, v2, v3 = k * h, 2 * k * (h + l), 2 * k * (h - l), (h * h - l * l) / (h * h)
+        (s2v0, c2v0), (s1, c1), (sv2, cv2) = sici(2 * v0), sici(v1), sici(v2)
+        R = (-self.ETA / (8 * np.pi) * np.cos(v0) * (-2 * c2v0 + cv2 + c1 - np.log(v3))
+             + self.ETA / (8 * np.pi) * np.sin(v0) * (2 * s2v0 - sv2 - s1))
+        X = (-self.ETA / (8 * np.pi) * np.cos(v0) * (2 * s2v0 - sv2 - s1)
+             + self.ETA / (8 * np.pi) * np.sin(v0) * (2 * c2v0 - cv2 - c1 - np.log(v3)))
+        return R + 1j * X
+
+    @pytest.mark.parametrize("d", [0.1, 0.25, 0.5, 0.75, 1.0, 2.0])
+    def test_side_by_side_matches_balanis_8_71(self, d):
+        assert pa.dipole_mutual_impedance(d) == pytest.approx(self._side_by_side(d), abs=1e-8)
+
+    @pytest.mark.parametrize("h", [0.6, 0.75, 1.0, 1.5])
+    def test_collinear_matches_balanis_8_72(self, h):
+        assert pa.dipole_mutual_impedance(0.0, h) == pytest.approx(self._collinear(h), abs=1e-8)
+
+    def test_self_impedance_half_wave(self):
+        # Balanis 73 + j42.5 ohm (eta = 120 pi); exact eta scales by 0.99931
+        z = pa.dipole_mutual_impedance(1e-5, 0.0)
+        assert z.real == pytest.approx(73.13 * self.ETA / (120 * np.pi), abs=0.02)
+        assert z.imag == pytest.approx(42.54 * self.ETA / (120 * np.pi), abs=0.02)
+
+    def test_balanis_tabulated_side_by_side_values(self):
+        # Balanis-convention values (eta = 120 pi) at d = 0.25 and 0.5 lambda
+        scale = self.ETA / (120 * np.pi)
+        assert pa.dipole_mutual_impedance(0.25) == pytest.approx((40.79 - 28.35j) * scale, abs=0.02)
+        assert pa.dipole_mutual_impedance(0.5) == pytest.approx((-12.53 - 29.93j) * scale, abs=0.02)
+
+    def test_echelon_symmetry_and_decay(self):
+        assert pa.dipole_mutual_impedance(0.5, 0.3) == pytest.approx(
+            pa.dipole_mutual_impedance(0.5, -0.3), abs=1e-9)
+        far = [abs(pa.dipole_mutual_impedance(d)) * d for d in (8.0, 16.0, 32.0)]
+        np.testing.assert_allclose(far, far[0], rtol=0.05)  # |Z21| ~ 1/d far away
+
+    def test_overlap_and_full_wave_raise(self):
+        with pytest.raises(ValueError, match="overlap"):
+            pa.dipole_mutual_impedance(0.0, 0.4)
+        with pytest.raises(ValueError, match="input current"):
+            pa.dipole_mutual_impedance(0.5, 0.0, length=1.0)
+
+
+class TestDipoleImpedanceMatrix:
+
+    def test_matrix_entries_and_symmetry(self):
+        geom = pa.create_rectangular_array(4, 3, 0.6, 0.5)
+        Z = pa.dipole_impedance_matrix(geom, length=0.5, radius=1e-4, orientation='x')
+        np.testing.assert_allclose(Z, Z.T)
+        np.testing.assert_allclose(np.diag(Z), pa.dipole_mutual_impedance(1e-4, 0.0))
+        i, j = 0, 7
+        d = np.array([geom.x[j] - geom.x[i], geom.y[j] - geom.y[i]])
+        assert Z[i, j] == pytest.approx(pa.dipole_mutual_impedance(abs(d[1]), abs(d[0])))
+
+    def test_orientation_swaps_axes(self):
+        geom = pa.create_rectangular_array(2, 1, 0.5, 0.5)  # two elements along x
+        side = pa.dipole_impedance_matrix(geom, orientation='y')[0, 1]
+        coll = pa.dipole_impedance_matrix(geom, length=0.45, orientation='x')[0, 1]
+        assert side == pytest.approx(pa.dipole_mutual_impedance(0.5))
+        assert coll == pytest.approx(pa.dipole_mutual_impedance(0.0, 0.5, length=0.45))
+
+    @pytest.mark.parametrize("sign", [1, -1])
+    def test_two_element_active_impedance(self, sign):
+        # Balanis eq. 8-64: symmetric/antisymmetric excitation gives Z11 +- Z12
+        geom = pa.create_rectangular_array(1, 2, 0.5, 0.5)
+        Z = pa.dipole_impedance_matrix(geom, orientation='x')
+        w = np.array([1.0, sign])
+        za = pa.active_impedance(Z / 50.0, w, 0, Z0=50.0)
+        assert za == pytest.approx(Z[0, 0] + sign * Z[0, 1], abs=1e-9)
+
+    def test_touching_dipoles_raise(self):
+        geom = pa.create_rectangular_array(3, 1, 0.5, 0.5)
+        with pytest.raises(ValueError, match="overlap"):
+            pa.dipole_impedance_matrix(geom, length=0.5, orientation='x')
+
+
+class TestDipoleUnitsAndChecks:
+
+    def test_physical_wavelength_matches_normalized(self):
+        lam = 0.03
+        g_norm = pa.create_rectangular_array(3, 2, 0.6, 0.5)
+        g_phys = pa.create_rectangular_array(3, 2, 0.6, 0.5, wavelength=lam)
+        Z_norm = pa.dipole_impedance_matrix(g_norm, length=0.5, radius=1e-3)
+        Z_phys = pa.dipole_impedance_matrix(g_phys, length=0.5, radius=1e-3, wavelength=lam)
+        np.testing.assert_allclose(Z_phys, Z_norm, rtol=1e-9)
+        assert pa.dipole_mutual_impedance(0.5 * lam, 0.0, 0.5, wavelength=lam) == \
+            pytest.approx(pa.dipole_mutual_impedance(0.5))
+
+    def test_near_collinear_overlap_raises(self):
+        geom = pa.ArrayGeometry(x=np.array([0.0, 0.3]), y=np.array([0.0, 1e-17]))
+        with pytest.raises(ValueError, match="overlap"):
+            pa.dipole_impedance_matrix(geom, orientation='x')
+        close = pa.ArrayGeometry(x=np.array([0.0, 0.0]), y=np.array([0.0, 5e-4]))
+        with pytest.raises(ValueError, match="overlap"):
+            pa.dipole_impedance_matrix(close, radius=1e-3, orientation='x')
+
+    def test_radius_and_empty(self):
+        geom = pa.create_rectangular_array(1, 2, 0.5, 0.5)
+        with pytest.raises(ValueError, match="radius"):
+            pa.dipole_impedance_matrix(geom, radius=0.0)
+        empty = pa.ArrayGeometry(x=np.array([]), y=np.array([]))
+        assert pa.dipole_impedance_matrix(empty).shape == (0, 0)
+
+
 class TestRandomErrorSidelobeLevel:
 
     @staticmethod
