@@ -11,6 +11,7 @@ best practices.
    conventions
    geometry
    beamforming
+   doa
    impairments
    polarization
    wideband
@@ -24,9 +25,10 @@ design workflow:
 
 1. **Geometry**: Define array element positions and orientations
 2. **Beamforming**: Compute steering weights, apply tapers, place nulls
-3. **Impairments**: Model real-world effects (coupling, quantization, failures)
-4. **Wideband**: Handle frequency-dependent effects and TTD compensation
-5. **Visualization**: Plot patterns in 2D, 3D, and UV-space
+3. **Direction finding**: Estimate arrival angles from received snapshots
+4. **Impairments**: Model real-world effects (coupling, quantization, failures)
+5. **Wideband**: Handle frequency-dependent effects and TTD compensation
+6. **Visualization**: Plot patterns in 2D, 3D, and UV-space
 
 Typical Workflow
 ----------------

@@ -12,6 +12,7 @@ MODULES = [
     "utils",
     "geometry",
     "beamforming",
+    "doa",
     "impairments",
     "wideband",
     "polarization",
