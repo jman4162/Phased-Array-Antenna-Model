@@ -20,12 +20,15 @@ What's new in v1.4.0:
 
 - **High Performance**: Vectorized array factor with bounded memory; on rectangular, triangular and thinned grids the sum factors over x and y (32x32 array on a 181x361 grid: 15x faster than a NumPy loop over elements, 320x faster than pure Python; see `benchmarks/bench_array_factor.py`)
 - **Multiple Geometries**: Rectangular, triangular, circular, cylindrical, spherical, sparse/thinned arrays
-- **Beamforming**: Amplitude tapering (Taylor, Chebyshev, etc.), null steering, multi-beam
-- **Realistic Impairments**: Mutual coupling, phase quantization, element failures, scan blindness
+- **Beamforming**: Amplitude tapering (Taylor, Chebyshev, Bayliss difference), null steering, multi-beam, adaptive SMI/GSC
+- **Pattern Synthesis**: Binomial, Woodward-Lawson and least-squares weights for a desired pattern
+- **Direction Finding**: Bartlett, Capon, MUSIC, root-MUSIC and ESPRIT estimators, MDL/AIC source counting, Cramer-Rao bound
+- **Pattern Analysis**: `pattern_summary` reports directivity, beamwidths, sidelobe levels and grating lobes
+- **Realistic Impairments**: Induced-EMF dipole coupling, phase quantization, element failures, scan blindness, random-error sidelobe budgets
 - **Polarized Patterns**: Vector (E-theta, E-phi) patterns with dipole/patch/CP element models, co/cross-pol cuts, axial ratio and XPD maps, measured element pattern import
 - **Visualization**: 2D matplotlib, interactive 3D Plotly, UV-space representation
 - **Subarray Support**: Subarray-level beamforming with quantized phase shifters
-- **Data Export**: CSV, JSON, and NumPy formats for patterns, weights, and geometry
+- **Data Export and Import**: CSV, JSON, and NumPy export; Touchstone S-parameter and tabulated element-pattern import
 
 ## Try it Online
 

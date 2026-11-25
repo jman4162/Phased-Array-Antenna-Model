@@ -37,7 +37,7 @@ Example
 >>> theta, phi, pattern_dB = pa.compute_full_pattern(geom.x, geom.y, weights, k)
 """
 
-__version__ = "1.7.0"
+__version__ = "1.8.0"
 
 # Pattern summary
 from .analysis import pattern_summary

@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-11-25
+
+Feature release: the Phase 3 additions from the review roadmap. Each new
+function is checked against a textbook closed form, a published example
+or Monte Carlo simulation in the test suite.
+
+### Added
+
+- `pattern_summary()`: beam direction (located when not given),
+  directivity, half-power and first-null beamwidths and peak sidelobe in
+  two cuts through the beam, the peak sidelobe over the whole front
+  hemisphere, and grating lobes. `compute_first_null_beamwidth()` for 1D
+  cuts
+- `bayliss_taper_1d()` and `bayliss_taper_2d()`: Bayliss difference
+  tapers (Haupt eqs. 3.33-3.35); peak sidelobes within 0.4 dB of design
+  for 32-128 elements, exact boresight null
+- `random_error_sidelobe_level()`: average sidelobe level from random
+  amplitude, phase and position errors and element failures (exact form
+  of Haupt eqs. 2.118-2.122), within 0.3 dB of Monte Carlo
+- `dipole_mutual_impedance()` and `dipole_impedance_matrix()`:
+  induced-EMF impedances of parallel thin dipoles (Balanis eq. 8-68),
+  matching Balanis's side-by-side and collinear closed forms to 1e-8 ohm
+- `phased_array.doa`: `generate_snapshots`, `sample_covariance`,
+  `bartlett_spectrum`, `capon_spectrum`, `music_spectrum`, `root_music`,
+  `esprit`, `estimate_num_sources` (MDL/AIC), `find_spectrum_peaks`,
+  `crb_ula_single_source`; root-MUSIC reaches 1.04x and ESPRIT 1.42x the
+  Cramer-Rao bound in the tests
+- `phased_array.synthesis`: `binomial_taper_1d`, `woodward_lawson_weights`,
+  `least_squares_weights` (Haupt Tables 3.1 and 3.2 reproduced)
+- `phased_array.io`: `read_touchstone` / `write_touchstone` (Touchstone
+  v1 S-parameters) and `load_element_pattern_csv`;
+  `GriddedElementPattern.from_table`
+- `patch_design()` and `rectangular_patch_element()`: transmission-line
+  design equations and the cavity-model patch field (Balanis Ch. 14);
+  Example 14.1 gives 89.5 and 77.2 deg E- and H-plane beamwidths
+- User guide pages for DOA, synthesis and data import; API entries for
+  functions added in 1.6.0 that were missing from the reference
+
+### Changed
+
+- `quantization_sidelobe_level()` evaluates the exact expectation through
+  `random_error_sidelobe_level()` (values change by under 0.001 dB)
+
+### Notes
+
+- Haupt's worked Bayliss example (p. 141) uses the Taylor parameter, and
+  Table 3.2 lists 0.667 for the N = 6 binomial efficiency where the
+  weights give 0.677; the tests do not use those values.
+
 ## [1.7.0] - 2026-11-25
 
 Maintenance release: supported Python versions, packaging metadata, a
