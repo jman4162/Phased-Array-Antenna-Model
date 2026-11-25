@@ -46,7 +46,9 @@ package to textbook values.
 - **Behavior change:** `rotate_pattern()` returns the input grid with the
   rotated pattern. It used to return the input points rotated forward,
   which did not match the returned pattern, and it now raises
-  `ValueError` for non-2D input instead of returning 1D data unrotated
+  `ValueError` for non-2D input instead of returning 1D data unrotated.
+  Phi grids such as `[-pi, pi]` are handled; they used to lose half the
+  sphere to zero fill
 - **Behavior change:** `create_rectangular_subarrays()` puts elements
   left over by a non-divisible split into partial edge subarrays. They
   were silently added to subarray 0 (10x10 with 4x4 subarrays: 52
@@ -58,7 +60,9 @@ package to textbook values.
 - `monopulse_weights()` splits the difference halves about the array
   centroid and gives elements on the split line zero weight: odd-sized
   arrays now have an exact boresight null (5x5 was -14 dB), and an
-  uncentred array no longer returns the sum pattern for `delta_az`
+  uncentred array no longer returns the sum pattern for `delta_az`. It
+  raises `ValueError` when the array has no extent in the split direction
+  (e.g. `delta_el` on a linear array along x) instead of returning zeros
 - `compute_half_power_beamwidth()` uses the exact `10*log10(0.5)`
   threshold instead of -3.0 dB
 
@@ -74,7 +78,8 @@ package to textbook values.
   wave index, so it put blindness at broadside for any substrate height.
   It now solves the grounded-slab TM0 dispersion relation; er = 12.8,
   h = 0.06, d = 0.5 gives 45.6 deg, consistent with Pozar and Schaubert
-  (1984). Returns 90 when no blind angle falls in visible space
+  (1984), and stays valid for substrates many wavelengths thick. Returns
+  90 when no blind angle falls in visible space
 - `compute_scan_loss()` used unit weights as the broadside reference, so
   an amplitude taper counted as scan loss (-8.8 dB at broadside for a
   Taylor -35 dB taper); it now uses `|weights|` steered to broadside and
@@ -83,7 +88,8 @@ package to textbook values.
   the "sidelobe" (-3.7 dB for a uniform 16x16 array) and reported no
   change for steered weights. It now takes a cut through the beam,
   measures the peak sidelobe outside the first nulls, and returns
-  `sidelobe_ref_dB`
+  `sidelobe_ref_dB`. The beam direction is refined below a beamwidth, so
+  large arrays steered off the principal planes are cut through the beam
 - `GriddedElementPattern` returned zero field for half of a
   `[-pi, pi]` phi grid; queries now wrap into the grid's own range and an
   open full-turn grid is closed at the 2*pi seam
