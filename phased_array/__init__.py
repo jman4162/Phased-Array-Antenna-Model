@@ -36,6 +36,8 @@ Example
 
 __version__ = "1.7.0"
 
+# Pattern summary
+from .analysis import pattern_summary
 # Beamforming functions
 from .beamforming import (  # Amplitude tapers; Null steering; Multiple beams; Beam spoiling; Adaptive
     adaptive_weights_gsc, adaptive_weights_smi, apply_taper_to_geometry,
@@ -57,7 +59,8 @@ from .coordinates import (antenna_to_cone, antenna_to_radar, cone_to_antenna,
                           rotation_matrix_yaw)
 # Core computation functions
 from .core import (array_factor_fft, array_factor_uv, array_factor_vectorized,
-                   array_manifold, compute_directivity, compute_full_pattern,
+                   array_manifold, compute_directivity,
+                   compute_first_null_beamwidth, compute_full_pattern,
                    compute_half_power_beamwidth, compute_pattern_cuts,
                    compute_peak_sidelobe_level, element_pattern,
                    element_pattern_cosine_tapered, steering_vector,
@@ -143,6 +146,8 @@ __all__ = [
     "compute_directivity",
     "compute_half_power_beamwidth",
     "compute_peak_sidelobe_level",
+    "compute_first_null_beamwidth",
+    "pattern_summary",
     # Utils
     "deg2rad",
     "rad2deg",

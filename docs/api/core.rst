@@ -12,6 +12,8 @@ Steering and Array Factor
 
 .. autofunction:: phased_array.steering_vector
 
+.. autofunction:: phased_array.array_manifold
+
 .. autofunction:: phased_array.array_factor_vectorized
 
 .. autofunction:: phased_array.array_factor_uv
@@ -40,3 +42,9 @@ Pattern Analysis
 .. autofunction:: phased_array.compute_directivity
 
 .. autofunction:: phased_array.compute_half_power_beamwidth
+
+.. autofunction:: phased_array.compute_first_null_beamwidth
+
+.. autofunction:: phased_array.compute_peak_sidelobe_level
+
+.. autofunction:: phased_array.pattern_summary
