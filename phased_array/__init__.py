@@ -9,6 +9,7 @@ antenna radiation patterns, including:
 - FFT-based pattern computation for uniform rectangular arrays
 - Various array geometries (rectangular, circular, conformal, sparse)
 - Beamforming techniques (tapering, null steering, multi-beam)
+- Direction-of-arrival estimation (Bartlett, Capon, MUSIC, root-MUSIC, ESPRIT)
 - Realistic impairments (mutual coupling, quantization, failures, scan blindness)
 - Vector (polarized) patterns: co/cross-pol, axial ratio, XPD, conformal
 - Interactive 3D visualization with Plotly
@@ -61,6 +62,11 @@ from .core import (array_factor_fft, array_factor_uv, array_factor_vectorized,
                    compute_peak_sidelobe_level, element_pattern,
                    element_pattern_cosine_tapered, steering_vector,
                    total_pattern)
+# Direction-of-arrival estimation
+from .doa import (bartlett_spectrum, capon_spectrum, crb_ula_single_source,
+                  esprit, estimate_num_sources, find_spectrum_peaks,
+                  generate_snapshots, music_spectrum, root_music,
+                  sample_covariance)
 # Export functions
 from .export import (export_array_config_json, export_coupling_matrix_csv,
                      export_geometry_csv, export_pattern_2d_csv,
@@ -215,6 +221,17 @@ __all__ = [
     "adaptive_weights_gsc",
     "compute_sinr_improvement",
     "plot_adapted_pattern",
+    # Direction-of-arrival estimation
+    "generate_snapshots",
+    "sample_covariance",
+    "bartlett_spectrum",
+    "capon_spectrum",
+    "music_spectrum",
+    "root_music",
+    "esprit",
+    "estimate_num_sources",
+    "find_spectrum_peaks",
+    "crb_ula_single_source",
     # Impairments
     "mutual_coupling_matrix_theoretical",
     "mutual_coupling_matrix_measured",
