@@ -34,8 +34,7 @@ Basic Pattern Cut
        title='E-plane Pattern Cut',
        xlabel='Theta (deg)',
        ylabel='Normalized Gain (dB)',
-       xlim=(-90, 90),
-       ylim=(-50, 0)
+       min_dB=-50  # lower y-axis limit
    )
 
 Polar Plot
@@ -80,25 +79,25 @@ Compare multiple patterns on the same axes:
 
    # Uniform illumination
    w_uniform = pa.steering_vector(k, geom.x, geom.y, 30, 0)
-   _, E_uniform, _ = pa.compute_pattern_cuts(geom.x, geom.y, w_uniform, k)
+   _, E_uniform, _ = pa.compute_pattern_cuts(geom.x, geom.y, w_uniform, k, 30, 0)
    patterns['Uniform'] = E_uniform
 
    # Taylor taper
    w_taylor = w_uniform * pa.taylor_taper_2d(16, 16, sidelobe_dB=-30)
-   _, E_taylor, _ = pa.compute_pattern_cuts(geom.x, geom.y, w_taylor, k)
+   _, E_taylor, _ = pa.compute_pattern_cuts(geom.x, geom.y, w_taylor, k, 30, 0)
    patterns['Taylor -30 dB'] = E_taylor
 
    # Chebyshev taper
    w_cheb = w_uniform * pa.chebyshev_taper_2d(16, 16, sidelobe_dB=-30)
-   _, E_cheb, _ = pa.compute_pattern_cuts(geom.x, geom.y, w_cheb, k)
+   _, E_cheb, _ = pa.compute_pattern_cuts(geom.x, geom.y, w_cheb, k, 30, 0)
    patterns['Chebyshev -30 dB'] = E_cheb
 
-   pa.plot_comparison_patterns(
+   ax = pa.plot_comparison_patterns(
        theta_deg, patterns,
        title='Taper Comparison',
-       xlim=(-60, 60),
-       ylim=(-50, 0)
+       min_dB=-50
    )
+   ax.set_xlim(-60, 60)
 
 Array Geometry Plot
 ^^^^^^^^^^^^^^^^^^^
@@ -106,7 +105,7 @@ Array Geometry Plot
 .. code-block:: python
 
    pa.plot_array_geometry(
-       geom.x, geom.y,
+       geom,
        weights=weights,  # Color by weight magnitude
        title='16x16 Array Element Positions'
    )
@@ -123,7 +122,7 @@ Computing UV-Space Pattern
 .. code-block:: python
 
    u, v, pattern_uv = pa.compute_pattern_uv_space(
-       geom.x, geom.y, weights, k,
+       geom, weights, k,
        n_u=201, n_v=201,
        u_range=(-1, 1),
        v_range=(-1, 1)
@@ -175,7 +174,7 @@ Theta/phi/gain as a 3D surface:
 .. code-block:: python
 
    fig = pa.plot_pattern_3d_cartesian_plotly(
-       theta, phi, pattern_dB,
+       np.rad2deg(theta), np.rad2deg(phi), pattern_dB,  # degrees
        title='Pattern Surface'
    )
    fig.show()
@@ -231,8 +230,8 @@ Create animations showing pattern changes (e.g., scanning beam):
    fig = pa.create_pattern_animation_plotly(
        theta, phi,
        patterns_list,
-       frame_titles=titles,
-       animation_speed=500  # ms per frame
+       frame_labels=titles,  # frames advance every 500 ms
+       title='Beam Scan'
    )
    fig.show()
 
@@ -246,28 +245,41 @@ Beam Squint Plot
 
    wavelength = 0.03  # 10 GHz
    geom = pa.create_rectangular_array(16, 16, dx=0.5, dy=0.5, wavelength=wavelength)
+   frequencies = np.linspace(9e9, 11e9, 21)  # 2 GHz band
 
-   fig = pa.plot_beam_squint(
-       geom.x, geom.y,
-       theta0_deg=45, phi0_deg=0,
-       center_frequency=10e9,
-       bandwidth=2e9,
-       steering_modes=['phase', 'ttd']
-   )
-   fig.show()
+   # Squint (deg) at each frequency for each steering mode
+   squint_data = {}
+   for mode in ['phase', 'ttd']:
+       result = pa.compute_beam_squint(
+           geom.x, geom.y,
+           theta0_deg=45, phi0_deg=0,
+           center_frequency=10e9,
+           frequencies=frequencies,
+           steering_mode=mode
+       )
+       squint_data[mode] = result['squint']
+
+   ax = pa.plot_beam_squint(frequencies, squint_data, center_frequency=10e9)
+   plt.show()
 
 Pattern vs Frequency
 ^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: python
 
-   fig = pa.plot_pattern_vs_frequency_plotly(
+   result = pa.compute_pattern_vs_frequency(
        geom.x, geom.y,
        theta0_deg=30, phi0_deg=0,
        center_frequency=10e9,
-       bandwidth=2e9,
-       n_freqs=11,
+       frequencies=np.linspace(9e9, 11e9, 11),
        steering_mode='phase'
+   )
+
+   fig = pa.plot_pattern_vs_frequency_plotly(
+       result['angles'],       # theta (deg)
+       result['frequencies'],  # Hz
+       result['patterns'],     # dB, n_freq x n_angles
+       center_frequency=10e9
    )
    fig.show()
 
@@ -282,11 +294,10 @@ Subarray Delays
        dx=0.5, dy=0.5, wavelength=wavelength
    )
 
-   fig = pa.plot_subarray_delays(
-       architecture,
-       theta0_deg=45, phi0_deg=0
-   )
-   fig.show()
+   delays = pa.compute_subarray_delays_ttd(architecture, theta0_deg=45, phi0_deg=0)
+
+   ax = pa.plot_subarray_delays(architecture, delays)
+   plt.show()
 
 Saving Figures
 --------------
@@ -306,15 +317,19 @@ Plotly
 
 .. code-block:: python
 
+   # Any figure returned by a *_plotly function
+   fig = pa.plot_pattern_3d_plotly(theta, phi, pattern_dB)
+
    # HTML (interactive)
    fig.write_html('pattern_3d.html')
 
-   # Static image (requires kaleido)
+Static images need the optional ``kaleido`` package (``pip install kaleido``):
+
+.. code-block:: python
+   :class: no-exec
+
    fig.write_image('pattern_3d.png', scale=2)
    fig.write_image('pattern_3d.pdf')
-
-   # Install kaleido for static export:
-   # pip install kaleido
 
 Customization
 -------------
