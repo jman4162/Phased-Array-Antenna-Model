@@ -31,6 +31,10 @@ Amplitude Tapers (2D)
 
 .. autofunction:: phased_array.chebyshev_taper_2d
 
+.. autofunction:: phased_array.bayliss_taper_1d
+
+.. autofunction:: phased_array.bayliss_taper_2d
+
 .. autofunction:: phased_array.hamming_taper_2d
 
 .. autofunction:: phased_array.hanning_taper_2d
