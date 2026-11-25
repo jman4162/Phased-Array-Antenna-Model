@@ -26,6 +26,12 @@ Phase Quantization
 
 .. autofunction:: phased_array.quantization_rms_error
 
+.. autofunction:: phased_array.quantization_sidelobe_level
+
+.. autofunction:: phased_array.quantization_lobes
+
+.. autofunction:: phased_array.random_error_sidelobe_level
+
 .. autofunction:: phased_array.quantization_sidelobe_increase
 
 .. autofunction:: phased_array.analyze_quantization_effect
