@@ -28,12 +28,17 @@ Features
   triangular and thinned grids (15x faster than a NumPy element loop for a 32x32 array;
   see ``benchmarks/bench_array_factor.py``)
 - **Multiple geometries** - Rectangular, triangular, circular, cylindrical, spherical, and sparse arrays
-- **Beamforming** - Amplitude tapering, null steering, multi-beam synthesis
+- **Beamforming** - Amplitude tapering (Taylor, Chebyshev, Bayliss difference), null steering,
+  multi-beam, adaptive SMI/GSC
+- **Pattern analysis** - Directivity, beamwidths, sidelobe levels and grating lobes in one call
+  (``pattern_summary``)
 - **Direction finding** - Bartlett, Capon, MUSIC, root-MUSIC and ESPRIT estimators, MDL/AIC
   source counting, Cramer-Rao bound
 - **Pattern synthesis** - Binomial taper, Woodward-Lawson and least-squares weights for a
   desired linear array factor
-- **Realistic impairments** - Mutual coupling, phase quantization, element failures, scan blindness
+- **Realistic impairments** - Induced-EMF dipole coupling, phase quantization, element failures,
+  scan blindness, random-error sidelobe budgets
+- **Element models** - Dipole, cavity-model rectangular patch, cos^q and measured patterns
 - **Wideband support** - True time delay (TTD), hybrid phase/TTD, beam squint analysis
 - **Interactive visualization** - 2D/3D plots with Plotly, UV-space, pattern animations
 - **Data export** - CSV, JSON, NPZ formats for integration with other tools
@@ -96,11 +101,14 @@ For interactive Plotly visualizations:
    :caption: User Guide
 
    user_guide/index
+   user_guide/conventions
    user_guide/geometry
    user_guide/beamforming
    user_guide/synthesis
+   user_guide/doa
    user_guide/impairments
    user_guide/data_import
+   user_guide/polarization
    user_guide/wideband
    user_guide/visualization
 
@@ -114,8 +122,10 @@ For interactive Plotly visualizations:
    api/geometry
    api/beamforming
    api/synthesis
+   api/doa
    api/impairments
    api/polarization
+   api/vector_patterns
    api/coordinates
    api/visualization
    api/wideband
