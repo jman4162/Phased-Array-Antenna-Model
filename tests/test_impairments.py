@@ -474,8 +474,7 @@ class TestGracefulDegradationSidelobes:
         geom = pa.create_rectangular_array(16, 16, 0.5, 0.5)
         k = pa.wavelength_to_k(1.0)
         w = pa.taylor_taper_2d(16, 16, -35) * pa.steering_vector(k, geom.x, geom.y, theta0, 0)
-        np.random.seed(0)
-        r = pa.analyze_graceful_degradation(w, geom, k, [0.0, 0.3], n_trials=10)
+        r = pa.analyze_graceful_degradation(w, geom, k, [0.0, 0.3], n_trials=10, seed=0)
         assert r['sidelobe_increase_mean_dB'][1] > 5.0
         assert r['gain_loss_mean_dB'][1] > 1.0
 
@@ -603,3 +602,38 @@ class TestCouplingMatrixVectorized:
                                                   coupling_coeff=0.27)
         np.testing.assert_allclose(C, self._loop_reference(geom, k, model, 0.27),
                                    rtol=1e-12, atol=1e-14)
+
+
+class TestLocalRandomGenerators:
+    """Library functions must not read or modify NumPy's global RNG."""
+
+    def test_global_state_untouched(self):
+        g = pa.create_rectangular_array(8, 8, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        np.random.seed(123)
+        expected = np.random.random(3)
+        np.random.seed(123)
+        pa.simulate_element_failures(np.ones(64), 0.2, seed=5)
+        pa.thin_array_random(g, 0.5, seed=5)
+        pa.thin_array_density_tapered(g, lambda x, y: np.full_like(x, 0.5), seed=5)
+        pa.analyze_graceful_degradation(np.ones(64), g, k, [0.1], n_trials=2, seed=5)
+        np.testing.assert_array_equal(np.random.random(3), expected)
+
+    def test_seed_reproducible_and_generator_accepted(self):
+        w = np.ones(100)
+        a, ma = pa.simulate_element_failures(w, 0.3, seed=9)
+        b, mb = pa.simulate_element_failures(w, 0.3, seed=9)
+        np.testing.assert_array_equal(ma, mb)
+        rng = np.random.default_rng(9)
+        c, mc = pa.simulate_element_failures(w, 0.3, seed=rng)
+        np.testing.assert_array_equal(mc, ma)
+        # A shared generator advances between calls
+        _, md = pa.simulate_element_failures(w, 0.3, seed=rng)
+        assert not np.array_equal(mc, md)
+
+    def test_degradation_seed_reproducible(self):
+        g = pa.create_rectangular_array(8, 8, 0.5, 0.5)
+        k = pa.wavelength_to_k(1.0)
+        r1 = pa.analyze_graceful_degradation(np.ones(64), g, k, [0.2], n_trials=5, seed=3)
+        r2 = pa.analyze_graceful_degradation(np.ones(64), g, k, [0.2], n_trials=5, seed=3)
+        np.testing.assert_array_equal(r1['gain_loss_mean_dB'], r2['gain_loss_mean_dB'])

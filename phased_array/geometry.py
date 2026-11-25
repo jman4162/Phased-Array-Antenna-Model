@@ -675,7 +675,7 @@ def _subset(geometry: ArrayGeometry, keep: np.ndarray) -> ArrayGeometry:
 def thin_array_random(
     geometry: ArrayGeometry,
     thinning_factor: float,
-    seed: Optional[int] = None
+    seed: Union[int, np.random.Generator, None] = None
 ) -> ArrayGeometry:
     """
     Randomly thin an array by removing elements.
@@ -686,8 +686,9 @@ def thin_array_random(
         Original array geometry
     thinning_factor : float
         Fraction of elements to keep (0 to 1)
-    seed : int, optional
-        Random seed for reproducibility
+    seed : int or numpy.random.Generator, optional
+        Seed or generator for reproducibility. A local generator is used;
+        NumPy's global random state is neither read nor modified.
 
     Returns
     -------
@@ -695,11 +696,10 @@ def thin_array_random(
         Thinned array geometry. ``element_indices`` index the original
         (unthinned) array, also when thinning an already thinned geometry.
     """
-    if seed is not None:
-        np.random.seed(seed)
+    rng = np.random.default_rng(seed)
 
     n_keep = int(geometry.n_elements * thinning_factor)
-    keep_indices = np.random.choice(geometry.n_elements, n_keep, replace=False)
+    keep_indices = rng.choice(geometry.n_elements, n_keep, replace=False)
     keep_indices = np.sort(keep_indices)
 
     return _subset(geometry, keep_indices)
@@ -708,7 +708,7 @@ def thin_array_random(
 def thin_array_density_tapered(
     geometry: ArrayGeometry,
     density_func: Callable[[np.ndarray, np.ndarray], np.ndarray],
-    seed: Optional[int] = None
+    seed: Union[int, np.random.Generator, None] = None
 ) -> ArrayGeometry:
     """
     Thin array with position-dependent density (statistical thinning).
@@ -719,23 +719,23 @@ def thin_array_density_tapered(
         Original array geometry
     density_func : callable
         Function(x, y) -> probability of keeping each element (0 to 1)
-    seed : int, optional
-        Random seed
+    seed : int or numpy.random.Generator, optional
+        Seed or generator for reproducibility. A local generator is used;
+        NumPy's global random state is neither read nor modified.
 
     Returns
     -------
     geometry : ArrayGeometry
         Thinned geometry. ``element_indices`` index the original array.
     """
-    if seed is not None:
-        np.random.seed(seed)
+    rng = np.random.default_rng(seed)
 
     # Compute keep probability for each element
     keep_prob = density_func(geometry.x, geometry.y)
     keep_prob = np.clip(keep_prob, 0, 1)
 
     # Random selection based on probability
-    keep_mask = np.random.random(geometry.n_elements) < keep_prob
+    keep_mask = rng.random(geometry.n_elements) < keep_prob
     keep_indices = np.where(keep_mask)[0]
 
     return _subset(geometry, keep_indices)
@@ -748,7 +748,7 @@ def thin_array_genetic_algorithm(
     population_size: int = 50,
     n_generations: int = 100,
     mutation_rate: float = 0.1,
-    seed: Optional[int] = None
+    seed: Union[int, np.random.Generator, None] = None
 ) -> ArrayGeometry:
     """
     Optimize element selection using a genetic algorithm.
@@ -767,22 +767,22 @@ def thin_array_genetic_algorithm(
         Number of generations
     mutation_rate : float
         Probability of mutation per gene
-    seed : int, optional
-        Random seed
+    seed : int or numpy.random.Generator, optional
+        Seed or generator for reproducibility. A local generator is used;
+        NumPy's global random state is neither read nor modified.
 
     Returns
     -------
     geometry : ArrayGeometry
         Optimized thinned geometry
     """
-    if seed is not None:
-        np.random.seed(seed)
+    rng = np.random.default_rng(seed)
 
     n_elements = geometry.n_elements
 
     def create_individual():
         """Create a random selection of n_target elements."""
-        return np.random.choice(n_elements, n_target, replace=False)
+        return rng.choice(n_elements, n_target, replace=False)
 
     def evaluate(individual):
         """Evaluate fitness on the same geometry the function returns."""
@@ -793,22 +793,22 @@ def thin_array_genetic_algorithm(
         # Combine unique elements from both parents
         combined = np.unique(np.concatenate([parent1, parent2]))
         if len(combined) >= n_target:
-            return np.random.choice(combined, n_target, replace=False)
+            return rng.choice(combined, n_target, replace=False)
         else:
             # Fill with random elements if needed
             remaining = np.setdiff1d(np.arange(n_elements), combined)
-            additional = np.random.choice(remaining, n_target - len(combined), replace=False)
+            additional = rng.choice(remaining, n_target - len(combined), replace=False)
             return np.concatenate([combined, additional])
 
     def mutate(individual):
         """Mutate by swapping elements."""
         individual = individual.copy()
         for i in range(len(individual)):
-            if np.random.random() < mutation_rate:
+            if rng.random() < mutation_rate:
                 # Swap with a random element not in the array
                 available = np.setdiff1d(np.arange(n_elements), individual)
                 if len(available) > 0:
-                    individual[i] = np.random.choice(available)
+                    individual[i] = rng.choice(available)
         return individual
 
     # Initialize population
@@ -823,10 +823,10 @@ def thin_array_genetic_algorithm(
 
         while len(new_population) < population_size:
             # Tournament selection
-            i1, i2 = np.random.choice(population_size, 2, replace=False)
+            i1, i2 = rng.choice(population_size, 2, replace=False)
             parent1 = population[i1] if fitness[i1] < fitness[i2] else population[i2]
 
-            i3, i4 = np.random.choice(population_size, 2, replace=False)
+            i3, i4 = rng.choice(population_size, 2, replace=False)
             parent2 = population[i3] if fitness[i3] < fitness[i4] else population[i4]
 
             child = crossover(parent1, parent2)

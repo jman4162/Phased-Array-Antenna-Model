@@ -94,9 +94,8 @@ Array Failure Analysis
        """Find the failure rate where performance drops below threshold."""
        failure_rates = np.arange(0.0, 0.31, 0.02)
 
-       np.random.seed(0)  # analyze_graceful_degradation uses the global RNG
        r = pa.analyze_graceful_degradation(
-           weights, geom, k, list(failure_rates), n_trials=n_trials
+           weights, geom, k, list(failure_rates), n_trials=n_trials, seed=0
        )
        too_much = ((r['gain_loss_mean_dB'] > max_gain_loss_dB) |
                    (r['sidelobe_increase_mean_dB'] > max_sll_increase_dB))

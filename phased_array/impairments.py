@@ -5,7 +5,7 @@ Includes mutual coupling, phase quantization, element failures, and scan blindne
 """
 
 import warnings
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -509,7 +509,7 @@ def simulate_element_failures(
     weights: np.ndarray,
     failure_rate: float,
     mode: str = 'off',
-    seed: Optional[int] = None
+    seed: Union[int, np.random.Generator, None] = None
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Simulate random element failures.
@@ -524,8 +524,9 @@ def simulate_element_failures(
         'off' - failed elements have zero output
         'stuck' - failed elements stuck at nominal magnitude, random phase
         'full' - failed elements at full power, random phase
-    seed : int, optional
-        Random seed
+    seed : int or numpy.random.Generator, optional
+        Seed or generator for reproducibility. A local generator is used;
+        NumPy's global random state is neither read nor modified.
 
     Returns
     -------
@@ -563,24 +564,23 @@ def simulate_element_failures(
     ...     weights, geom, k, failure_rates=[0.0, 0.05, 0.1], n_trials=5
     ... )
     """
-    if seed is not None:
-        np.random.seed(seed)
+    rng = np.random.default_rng(seed)
 
     n = len(weights)
-    failure_mask = np.random.random(n) < failure_rate
+    failure_mask = rng.random(n) < failure_rate
     degraded_weights = weights.copy()
 
     if mode == 'off':
         degraded_weights[failure_mask] = 0
     elif mode == 'stuck':
         # Random phase, same magnitude
-        random_phase = np.random.uniform(0, 2*np.pi, np.sum(failure_mask))
+        random_phase = rng.uniform(0, 2*np.pi, np.sum(failure_mask))
         degraded_weights[failure_mask] = (
             np.abs(degraded_weights[failure_mask]) * np.exp(1j * random_phase)
         )
     elif mode == 'full':
         # Full power, random phase
-        random_phase = np.random.uniform(0, 2*np.pi, np.sum(failure_mask))
+        random_phase = rng.uniform(0, 2*np.pi, np.sum(failure_mask))
         degraded_weights[failure_mask] = np.exp(1j * random_phase)
     else:
         raise ValueError(f"Unknown failure mode: {mode}")
@@ -653,7 +653,8 @@ def analyze_graceful_degradation(
     k: float,
     failure_rates: List[float],
     n_trials: int = 100,
-    mode: str = 'off'
+    mode: str = 'off',
+    seed: Union[int, np.random.Generator, None] = None
 ) -> Dict[str, np.ndarray]:
     """
     Monte Carlo analysis of graceful degradation vs failure rate.
@@ -672,6 +673,9 @@ def analyze_graceful_degradation(
         Number of Monte Carlo trials per rate
     mode : str
         Failure mode
+    seed : int or numpy.random.Generator, optional
+        Seed or generator for the trials. A local generator is used;
+        NumPy's global random state is neither read nor modified.
 
     Returns
     -------
@@ -687,9 +691,8 @@ def analyze_graceful_degradation(
     Patterns are evaluated on a cut through the beam peak (the
     ``phi`` plane of the beam, theta from -90 to 90 degrees), and the
     sidelobe level is measured outside the first nulls with
-    :func:`~phased_array.core.compute_peak_sidelobe_level`. Trials use
-    NumPy's global random state; call ``np.random.seed`` first for
-    repeatable results.
+    :func:`~phased_array.core.compute_peak_sidelobe_level`. Pass ``seed``
+    for repeatable results.
     """
     from .core import array_factor_vectorized, compute_peak_sidelobe_level
     from .utils import linear_to_db
@@ -697,6 +700,7 @@ def analyze_graceful_degradation(
     x, y, z = geometry.x, geometry.y, geometry.z
 
     # Beam direction of the nominal weights, refined well below a beamwidth
+    rng = np.random.default_rng(seed)
     theta_beam, phi_beam, beamwidth = _beam_direction(x, y, z, weights, k)
 
     # Cut through the beam: the phi_beam plane, theta from -90 to 90 deg,
@@ -725,7 +729,7 @@ def analyze_graceful_degradation(
 
         for trial in range(n_trials):
             degraded, _ = simulate_element_failures(
-                weights, rate, mode, seed=None
+                weights, rate, mode, seed=rng
             )
             pattern_dB = cut_power_dB(degraded)
 
