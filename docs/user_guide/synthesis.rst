@@ -81,13 +81,21 @@ superposes the beams:
 
    w_n = \frac{1}{N}\sum_m b_m \exp(-jk\,x_n u_m).
 
-The synthesized pattern equals ``desired`` exactly at every sample point
-and interpolates between them. The samples are the :math:`u_m` with
-:math:`|u_m| \le 1`. For ``d < 0.5`` there are
-:math:`2\lfloor Nd/\lambda \rfloor + 1 \le N` of them. For
-``d >= 0.5`` visible space holds a full period of the array factor, so
-one period is sampled, :math:`-\lambda/(2d) \le u_m < \lambda/(2d)`,
-which is exactly N samples.
+The synthesized pattern equals ``desired`` at every sample point (with
+one exception, below) and interpolates between them. The samples are the
+:math:`u_m` with :math:`|u_m| \le 1`. For ``d < 0.5`` there are
+:math:`2\lfloor Nd/\lambda \rfloor + 1 \le N` of them.
+
+For ``d >= 0.5`` visible space holds a full period of the array factor,
+:math:`AF(u + \lambda/d) = (-1)^{N-1} AF(u)`, so only the N beams of one
+period, :math:`-\lambda/(2d) \le u_m \le \lambda/(2d)`, are
+independent. For even N both period ends :math:`\pm e`,
+:math:`e = \lambda/(2d)`, are visible and share one beam, with
+:math:`AF(+e) = -AF(-e)`. That beam gets the least-squares compromise
+:math:`b = (D(-e) - D(+e))/2`, and both ends are returned as samples
+(N + 1 in all). A target symmetric in ``u`` therefore gets a null at
+both ends, which is all an even-N array with symmetric weights can do
+there.
 
 Haupt's example is a 16-element array with :math:`|AF| = 1` for
 :math:`|u| \le 0.5`. The weights match Table 3.1:
@@ -157,8 +165,9 @@ column of Table 3.1 with 21 samples at :math:`u = 2m/21`,
    print(np.round(w.real[8:], 4))
    # [ 0.4671  0.1334 -0.1077 -0.0476  0.0688  0.0237 -0.0551 -0.0118]
 
-With N samples at the Woodward-Lawson points the system is square and
-the result equals :func:`~phased_array.woodward_lawson_weights`.
+At the sample points that ``woodward_lawson_weights(...,
+return_samples=True)`` returns, the least-squares solution equals the
+Woodward-Lawson weights, including the end-beam compromise for even N.
 
 Shaped beam
 ^^^^^^^^^^^

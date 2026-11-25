@@ -128,20 +128,30 @@ class TestWoodwardLawson:
             return np.exp(-3 * u ** 2) * np.exp(2j * u) + 0.2 * u
 
         w, u_m = pa.woodward_lawson_weights(desired, n, spacing, return_samples=True)
-        np.testing.assert_allclose(_af(u_m, w, spacing), desired(u_m), atol=1e-9, rtol=0)
+        af = _af(u_m, w, spacing)
+        target = desired(u_m)
+        if n % 2 == 0 and spacing >= 0.5:
+            # Even N, full period visible: one beam serves both ends +/-e
+            e = 1 / (2 * spacing)
+            assert u_m.size == n + 1
+            np.testing.assert_allclose(u_m[[0, -1]], [-e, e])
+            b = (target[0] - target[-1]) / 2
+            np.testing.assert_allclose(af[[0, -1]], [b, -b], atol=1e-9, rtol=0)
+            af, target = af[1:-1], target[1:-1]
+        np.testing.assert_allclose(af, target, atol=1e-9, rtol=0)
 
     @pytest.mark.parametrize("n, spacing, n_samples", [
         (16, 0.25, 9),     # |m| <= N d = 4
         (16, 0.4, 13),     # |m| <= floor(6.4)
         (15, 0.5, 15),     # m = -7..7
-        (16, 0.5, 16),     # m = -8..7: u = -1 kept, u = +1 is the same beam
-        (16, 0.7, 16),     # one period of the array factor
+        (16, 0.5, 17),     # m = -8..8: u = -1 and u = +1 share one beam
+        (16, 0.7, 17),     # one period, both ends sampled
         (15, 0.9, 15),
     ])
     def test_sample_points(self, n, spacing, n_samples):
         _, u_m = pa.woodward_lawson_weights(lambda u: 1.0, n, spacing,
                                             return_samples=True)
-        assert u_m.size == n_samples <= n
+        assert u_m.size == n_samples
         m = u_m * n * spacing
         np.testing.assert_allclose(m, np.round(m), atol=1e-12)
         np.testing.assert_allclose(np.diff(m), 1.0)
@@ -154,6 +164,7 @@ class TestWoodwardLawson:
         desired = _sector(0.35)
         w, u_m = pa.woodward_lawson_weights(desired, n, d, return_samples=True)
         u = np.linspace(-0.997, 0.997, 777)    # avoids every u_m
+        # desired is 0 at u = +/-1, so the shared end beam (n = 16) has b = 0
         psi = K * d * (u[:, None] - u_m[None, :])
         beams = np.sin(n * psi / 2) / (n * np.sin(psi / 2))
         np.testing.assert_allclose(_af(u, w, d), beams @ desired(u_m), atol=1e-12)
@@ -177,20 +188,69 @@ class TestWoodwardLawson:
         assert np.max(np.abs(w.imag)) < 1e-15
         np.testing.assert_allclose(w, w[::-1], atol=1e-15)
 
-    def test_least_squares_at_beam_points_equals_wl(self):
-        # Square system at the orthogonal beam points: same solution
-        desired = _sector(0.5)
-        w_wl, u_m = pa.woodward_lawson_weights(desired, 16, 0.5, return_samples=True)
-        w_ls = pa.least_squares_weights(u_m, desired(u_m), n_elements=16)
+    @pytest.mark.parametrize("n", [4, 15, 16])
+    @pytest.mark.parametrize("spacing", [0.3, 0.5, 0.7])
+    @pytest.mark.parametrize("desired", [
+        _sector(0.5),
+        lambda u: (u >= 0.9).astype(float),
+        lambda u: np.exp(1j * u) * (1 + u),
+    ])
+    def test_least_squares_at_samples_equals_wl(self, n, spacing, desired):
+        # Orthogonal beams: least squares at the WL samples gives the WL
+        # weights, including the shared-end compromise for even N
+        w_wl, u_m = pa.woodward_lawson_weights(desired, n, spacing, return_samples=True)
+        w_ls = pa.least_squares_weights(u_m, desired(u_m), n_elements=n, spacing=spacing)
         np.testing.assert_allclose(w_ls, w_wl, atol=1e-12)
+
+    def test_target_only_at_positive_end(self):
+        # Regression: no sample has u >= 0.9 except u = +1, which shares the
+        # u = -1 beam; dropping +1 used to return all-zero weights
+        w = pa.woodward_lawson_weights(lambda u: (u >= 0.9).astype(float), 16)
+        assert np.abs(w).max() == pytest.approx(1 / 32)
+        np.testing.assert_allclose(_af(np.array([-1.0, 1.0]), w), [-0.5, 0.5], atol=1e-12)
+
+    def test_step_target_reaches_positive_end(self):
+        # Regression: D = 1 for u > 0.6 used to give AF(+1) = 0
+        desired = lambda u: (u > 0.6).astype(float)  # noqa: E731
+        w, u_m = pa.woodward_lawson_weights(desired, 16, return_samples=True)
+        af = _af(u_m, w)
+        np.testing.assert_allclose(af[1:-1], desired(u_m[1:-1]), atol=1e-12)
+        np.testing.assert_allclose(af[[0, -1]], [-0.5, 0.5], atol=1e-12)
+
+    @pytest.mark.parametrize("n", [4, 16])
+    @pytest.mark.parametrize("spacing", [0.5, 0.8])
+    def test_symmetric_target_gives_symmetric_weights(self, n, spacing):
+        # Regression: a uniform target used to give complex, asymmetric
+        # weights and AF(+1) = -1 for N = 4. Symmetric weights put a null at
+        # both period ends u = +/-lambda/(2d) for even N.
+        w, u_m = pa.woodward_lawson_weights(lambda u: np.ones_like(u), n, spacing,
+                                            return_samples=True)
+        assert np.max(np.abs(w.imag)) < 1e-15
+        np.testing.assert_allclose(w, w[::-1], atol=1e-15)
+        af = _af(u_m, w, spacing)
+        np.testing.assert_allclose(af[[0, -1]], 0, atol=1e-12)
+        np.testing.assert_allclose(af[1:-1], 1, atol=1e-12)
+
+    @pytest.mark.parametrize("n, spacing", [(100, 0.29), (180, 0.35), (10, 0.3)])
+    def test_samples_stay_in_visible_space(self, n, spacing):
+        # Regression: N d an integer that rounds low put u_m at
+        # 1.0000000000000002, so sqrt(1 - u^2) targets gave NaN weights
+        def desired(u):
+            return np.sqrt(1 - u ** 2)
+
+        w, u_m = pa.woodward_lawson_weights(desired, n, spacing, return_samples=True)
+        assert np.all(np.isfinite(w))
+        assert u_m[0] == -1.0 and u_m[-1] == 1.0
+        np.testing.assert_allclose(_af(u_m, w, spacing), desired(u_m), atol=1e-12)
 
     def test_invalid_inputs(self):
         with pytest.raises(TypeError):
             pa.woodward_lawson_weights(np.ones(8), 8)
         with pytest.raises(ValueError):
             pa.woodward_lawson_weights(_sector(0.3), 0)
-        with pytest.raises(ValueError):
-            pa.woodward_lawson_weights(_sector(0.3), 8, spacing=0.0)
+        for bad in (0.0, -0.5, np.inf, np.nan):
+            with pytest.raises(ValueError, match="spacing"):
+                pa.woodward_lawson_weights(_sector(0.3), 8, spacing=bad)
 
 
 # ------------------------------------------------------------ least squares
@@ -334,5 +394,19 @@ class TestLeastSquares:
             pa.least_squares_weights(u, np.ones(5), n_elements=4)
         with pytest.raises(ValueError, match="nonnegative"):
             pa.least_squares_weights(u, d, n_elements=4, weights=-np.ones(11))
-        with pytest.raises(ValueError, match="nonnegative"):
-            pa.least_squares_weights(u, d, n_elements=4, regularization=-1.0)
+        for bad in (-1.0, np.inf, np.nan):
+            with pytest.raises(ValueError, match="regularization"):
+                pa.least_squares_weights(u, d, n_elements=4, regularization=bad)
+        for bad in (0.0, -1.0, np.inf, np.nan):
+            with pytest.raises(ValueError, match="spacing"):
+                pa.least_squares_weights(u, d, n_elements=4, spacing=bad)
+        for bad in (0.0, -K, np.inf, np.nan):
+            with pytest.raises(ValueError, match="k must be"):
+                pa.least_squares_weights(u, d, positions=np.arange(4.0), k=bad)
+        for bad in (np.nan, np.inf):
+            with pytest.raises(ValueError, match="positions must be finite"):
+                pa.least_squares_weights(u, d, positions=np.array([0.0, 0.5, bad]), k=K)
+        with pytest.raises(ValueError, match="u_samples must be finite"):
+            pa.least_squares_weights(np.r_[u[:-1], np.nan], d, n_elements=4)
+        with pytest.raises(ValueError, match="desired must be finite"):
+            pa.least_squares_weights(u, np.r_[d[:-1], np.inf], n_elements=4)

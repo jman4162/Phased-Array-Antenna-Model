@@ -41,6 +41,15 @@ def _check_n_elements(n: int, name: str = "n_elements") -> int:
     return int(n)
 
 
+def _check_spacing(spacing: float) -> float:
+    spacing = float(spacing)
+    if not (np.isfinite(spacing) and spacing > 0):
+        raise ValueError(
+            f"spacing must be a finite positive number, got {spacing!r}"
+        )
+    return spacing
+
+
 def binomial_taper_1d(n: int) -> np.ndarray:
     """
     Binomial amplitude taper for a linear array.
@@ -117,7 +126,7 @@ def woodward_lawson_weights(
     spacing : float
         Element spacing d in wavelengths
     return_samples : bool
-        If True, also return the sample points ``u_m``
+        If True, also return the points where ``desired`` was sampled
 
     Returns
     -------
@@ -125,8 +134,9 @@ def woodward_lawson_weights(
         Complex weights, shape (N,), for elements at
         ``x_n = (n - (N - 1) / 2) * spacing`` wavelengths
     u_samples : ndarray
-        Sample points ``u_m`` in increasing order (only if
-        ``return_samples``)
+        Points where ``desired`` was sampled, in increasing order (only
+        if ``return_samples``). N + 1 points for even N with
+        ``d >= lambda/2``, otherwise at most N (see Notes).
 
     Notes
     -----
@@ -145,18 +155,28 @@ def woodward_lawson_weights(
 
     Each beam peaks at its own ``u_m`` and is zero at every other sample
     point, so the synthesized pattern equals ``desired`` exactly at every
-    ``u_m``. Between samples it interpolates, with Gibbs-type ripple near
-    discontinuities of ``desired``.
+    ``u_m``, with one exception for even N described below. Between
+    samples it interpolates, with Gibbs-type ripple near discontinuities
+    of ``desired``.
 
     Sample points are the ``u_m`` inside visible space, ``|u_m| <= 1``.
     For ``d < lambda/2`` that gives ``2 floor(N d / lambda) + 1 <= N``
     samples and the pattern in invisible space is left uncontrolled.
-    For ``d >= lambda/2`` the
-    array factor repeats with period ``lambda/d <= 2`` in ``u`` (with
-    sign ``(-1)**(N - 1)`` for a centered array), so only one period is
-    sampled, ``-lambda/(2d) <= u_m < lambda/(2d)``: exactly N samples.
-    At ``d = lambda/2`` with even N this keeps ``u = -1`` and drops
-    ``u = +1``, which is the same beam.
+
+    For ``d >= lambda/2`` the array factor of a centered array satisfies
+    ``AF(u + lambda/d) = (-1)**(N - 1) AF(u)``, so visible space holds a
+    full period and only the N beams of one period,
+    ``-lambda/(2d) <= u_m <= lambda/(2d)``, are independent. For odd N
+    these are N interior samples. For even N both period ends
+    ``u = -e`` and ``u = +e`` (``e = lambda/(2d)``) are visible, and a
+    single beam serves both with ``AF(+e) = -AF(-e)``. Its coefficient
+    is the least-squares compromise ``b = (D(-e) - D(+e)) / 2``, so
+    ``AF(-e) = b`` and ``AF(+e) = -b``; both points are returned as
+    samples. The result matches ``desired`` at both ends only when
+    ``D(+e) = -D(-e)``. A target symmetric in ``u`` gives a null at both
+    ends: an even-N array with symmetric weights cannot radiate there.
+    :func:`least_squares_weights` evaluated at the returned samples
+    gives the same weights in every case.
 
     Reference: R. L. Haupt, *Antenna Arrays: A Computational Approach*,
     Wiley-IEEE Press, 2010, Sec. 3.1.2, eqs. (3.5)-(3.8), Table 3.1.
@@ -184,25 +204,36 @@ def woodward_lawson_weights(
     if not callable(desired):
         raise TypeError("desired must be a callable of u")
     n = _check_n_elements(n_elements)
-    if not spacing > 0:
-        raise ValueError(f"spacing must be positive, got {spacing!r}")
+    spacing = _check_spacing(spacing)
 
-    m_max = int(np.floor(n * spacing + 1e-9))
-    if 2 * m_max + 1 > n:
-        # Visible space holds a full period: sample one period only
+    # Beams |m| <= N d fit in visible space. The tolerance keeps u_m = 1
+    # when N d is an integer that rounds low; u_m is clipped below.
+    nd = n * spacing + 1e-9
+    shared_edge = False
+    if nd >= (n + 1) // 2:
+        # More than N beams fit: visible space holds a full period, so
+        # use the N beams of one period
         m = np.arange(-(n // 2), (n - 1) // 2 + 1)
+        # Even N: the beam at u = -e also serves u = +e
+        shared_edge = n % 2 == 0
     else:
+        m_max = int(np.floor(nd))
         m = np.arange(-m_max, m_max + 1)
-    u_m = m / (n * spacing)
+    m_sampled = np.append(m, n // 2) if shared_edge else m
+    u_samples = np.clip(m_sampled / (n * spacing), -1.0, 1.0)
 
-    b = np.asarray(desired(u_m), dtype=complex)
-    b = np.broadcast_to(b, u_m.shape)
+    d = np.asarray(desired(u_samples), dtype=complex)
+    d = np.broadcast_to(d, u_samples.shape)
+    b = d[:m.size].copy()
+    if shared_edge:
+        # Least-squares fit of AF(-e) = b and AF(+e) = -b to D(-e), D(+e)
+        b[0] = (d[0] - d[-1]) / 2
 
     # k x_n u_m = 2 pi (n - (N-1)/2) m / N, independent of the spacing
     n_idx = np.arange(n) - (n - 1) / 2
     weights = np.exp(-2j * np.pi * np.outer(n_idx, m) / n) @ b / n
     if return_samples:
-        return weights, u_m
+        return weights, u_samples
     return weights
 
 
@@ -250,8 +281,8 @@ def least_squares_weights(
         Element x positions in meters, shape (N,), for an arbitrary
         (for example nonuniform) linear array
     k : float, optional
-        Wavenumber ``2*pi/wavelength`` in rad/m. Required with
-        ``positions``; must be omitted with ``n_elements``
+        Wavenumber ``2*pi/wavelength`` in rad/m, finite and positive.
+        Required with ``positions``; must be omitted with ``n_elements``
     weights : ndarray, optional
         Nonnegative weight ``c_i`` of each sample point, shape (M,).
         Default is 1 for every sample.
@@ -278,9 +309,9 @@ def least_squares_weights(
     The fit matches complex values, not magnitudes, so a magnitude-only
     target needs a chosen phase. The method works for any element
     positions, but the weights it returns can vary strongly from element
-    to element. With M = N samples at the Woodward-Lawson points
-    ``u_m = m lambda / (N d)`` the system is square and the solution
-    equals :func:`woodward_lawson_weights`.
+    to element. At the sample points returned by
+    ``woodward_lawson_weights(..., return_samples=True)`` the solution
+    equals the Woodward-Lawson weights.
 
     Reference: R. L. Haupt, *Antenna Arrays: A Computational Approach*,
     Wiley-IEEE Press, 2010, Sec. 3.1.3, eq. (3.9), Table 3.1.
@@ -309,6 +340,8 @@ def least_squares_weights(
     u_samples = np.asarray(u_samples, dtype=float)
     if u_samples.ndim != 1 or u_samples.size == 0:
         raise ValueError("u_samples must be a non-empty 1D array")
+    if not np.all(np.isfinite(u_samples)):
+        raise ValueError("u_samples must be finite")
     m = u_samples.size
     desired = np.asarray(desired, dtype=complex)
     if desired.shape not in ((), (m,)):
@@ -316,6 +349,8 @@ def least_squares_weights(
             f"desired must have shape ({m},) to match u_samples, "
             f"got {desired.shape}"
         )
+    if not np.all(np.isfinite(desired)):
+        raise ValueError("desired must be finite")
     desired = np.broadcast_to(desired, (m,))
 
     if (n_elements is None) == (positions is None):
@@ -327,18 +362,20 @@ def least_squares_weights(
                 "k applies only with positions; a uniform array uses "
                 "spacing in wavelengths"
             )
-        if not spacing > 0:
-            raise ValueError(f"spacing must be positive, got {spacing!r}")
-        x = _ula_positions(n, spacing)
+        x = _ula_positions(n, _check_spacing(spacing))
         kk = 2 * np.pi
     else:
         x = np.asarray(positions, dtype=float)
         if x.ndim != 1 or x.size == 0:
             raise ValueError("positions must be a non-empty 1D array")
+        if not np.all(np.isfinite(x)):
+            raise ValueError("positions must be finite")
         if k is None:
             raise ValueError("k (rad/m) is required with positions in meters")
-        n = x.size
         kk = float(k)
+        if not (np.isfinite(kk) and kk > 0):
+            raise ValueError(f"k must be a finite positive number, got {k!r}")
+        n = x.size
 
     if weights is None:
         c = np.ones(m)
@@ -351,9 +388,11 @@ def least_squares_weights(
             )
         if np.any(c < 0) or not np.all(np.isfinite(c)):
             raise ValueError("weights must be finite and nonnegative")
-    if not regularization >= 0:
+    regularization = float(regularization)
+    if not (np.isfinite(regularization) and regularization >= 0):
         raise ValueError(
-            f"regularization must be nonnegative, got {regularization!r}"
+            "regularization must be finite and nonnegative, "
+            f"got {regularization!r}"
         )
 
     sqrt_c = np.sqrt(c)
