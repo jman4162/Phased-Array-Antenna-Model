@@ -40,6 +40,15 @@ def taylor_taper_1d(
     -------
     taper : ndarray
         Amplitude taper weights (n,)
+
+    Notes
+    -----
+    The weights sample the continuous Taylor line-source distribution
+    (``scipy.signal.windows.taylor``), so the achieved peak sidelobe level
+    is close to, but not exactly, the design value. Choose
+    ``nbar >= 2*A**2 + 0.5`` with ``A = arccosh(10**(|sidelobe_dB|/20))/pi``
+    (about 7 for -40 dB). Small arrays with deep sidelobes fall short:
+    N = 16 designed for -40 dB reaches about -39.3 dB with nbar = 7.
     """
     # Use scipy's Taylor window
     return signal.windows.taylor(n, nbar=nbar, sll=abs(sidelobe_dB), norm=True)
