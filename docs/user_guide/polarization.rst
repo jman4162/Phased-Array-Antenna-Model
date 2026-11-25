@@ -321,6 +321,29 @@ computed directly from an array definition.
    E_co, E_cross = pattern.co_cross()
    xpd_dB = pattern.xpd_map()
 
+For a physical patch, :func:`~phased_array.patch_design` gives the
+dimensions for a resonant frequency (Balanis eqs. 14-1 to 14-7) and
+:func:`~phased_array.rectangular_patch_element` the cavity-model field of
+its two radiating slots. Its E- and H-plane patterns differ, which the
+``cos**q`` models cannot show:
+
+.. code-block:: python
+
+   f0, eps_r, h = 10e9, 2.2, 1.588e-3          # Balanis Example 14.1
+   lam = 299792458.0 / f0
+   design = pa.patch_design(f0, eps_r, h)
+   print(f"W = {design['width'] * 1e3:.2f} mm, L = {design['length'] * 1e3:.2f} mm, "
+         f"Le = {design['effective_length'] * 1e3:.2f} mm")
+
+   patch = pa.rectangular_patch_element(design['width'], design['effective_length'],
+                                        h, wavelength=lam, pol='x')
+   theta = np.linspace(0, np.pi / 2, 9001)
+   e_plane = np.abs(patch(theta, np.zeros_like(theta))[0])           # phi = 0
+   h_plane = np.abs(patch(theta, np.full_like(theta, np.pi / 2))[1])  # phi = 90
+   half = 1 / np.sqrt(2)
+   print(f"E-plane HPBW: {2 * np.rad2deg(theta[np.argmax(e_plane < half)]):.1f} deg")
+   print(f"H-plane HPBW: {2 * np.rad2deg(theta[np.argmax(h_plane < half)]):.1f} deg")
+
 Co/cross-polar pattern cuts through any phi plane:
 
 .. code-block:: python

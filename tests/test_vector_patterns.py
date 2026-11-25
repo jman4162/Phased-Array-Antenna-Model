@@ -412,3 +412,98 @@ class TestGriddedPhiRange:
         Et, Ep = gp(np.array([0.5, 0.5]), np.array([0.3, np.pi]))
         assert abs(Et[0]) + abs(Ep[0]) > 0.5
         assert Et[1] == 0 and Ep[1] == 0
+
+
+class TestRectangularPatch:
+    """Cavity-model patch against Balanis Ch. 14 (Example 14.1)."""
+
+    LAM = 299792458.0 / 10e9
+    H = 0.1588e-2
+
+    def _patch(self, pol='x'):
+        d = pa.patch_design(10e9, 2.2, self.H)
+        return d, pa.rectangular_patch_element(d['width'], d['effective_length'],
+                                              self.H, wavelength=self.LAM, pol=pol)
+
+    def test_design_matches_example_14_1(self):
+        d = pa.patch_design(10e9, 2.2, self.H, c=3e8)
+        assert d['width'] * 100 == pytest.approx(1.186, abs=5e-4)
+        assert d['eps_eff'] == pytest.approx(1.972, abs=5e-4)
+        assert d['delta_length'] * 100 == pytest.approx(0.081, abs=5e-4)
+        assert d['length'] * 100 == pytest.approx(0.906, abs=5e-4)
+        assert d['effective_length'] * 100 == pytest.approx(1.068, abs=5e-4)
+
+    def test_principal_planes_match_balanis_14_45_14_46(self):
+        d, patch = self._patch()
+        k = 2 * np.pi / self.LAM
+        W, Le, h = d['width'], d['effective_length'], self.H
+        theta = np.linspace(0.01, np.pi / 2 - 1e-6, 300)
+        sinc = lambda a: np.sinc(a / np.pi)
+        # E-plane (phi = 0): Balanis (14-45) with cos(phi_B) = cos(theta)
+        e_ref = sinc(k * h * np.cos(theta) / 2) * np.cos(k * Le * np.sin(theta) / 2)
+        et, ep = patch(theta, np.zeros_like(theta))
+        np.testing.assert_allclose(np.abs(et), np.abs(e_ref) / sinc(k * h / 2), rtol=1e-12)
+        np.testing.assert_allclose(np.abs(ep), 0, atol=1e-15)
+        # H-plane (phi = 90): Balanis (14-46) with sin(theta_B) = cos(theta)
+        h_ref = (np.cos(theta) * sinc(k * h * np.cos(theta) / 2)
+                 * sinc(k * W * np.sin(theta) / 2))
+        et, ep = patch(theta, np.full_like(theta, np.pi / 2))
+        np.testing.assert_allclose(np.abs(ep), np.abs(h_ref) / sinc(k * h / 2), rtol=1e-12)
+        np.testing.assert_allclose(np.abs(et), 0, atol=1e-15)
+
+    def test_e_and_h_planes_differ(self):
+        _, patch = self._patch()
+        grazing = np.array([np.pi / 2 - 1e-9])
+        e_graze = abs(patch(grazing, np.array([0.0]))[0][0])
+        h_graze = abs(patch(grazing, np.array([np.pi / 2]))[1][0])
+        assert 20 * np.log10(e_graze) == pytest.approx(-7.2, abs=0.1)
+        assert h_graze < 1e-6
+        theta = np.linspace(0, np.pi / 2, 9001)
+        e_cut = 20 * np.log10(np.abs(patch(theta, np.zeros_like(theta))[0]) + 1e-30)
+        h_cut = 20 * np.log10(np.abs(patch(theta, np.full_like(theta, np.pi / 2))[1]) + 1e-30)
+        hp = 10 * np.log10(0.5)
+        e_hpbw = 2 * np.rad2deg(theta[np.argmax(e_cut < hp)])
+        h_hpbw = 2 * np.rad2deg(theta[np.argmax(h_cut < hp)])
+        assert e_hpbw > h_hpbw
+        # from (14-45)/(14-46) with the Example 14.1 dimensions
+        assert e_hpbw == pytest.approx(89.5, abs=0.3)
+        assert h_hpbw == pytest.approx(77.2, abs=0.3)
+
+    def test_y_polarization_is_x_rotated(self):
+        _, px = self._patch('x')
+        _, py = self._patch('y')
+        theta = np.linspace(0, np.pi / 2, 50)
+        phi = np.linspace(0, 2 * np.pi, 50)
+        T, P = np.meshgrid(theta, phi)
+        # A 90 deg rotation about z maps theta/phi unit vectors onto each
+        # other, so the complex components must match, not only |E|
+        ex_t, ex_p = px(T, P)
+        ey_t, ey_p = py(T, P + np.pi / 2)
+        np.testing.assert_allclose(ey_t, ex_t, atol=1e-12)
+        np.testing.assert_allclose(ey_p, ex_p, atol=1e-12)
+
+    def test_input_checks(self):
+        with pytest.raises(TypeError):
+            pa.rectangular_patch_element(1e-2, 1e-2, 1e-3)  # wavelength is required
+        with pytest.raises(ValueError, match="thin substrate"):
+            pa.rectangular_patch_element(0.4, 0.4, 0.5, wavelength=1.0)
+        with pytest.raises(ValueError, match="positive"):
+            pa.rectangular_patch_element(-1e-2, 1e-2, 1e-3, wavelength=0.03)
+        for args in [(0, 2.2, 1e-3), (10e9, 0.5, 1e-3), (10e9, 2.2, 0.0)]:
+            with pytest.raises(ValueError):
+                pa.patch_design(*args)
+
+    def test_zero_behind_ground_plane_and_boresight_unity(self):
+        _, patch = self._patch()
+        et, ep = patch(np.array([0.0, 2.0]), np.array([0.0, 1.0]))
+        assert abs(et[0]) == pytest.approx(1.0) and abs(ep[0]) < 1e-15
+        assert et[1] == 0 and ep[1] == 0
+
+    def test_in_array_vector_pattern(self):
+        d, patch = self._patch()
+        geom = pa.create_rectangular_array(4, 4, 0.5 * self.LAM, 0.5 * self.LAM)
+        k = 2 * np.pi / self.LAM
+        w = pa.steering_vector(k, geom.x, geom.y, 0, 0)
+        vp = pa.compute_full_vector_pattern(geom.x, geom.y, w, k, element_func=patch,
+                                            n_theta=31, n_phi=61)
+        assert np.all(np.isfinite(vp.E_theta)) and np.all(np.isfinite(vp.E_phi))

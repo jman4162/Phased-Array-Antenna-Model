@@ -126,6 +126,7 @@ from .vector_patterns import (GriddedElementPattern, VectorPattern,
                               dipole_element, dual_pol_weights,
                               element_rotation_matrices,
                               global_to_local_angles, ideal_patch_element,
+                              patch_design, rectangular_patch_element,
                               vector_array_factor_conformal,
                               vector_total_pattern)
 # Visualization functions
@@ -346,6 +347,8 @@ __all__ = [
     "GriddedElementPattern",
     "dipole_element",
     "ideal_patch_element",
+    "patch_design",
+    "rectangular_patch_element",
     "cos_q_polarized_element",
     "crossed_dipole_element",
     "vector_total_pattern",

@@ -31,6 +31,10 @@ Polarized Element Models
 
 .. autofunction:: phased_array.cos_q_polarized_element
 
+.. autofunction:: phased_array.patch_design
+
+.. autofunction:: phased_array.rectangular_patch_element
+
 .. autofunction:: phased_array.crossed_dipole_element
 
 .. autoclass:: phased_array.GriddedElementPattern
