@@ -161,3 +161,23 @@ class TestRotatePattern:
 
         # Pattern should be different due to rotation
         assert not np.allclose(pattern_r, pattern)
+
+
+class TestRotatePatternGrid:
+
+    def test_returned_grid_matches_rotated_values(self):
+        theta = np.linspace(0, np.pi, 181)
+        phi = np.linspace(0, 2 * np.pi, 361)
+        T, P = np.meshgrid(theta, phi, indexing='ij')
+        # Narrow spot at theta=30, phi=0
+        d = (np.sin(T) * np.cos(P) * np.sin(np.pi / 6) + np.cos(T) * np.cos(np.pi / 6))
+        spot = np.exp(-(1 - d) * 400)
+        th_r, ph_r, pat_r = pa.rotate_pattern(T, P, spot, 0, 30, 0)
+        np.testing.assert_array_equal(th_r, T)
+        np.testing.assert_array_equal(ph_r, P)
+        i = np.unravel_index(np.argmax(pat_r), pat_r.shape)
+        assert np.rad2deg(th_r[i]) == pytest.approx(60.0, abs=1.0)
+
+    def test_1d_input_raises(self):
+        with pytest.raises(ValueError, match="2D"):
+            pa.rotate_pattern(np.linspace(0, 1, 5), np.zeros(5), np.ones(5), 0, 10, 0)

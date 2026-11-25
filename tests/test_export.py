@@ -283,3 +283,42 @@ class TestSummaryReport:
             assert 'SUMMARY REPORT' in content
         finally:
             os.unlink(filename)
+
+
+class TestExportSafety:
+
+    def test_load_rejects_pickled_objects(self, tmp_path):
+        f = tmp_path / "evil.npz"
+        np.savez(f, theta=np.zeros(3), obj=np.array([{"a": 1}], dtype=object))
+        with pytest.raises(ValueError):
+            pa.load_pattern_npz(str(f))
+
+    def test_roundtrip_with_metadata(self, tmp_path):
+        f = str(tmp_path / "p.npz")
+        th = np.linspace(0, 1, 4)
+        pa.export_pattern_npz(f, theta=th, phi=th, pattern_2d=np.ones((4, 4)),
+                              metadata={"freq": 10e9})
+        data = pa.load_pattern_npz(f)
+        assert data["metadata"]["freq"] == 10e9
+        np.testing.assert_allclose(data["theta"], th)
+
+    def test_2d_csv_warns_on_radian_input(self):
+        geom = pa.create_rectangular_array(4, 4, 0.5, 0.5)
+        theta, phi, pat = pa.compute_full_pattern(geom.x, geom.y, np.ones(16),
+                                                  pa.wavelength_to_k(1.0), n_theta=5, n_phi=9)
+        with pytest.warns(UserWarning, match="radians"):
+            pa.export_pattern_2d_csv(theta, phi, pat)
+        csv = pa.export_pattern_2d_csv(theta, phi, pat, angle_unit='rad')
+        assert csv.splitlines()[0] == "theta_rad,phi_rad,pattern_dB"
+
+
+class TestUVPlotCircles:
+
+    def test_grating_circles_without_visible_region(self):
+        import matplotlib
+        matplotlib.use("Agg")
+        u = v = np.linspace(-1, 1, 21)
+        ax = pa.plot_pattern_uv_space(u, v, np.zeros((21, 21)),
+                                      show_visible_region=False,
+                                      show_grating_circles=True, dx_wavelengths=0.7)
+        assert ax is not None

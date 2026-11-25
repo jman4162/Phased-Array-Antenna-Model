@@ -381,3 +381,34 @@ class TestGriddedElementPattern:
             np.array([0.1]), np.array([0.2]), geom.x, geom.y, weights, k, gridded
         )
         assert np.isfinite(Et).all()
+
+
+class TestGriddedPhiRange:
+
+    def test_minus_pi_to_pi_grid(self):
+        theta = np.linspace(0, np.pi / 2, 31)
+        phi = np.linspace(-np.pi, np.pi, 73)
+        gp = pa.GriddedElementPattern.from_scalar(theta, phi, np.ones((31, 73)))
+        for ph in (0.5, -0.5, 3.0, -3.0, 2 * np.pi - 0.5):
+            Et, Ep = gp(np.array([0.5]), np.array([ph]))
+            assert np.hypot(abs(Et[0]), abs(Ep[0])) == pytest.approx(1.0, abs=1e-3)
+
+    def test_open_full_turn_grid_closes_seam(self):
+        theta = np.linspace(0, np.pi / 2, 31)
+        phi = np.linspace(0, 2 * np.pi, 72, endpoint=False)
+        T, P = np.meshgrid(theta, phi, indexing='ij')
+        gp = pa.GriddedElementPattern(theta, phi, np.cos(P).astype(complex),
+                                      np.zeros_like(P, dtype=complex))
+        ph = 2 * np.pi - 0.02  # between the last sample and 2*pi
+        Et, _ = gp(np.array([0.3]), np.array([ph]))
+        assert Et[0].real == pytest.approx(np.cos(ph), abs=2e-3)
+        Et_neg, _ = gp(np.array([0.3]), np.array([-0.02]))
+        assert Et_neg[0] == pytest.approx(Et[0])
+
+    def test_partial_grid_zero_outside(self):
+        theta = np.linspace(0, np.pi / 2, 10)
+        phi = np.linspace(0, np.pi / 2, 10)
+        gp = pa.GriddedElementPattern.from_scalar(theta, phi, np.ones((10, 10)))
+        Et, Ep = gp(np.array([0.5, 0.5]), np.array([0.3, np.pi]))
+        assert abs(Et[0]) + abs(Ep[0]) > 0.5
+        assert Et[1] == 0 and Ep[1] == 0

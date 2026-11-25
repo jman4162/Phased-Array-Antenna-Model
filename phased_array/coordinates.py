@@ -24,9 +24,14 @@ def antenna_to_radar(
         - theta: angle from boresight (z-axis), 0 at boresight
         - phi: azimuthal angle in x-y plane, 0 along x-axis
 
-    Radar coordinates:
-        - az: azimuth in horizontal plane, 0 at boresight
-        - el: elevation from horizon, 0 at horizon, positive up
+    Radar coordinates (array face pointing at zenith):
+        - az: azimuth in the array (x-y) plane, measured from the x-axis,
+          ``atan2(v, u)``
+        - el: elevation above the array plane, ``90 deg - theta``; the
+          array boresight (+z) is at el = 90 deg
+
+    For az/el angles centred on boresight (boresight at az = el = 0), use
+    :func:`~phased_array.utils.thetaphi_to_azel` instead.
 
     Parameters
     ----------
@@ -44,7 +49,7 @@ def antenna_to_radar(
 
     Examples
     --------
-    Boresight in antenna coords is also boresight in radar:
+    Array boresight maps to the zenith (el = 90 deg):
 
     >>> import numpy as np
     >>> import phased_array as pa
@@ -359,12 +364,20 @@ def rotate_pattern(
 
     Returns
     -------
-    theta_new : ndarray
-        New theta coordinates after rotation
-    phi_new : ndarray
-        New phi coordinates after rotation
+    theta_out : ndarray
+        Theta grid of the output, equal to the input ``theta``
+    phi_out : ndarray
+        Phi grid of the output, equal to the input ``phi``
     pattern_interp : ndarray
-        Pattern values interpolated onto the new grid
+        Rotated pattern sampled on ``(theta_out, phi_out)``: the value at
+        each grid direction is the original pattern at the direction that
+        the rotation maps onto it
+
+    Raises
+    ------
+    ValueError
+        If ``theta``, ``phi`` and ``pattern`` are not 2D grids of the same
+        shape (``np.meshgrid(..., indexing='ij')``)
 
     Examples
     --------
@@ -385,19 +398,19 @@ def rotate_pattern(
 
     Notes
     -----
-    For points that rotate outside the original grid, extrapolation
-    may produce artifacts. Consider padding the original pattern.
+    Directions whose source lies outside the original grid are filled
+    with zero. Before v1.6.0 the first two outputs were the input points
+    rotated forward, which did not correspond to ``pattern_interp``.
     """
     theta = np.asarray(theta)
     phi = np.asarray(phi)
     pattern = np.asarray(pattern)
-
-    original_shape = theta.shape
-
-    # Flatten for processing
-    theta_flat = theta.ravel()
-    phi_flat = phi.ravel()
-    pattern_flat = pattern.ravel()
+    if theta.ndim != 2 or theta.shape != phi.shape or theta.shape != pattern.shape:
+        raise ValueError(
+            "theta, phi and pattern must be 2D grids of the same shape "
+            "(np.meshgrid(..., indexing='ij')), got shapes "
+            f"{theta.shape}, {phi.shape} and {pattern.shape}"
+        )
 
     # Create rotation matrix (yaw * pitch * roll)
     R_roll = rotation_matrix_roll(np.deg2rad(roll_deg))
@@ -405,80 +418,33 @@ def rotate_pattern(
     R_yaw = rotation_matrix_yaw(np.deg2rad(yaw_deg))
     R = R_yaw @ R_pitch @ R_roll
 
-    # Convert theta/phi to Cartesian direction vectors
-    x = np.sin(theta_flat) * np.cos(phi_flat)
-    y = np.sin(theta_flat) * np.sin(phi_flat)
-    z = np.cos(theta_flat)
+    # Each output grid direction takes the value of the original pattern at
+    # the direction that R maps onto it, i.e. R^T applied to the output.
+    theta_flat = theta.ravel()
+    phi_flat = phi.ravel()
+    vectors_out = np.vstack([np.sin(theta_flat) * np.cos(phi_flat),
+                             np.sin(theta_flat) * np.sin(phi_flat),
+                             np.cos(theta_flat)])
+    vectors_src = R.T @ vectors_out
 
-    # Stack into (3, N) array and rotate
-    vectors = np.vstack([x, y, z])
-    vectors_rot = R @ vectors
-
-    # Convert back to theta/phi
-    x_rot = vectors_rot[0]
-    y_rot = vectors_rot[1]
-    z_rot = vectors_rot[2]
-
-    theta_new_flat = np.arccos(np.clip(z_rot, -1, 1))
-    phi_new_flat = np.arctan2(y_rot, x_rot)
-
-    # For interpolation, we need the inverse rotation to find where
-    # each output point came from in the original pattern
-    R_inv = R.T
-
-    # Create output grid at original theta/phi locations
-    theta_out_flat = theta_flat.copy()
-    phi_out_flat = phi_flat.copy()
-
-    # Convert output grid to Cartesian
-    x_out = np.sin(theta_out_flat) * np.cos(phi_out_flat)
-    y_out = np.sin(theta_out_flat) * np.sin(phi_out_flat)
-    z_out = np.cos(theta_out_flat)
-
-    # Apply inverse rotation to find source locations
-    vectors_out = np.vstack([x_out, y_out, z_out])
-    vectors_src = R_inv @ vectors_out
-
-    # Convert source locations to theta/phi
     theta_src = np.arccos(np.clip(vectors_src[2], -1, 1))
-    phi_src = np.arctan2(vectors_src[1], vectors_src[0])
+    phi_src = np.mod(np.arctan2(vectors_src[1], vectors_src[0]), 2 * np.pi)
+    points = np.column_stack([theta_src, phi_src])
 
-    # Normalize phi to [0, 2*pi]
-    phi_src = np.mod(phi_src, 2 * np.pi)
+    theta_1d = theta[:, 0]
+    phi_1d = phi[0, :]
 
-    # Interpolate pattern values
-    # Create interpolator from original pattern
-    if pattern.ndim == 2:
-        # 2D grid case - use theta_1d, phi_1d for interpolation
-        theta_1d = theta[:, 0] if theta.ndim == 2 else np.unique(theta)
-        phi_1d = phi[0, :] if phi.ndim == 2 else np.unique(phi)
+    def sample(values):
+        interp = interpolate.RegularGridInterpolator(
+            (theta_1d, phi_1d), values,
+            method='linear', bounds_error=False, fill_value=0
+        )
+        return interp(points)
 
-        # Handle complex patterns
-        if np.iscomplexobj(pattern):
-            interp_real = interpolate.RegularGridInterpolator(
-                (theta_1d, phi_1d), np.real(pattern),
-                method='linear', bounds_error=False, fill_value=0
-            )
-            interp_imag = interpolate.RegularGridInterpolator(
-                (theta_1d, phi_1d), np.imag(pattern),
-                method='linear', bounds_error=False, fill_value=0
-            )
-            points = np.column_stack([theta_src, phi_src])
-            pattern_interp_flat = interp_real(points) + 1j * interp_imag(points)
-        else:
-            interp = interpolate.RegularGridInterpolator(
-                (theta_1d, phi_1d), pattern,
-                method='linear', bounds_error=False, fill_value=0
-            )
-            points = np.column_stack([theta_src, phi_src])
-            pattern_interp_flat = interp(points)
+    if np.iscomplexobj(pattern):
+        pattern_interp = sample(np.real(pattern)) + 1j * sample(np.imag(pattern))
     else:
-        # 1D case - just do nearest neighbor or simple interpolation
-        pattern_interp_flat = pattern_flat.copy()
+        pattern_interp = sample(pattern)
+    pattern_interp = pattern_interp.reshape(theta.shape)
 
-    # Reshape outputs
-    theta_new = theta_new_flat.reshape(original_shape)
-    phi_new = phi_new_flat.reshape(original_shape)
-    pattern_interp = pattern_interp_flat.reshape(original_shape)
-
-    return theta_new, phi_new, pattern_interp
+    return theta.copy(), phi.copy(), pattern_interp
