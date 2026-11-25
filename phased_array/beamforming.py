@@ -169,10 +169,19 @@ def chebyshev_taper_2d(
 def _bayliss_parameters(sidelobe_dB: float) -> Tuple[float, np.ndarray, float]:
     """Bayliss A, the first four zero parameters and the peak position.
 
-    Polynomial fits in the sidelobe level (positive dB), Haupt, *Antenna
-    Arrays*, eqs. 3.34-3.35 (after Bayliss 1968 and Elliott).
+    Polynomial fits in the sidelobe level (positive dB): A and xi_1..4 are
+    Haupt, *Antenna Arrays*, eq. 3.34, the peak position eq. 3.35 (after
+    Bayliss 1968 and Elliott). The fits cover about 15 to 40 dB.
     """
     s = abs(float(sidelobe_dB))
+    if not 15.0 <= s <= 40.0:
+        warnings.warn(
+            f"Bayliss parameter fits cover 15-40 dB sidelobe levels; "
+            f"{s:g} dB is outside that range and the achieved level will "
+            "differ from the design",
+            UserWarning,
+            stacklevel=3,
+        )
     A = 0.3038753 + s * (0.05042922 + s * (-2.7989e-4 + s * (3.43e-6 - 2e-8 * s)))
     xi = np.array([
         0.9858302 + s * (0.0333885 + s * (1.4064e-4 + s * (-1.9e-6 + 1e-8 * s))),
@@ -208,7 +217,7 @@ def bayliss_taper_1d(
     nbar : int
         Number of nearly equal sidelobes plus one (at least 2). As for the
         Taylor taper, deeper designs need larger values; for -35 dB use 6
-        or more.
+        or more. Keep ``2 * nbar`` well below ``n``.
 
     Returns
     -------
@@ -222,9 +231,10 @@ def bayliss_taper_1d(
     The weights sample the Bayliss line-source distribution
     ``g(p) = sum_m B_m sin((m + 1/2) pi p)``, ``-1 <= p <= 1``, at the
     element centers, with pattern zeros from Haupt, *Antenna Arrays*,
-    eqs. 3.33-3.34 (Bayliss 1968). For 32 to 128 elements the achieved
-    peak sidelobe is within about 0.4 dB of the design when ``nbar`` is
-    large enough. The difference peak lies near
+    eq. 3.33 and the parameters of eq. 3.34 (Bayliss 1968). For 32 to 128
+    elements the achieved peak sidelobe is within about 0.4 dB of the
+    design when ``nbar`` is large enough. Small arrays fall short of the
+    line-source design: at -30 dB, 8 to 16 elements reach about -28 dB. The difference peak lies near
     ``z = L u / lambda`` given by Haupt eq. 3.35; the sampled designs put
     it 2-6 percent farther out (6 percent at -20 dB, 2 percent at
     -35 dB). (The worked example on Haupt p. 141
@@ -248,8 +258,13 @@ def bayliss_taper_1d(
     >>> round(float(r[j:].max() - peak), 1)    # peak sidelobe in dB
     -30.3
     """
-    if nbar < 2:
-        raise ValueError(f"nbar must be at least 2, got {nbar}")
+    if int(nbar) != nbar or nbar < 2:
+        raise ValueError(f"nbar must be an integer of at least 2, got {nbar}")
+    nbar = int(nbar)
+    if n < 2:
+        raise ValueError(
+            f"a difference taper needs at least 2 elements along its axis, got {n}"
+        )
     A, xi, _ = _bayliss_parameters(sidelobe_dB)
 
     zeros = []
@@ -281,7 +296,7 @@ def bayliss_taper_2d(
     nbar: int = 5,
     axis: str = 'x',
     sum_sidelobe_dB: Optional[float] = None,
-    sum_nbar: int = 5
+    sum_nbar: int = 4
 ) -> np.ndarray:
     """
     Separable 2D difference taper: Bayliss along one axis, sum taper along
@@ -300,7 +315,9 @@ def bayliss_taper_2d(
     sum_sidelobe_dB : float, optional
         Taylor sidelobe level for the other axis; uniform if omitted
     sum_nbar : int
-        Taylor ``nbar`` for the other axis
+        Taylor ``nbar`` for the other axis (default 4, as in
+        :func:`taylor_taper_2d`, so a matching sum channel uses the same
+        taper on that axis)
 
     Returns
     -------

@@ -585,3 +585,26 @@ class TestBaylissTaper:
             pa.bayliss_taper_1d(16, -30, nbar=1)
         with pytest.raises(ValueError, match="axis"):
             pa.bayliss_taper_2d(4, 4, axis='z')
+
+
+class TestBaylissInputs:
+
+    def test_single_element_axis_raises(self):
+        with pytest.raises(ValueError, match="at least 2 elements"):
+            pa.bayliss_taper_1d(1)
+        with pytest.raises(ValueError, match="at least 2 elements"):
+            pa.bayliss_taper_2d(16, 1, axis='y')
+
+    def test_non_integer_nbar_raises(self):
+        with pytest.raises(ValueError, match="integer"):
+            pa.bayliss_taper_1d(32, -30, nbar=5.5)
+
+    @pytest.mark.parametrize("sll", [-5, -50])
+    def test_outside_fit_range_warns(self, sll):
+        with pytest.warns(UserWarning, match="15-40 dB"):
+            pa.bayliss_taper_1d(64, sll, nbar=8)
+
+    def test_sum_axis_matches_taylor_default(self):
+        w = pa.bayliss_taper_2d(8, 6, -30, axis='x', sum_sidelobe_dB=-25).reshape(8, 6)
+        ty = pa.taylor_taper_1d(6, -25)
+        np.testing.assert_allclose(w / w[:, :1], np.tile(ty / ty[0], (8, 1)), atol=1e-12)
