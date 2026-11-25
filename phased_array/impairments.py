@@ -382,7 +382,8 @@ def quantization_sidelobe_level(
 def quantization_lobes(
     n_bits: int,
     u_scan: float,
-    max_order: int = 1
+    max_order: int = 1,
+    element_spacing: Optional[float] = None
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Positions and levels of phase-quantization lobes at small scan.
@@ -396,8 +397,17 @@ def quantization_lobes(
 
     with a field level of ``1 / |1 + m * 2**n_bits|`` relative to the main
     beam, from the Fourier series of the sawtooth error. The model assumes
-    a large array and round-to-nearest quantization; lobes with
-    ``|u_m| > 1`` fall in invisible space.
+    a large array, round-to-nearest quantization, and a phase that
+    advances by much less than one quantization step per element
+    (``k d u_scan << 2*pi / 2**n_bits``). When the per-element phase step
+    approaches the quantization step, the positions still hold but the
+    levels can be off by several dB.
+
+    For an array with element spacing ``d`` the pattern repeats in ``u``
+    with period ``lambda / d``, so a lobe at ``|u_m| > 1`` can alias back
+    into visible space. Pass ``element_spacing`` to get the positions
+    folded into one period, ``[-lambda/(2d), lambda/(2d))``; without it
+    the continuous-aperture positions are returned.
 
     Parameters
     ----------
@@ -408,6 +418,9 @@ def quantization_lobes(
     max_order : int
         Highest lobe order; orders ``-max_order..-1, 1..max_order`` are
         returned
+    element_spacing : float, optional
+        Element spacing in wavelengths along the scan plane. When given,
+        positions are folded into one period of the array pattern.
 
     Returns
     -------
@@ -426,6 +439,9 @@ def quantization_lobes(
     orders = np.r_[np.arange(-max_order, 0), np.arange(1, max_order + 1)]
     factor = 1 + orders * 2.0**n_bits
     u_positions = u_scan * factor
+    if element_spacing is not None:
+        period = 1.0 / element_spacing
+        u_positions = np.mod(u_positions + period / 2, period) - period / 2
     levels_dB = -20 * np.log10(np.abs(factor))
     return u_positions, levels_dB
 

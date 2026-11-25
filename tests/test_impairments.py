@@ -653,3 +653,32 @@ class TestLocalRandomGenerators:
         r1 = pa.analyze_graceful_degradation(np.ones(64), g, k, [0.2], n_trials=5, seed=3)
         r2 = pa.analyze_graceful_degradation(np.ones(64), g, k, [0.2], n_trials=5, seed=3)
         np.testing.assert_array_equal(r1['gain_loss_mean_dB'], r2['gain_loss_mean_dB'])
+
+
+class TestQuantizationLobeAliasing:
+
+    def test_folded_positions_are_pattern_peaks(self):
+        N, d, B = 64, 0.5, 3
+        k = pa.wavelength_to_k(1.0)
+        geom = pa.create_rectangular_array(N, 1, d, d)
+        for us in (0.15, 0.225):
+            w = pa.quantize_phase(pa.steering_vector(k, geom.x, geom.y,
+                                                     np.rad2deg(np.arcsin(us)), 0), B)
+            u_pos, _ = pa.quantization_lobes(B, us, element_spacing=d)
+            assert np.all(np.abs(u_pos) <= 1.0)
+            u = np.linspace(-1, 1, 20001)
+            af = np.abs(np.exp(1j * k * np.outer(u, geom.x)) @ w)
+            for um in u_pos:
+                window = np.abs(u - um) < 2.0 / N
+                # A lobe peak lies within one beamwidth (1/(N d) / 2 = 1/N in
+                # u for d = 0.5) of the prediction; overlapping sidelobes can
+                # pull it slightly
+                assert abs(u[window][np.argmax(af[window])] - um) < 1.0 / N
+
+    def test_unfolded_default_unchanged(self):
+        u_pos, levels = pa.quantization_lobes(3, 0.225)
+        np.testing.assert_allclose(u_pos, [0.225 * -7, 0.225 * 9])
+        u_fold, levels_fold = pa.quantization_lobes(3, 0.225, element_spacing=0.5)
+        np.testing.assert_allclose(u_fold, [0.425, 0.025], atol=1e-12)
+        np.testing.assert_allclose(levels_fold, levels)
+
