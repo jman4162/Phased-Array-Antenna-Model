@@ -12,6 +12,7 @@ best practices.
    geometry
    beamforming
    doa
+   synthesis
    impairments
    polarization
    data_import

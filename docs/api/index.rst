@@ -22,6 +22,8 @@ Modules
      - Beamforming techniques: amplitude tapers, null steering, multi-beam, beam spoiling, adaptive
    * - :doc:`doa`
      - Direction-of-arrival estimation: Bartlett, Capon, MUSIC, root-MUSIC, ESPRIT, MDL/AIC, CRB
+   * - :doc:`synthesis`
+     - Array factor synthesis: binomial taper, Woodward-Lawson, least squares
    * - :doc:`impairments`
      - Realistic impairments: mutual coupling, quantization, failures, scan blindness, active impedance
    * - :doc:`polarization`
@@ -75,6 +77,7 @@ Most Commonly Used Functions
    geometry
    beamforming
    doa
+   synthesis
    impairments
    polarization
    vector_patterns

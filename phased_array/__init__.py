@@ -10,6 +10,7 @@ antenna radiation patterns, including:
 - Various array geometries (rectangular, circular, conformal, sparse)
 - Beamforming techniques (tapering, null steering, multi-beam)
 - Direction-of-arrival estimation (Bartlett, Capon, MUSIC, root-MUSIC, ESPRIT)
+- Linear array factor synthesis (binomial, Woodward-Lawson, least squares)
 - Realistic impairments (mutual coupling, quantization, failures, scan blindness)
 - Vector (polarized) patterns: co/cross-pol, axial ratio, XPD, conformal
 - Data import: Touchstone S-parameter files and tabulated element patterns
@@ -107,6 +108,9 @@ from .polarization import (axial_ratio, co_pol_pattern,
                            jones_vector, ludwig3_decomposition,
                            polarization_loss_factor, stokes_parameters,
                            tilt_angle)
+# Array factor synthesis
+from .synthesis import (binomial_taper_1d, least_squares_weights,
+                        woodward_lawson_weights)
 # Utility functions
 from .utils import (azel_to_thetaphi, create_theta_phi_grid, create_uv_grid,
                     db_to_linear, deg2rad, frequency_to_k,
@@ -244,6 +248,10 @@ __all__ = [
     "estimate_num_sources",
     "find_spectrum_peaks",
     "crb_ula_single_source",
+    # Synthesis
+    "binomial_taper_1d",
+    "woodward_lawson_weights",
+    "least_squares_weights",
     # Impairments
     "mutual_coupling_matrix_theoretical",
     "mutual_coupling_matrix_measured",

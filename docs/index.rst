@@ -10,8 +10,9 @@ radiation patterns.
 
 **User Guide**
    In-depth guides covering :doc:`user_guide/geometry`, :doc:`user_guide/beamforming`,
-   :doc:`user_guide/doa`, :doc:`user_guide/impairments`, :doc:`user_guide/data_import`,
-   :doc:`user_guide/wideband`, and :doc:`user_guide/visualization`.
+   :doc:`user_guide/synthesis`, :doc:`user_guide/doa`, :doc:`user_guide/impairments`,
+   :doc:`user_guide/data_import`, :doc:`user_guide/wideband`, and
+   :doc:`user_guide/visualization`.
 
 **API Reference**
    Complete :doc:`api/index` for all functions, classes, and modules with detailed examples.
@@ -30,6 +31,8 @@ Features
 - **Beamforming** - Amplitude tapering, null steering, multi-beam synthesis
 - **Direction finding** - Bartlett, Capon, MUSIC, root-MUSIC and ESPRIT estimators, MDL/AIC
   source counting, Cramer-Rao bound
+- **Pattern synthesis** - Binomial taper, Woodward-Lawson and least-squares weights for a
+  desired linear array factor
 - **Realistic impairments** - Mutual coupling, phase quantization, element failures, scan blindness
 - **Wideband support** - True time delay (TTD), hybrid phase/TTD, beam squint analysis
 - **Interactive visualization** - 2D/3D plots with Plotly, UV-space, pattern animations
@@ -95,6 +98,7 @@ For interactive Plotly visualizations:
    user_guide/index
    user_guide/geometry
    user_guide/beamforming
+   user_guide/synthesis
    user_guide/impairments
    user_guide/data_import
    user_guide/wideband
@@ -109,6 +113,7 @@ For interactive Plotly visualizations:
    api/core
    api/geometry
    api/beamforming
+   api/synthesis
    api/impairments
    api/polarization
    api/coordinates
